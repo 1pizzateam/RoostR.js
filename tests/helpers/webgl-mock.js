@@ -11,6 +11,8 @@
 // This lets tests exercise the real control flow of Renderer, Scene, Mesh,
 // Texture and the cameras without requiring an actual GPU / GL driver.
 
+import { jest } from '@jest/globals';
+
 const GL_CONSTANTS = {
   DEPTH_BUFFER_BIT: 0x00000100,
   COLOR_BUFFER_BIT: 0x00004000,
@@ -136,7 +138,7 @@ function createMockCanvas(id, context) {
   return canvas;
 }
 
-module.exports = {
+export {
   GL_CONSTANTS,
   createMockContext,
   createMockCanvas,

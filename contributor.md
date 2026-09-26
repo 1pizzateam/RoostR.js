@@ -3,23 +3,18 @@
 ## Clone the project :
 
   ```bash
-  $ git clone https://github.com/LCluber/RoostR.js.git
+  $ git clone https://github.com/1pizzateam/RoostR.js.git
   ```
 
 ## Launch with docker
- 
-  ### build image : 
+
   ```bash
   $ cd RoostR.js/
   $ docker-compose up -d
   ```
-  
-  ### build lib : 
-  ```bash
-  $ cd RoostR.js/
-  $ docker-compose run roostr
-  ```
-  
+
+  That builds the library (`roostr`).
+
 OR
 
 ## Install project dependencies :
@@ -31,22 +26,12 @@ OR
 
 # Workflow
 
-- create a branch following [these instructions](https://lcluber.github.io/LeadDevToolkit/docs/git/branch.html)
-
-- build the library :
-
-  ```bash
-  $ npm run build
-  ```
-
-- test the library :
-
-  ```bash
-  $ npm run test
-  ```
-
-- commit your work following [conventional commits rules](https://lcluber.github.io/LeadDevToolkit/docs/git/commit.html) :
-
+1. Create a branch 
+2. Make your changes
+3. Build and test the library
+4. Sync your branch with main
+5. Commit your work 
+6. Push your branch and open a pull request against main
 
 ## Folders
 
@@ -54,4 +39,3 @@ OR
 - dist/
 - src/
 - tests/
-

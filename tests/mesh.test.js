@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals';
 import { Mesh, Quad, Material } from "../dist/roostr";
 import { createMockContext } from "./helpers/webgl-mock";
 

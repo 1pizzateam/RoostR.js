@@ -1,15 +1,23 @@
+import dts from "rollup-plugin-dts";
 
-const config =  {
-  input: "build/es6/roostr.js",
-  output: {
-    name: "roostr",
-    file: "build/roostr.js",
-    format: "es"
+const config = [
+  {
+    input: "build/es6/roostr.js",
+    external: ["@lcluber/type6js"],
+    output: {
+      file: "build/roostr.mjs",
+      format: "es",
+      generatedCode: "es2015",
+    },
   },
-  external: [
-    "@lcluber/type6js"
-  ],
-  plugins: []
-};
+  {
+    input: "build/es6/roostr.d.ts",
+    output: {
+      file: "build/roostr.d.mts",
+      format: "es",
+    },
+    plugins: [dts()],
+  },
+];
 
 export default config;

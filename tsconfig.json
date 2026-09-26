@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "sourceMap": false,
+    "noImplicitAny": false,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "strictNullChecks": true,
+    "strictPropertyInitialization": true,
+    "allowSyntheticDefaultImports": true,
+    "preserveConstEnums": true,
+    "suppressImplicitAnyIndexErrors": false,
+    "allowJs": false,
+    "skipLibCheck": true,
+    "removeComments": true,
+    "declaration": true,
+    "outDir": "build/es6/",
+    "rootDir": "src/"
+  },
+  "exclude": [
+    "node_modules",
+    "build",
+    "**/*.test.ts"
+  ]
+}

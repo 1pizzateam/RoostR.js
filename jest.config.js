@@ -1,13 +1,17 @@
 // For a detailed explanation regarding each configuration property, visit:
 // https://jestjs.io/docs/en/configuration.html
 
-module.exports = {
-
+export default {
   // Stop running tests after `n` failures
   bail: true,
 
   // Automatically clear mock calls and instances between every test
   clearMocks: true,
+
+  // An array of glob patterns indicating a set of files for which coverage information should be collected
+  collectCoverageFrom: [
+    "dist/**/*.js",
+  ],
 
   // The directory where Jest should output its coverage files
   coverageDirectory: "./tests/coverage",
@@ -21,14 +25,32 @@ module.exports = {
     "mjs",
   ],
 
-  // @lcluber/type6js ships ES module syntax under its "main" entry point.
-  // Map it to its CommonJS build so Jest (running under CommonJS) can require it.
+  // A map from regular expressions to module names that allow to stub out resources with a single module
   moduleNameMapper: {
     "^@lcluber/type6js$": "<rootDir>/node_modules/@lcluber/type6js/dist/type6.cjs.js"
   },
 
   // The test environment that will be used for testing
   testEnvironment: "jest-environment-jsdom",
+
+  // The glob patterns Jest uses to detect test files
+  testMatch: [
+    "<rootDir>/tests/**/*.test.js",
+  ],
+
+  // An array of regexp pattern strings that are matched against all test paths, matched tests are skipped
+  testPathIgnorePatterns: [
+    "/node_modules/",
+    "/tests/coverage/",
+  ],
+
+  // Native ESM: tests and compiled sources are loaded by Node, not Babel.
+  transform: {},
+
+  // An array of regexp pattern strings that are matched against all source file paths, matched files will skip transformation
+  transformIgnorePatterns: [
+    "/node_modules/"
+  ],
 
   // Indicates whether each individual test should be reported during the run
   verbose: true

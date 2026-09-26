@@ -1,4 +1,3 @@
-version: "3.8"
 services:
 
   roostr:
@@ -7,7 +6,6 @@ services:
     volumes:
       - ./:/usr/src/app
       - roostr_node_modules:/usr/src/app/node_modules
-
 
 volumes:
   roostr_node_modules:

@@ -1,13 +1,10 @@
 {
-  "name": "@lcluber/roostrjs",
+  "name": "@1pizzateam/roostr",
   "version": "0.6.0",
   "description": "WebGL 3D engine written in TypeScript",
-  "keywords": [
-    "WebGL 3D engine"
-  ],
-  "homepage": "http://roostrjs.lcluber.com",
+  "type": "module",
+  "sideEffects": false,
   "main": "dist/roostr.js",
-  "module": "dist/roostr.js",
   "types": "dist/roostr.d.ts",
   "exports": {
     ".": {
@@ -15,48 +12,56 @@
       "import": "./dist/roostr.js"
     }
   },
-  "sideEffects": false,
-  "engines": {
-    "node": ">=14"
-  },
-  "bugs": {
-    "url": "https://github.com/LCluber/RoostR.js/issues"
-  },
+  "keywords": [
+    "webgl",
+    "3d",
+    "engine",
+    "graphics",
+    "mesh",
+    "camera",
+    "lights",
+    "scene",
+    "typescript"
+  ],
+  "homepage": "https://github.com/1pizzateam/RoostR.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/LCluber/RoostR.js.git"
+    "url": "git+https://github.com/1pizzateam/RoostR.js.git"
+  },
+  "bugs": {
+    "url": "https://github.com/1pizzateam/RoostR.js/issues"
   },
   "license": "MIT",
   "author": {
-    "name": "Ludovic Cluber",
-    "url": "http://www.lcluber.com/",
-    "email": "http://www.lcluber.com/contact"
+    "name": "Ludovic Cluber"
   },
   "contributors": [],
   "scripts": {
     "prebuild": "npm install",
-    "build": "node ./scripts/clear.cjs && tsc -p tsconfig.lib.json && npm run rollup && npm run uglify && node ./scripts/copy.cjs && npm run test",
-    "rollup:mjs": "rollup --config rollup.config.mjs",
-    "rollup:iife": "rollup --config rollup.config.iife.mjs",
-    "rollup": "npm run rollup:mjs && npm run rollup:iife",
-    "uglify": "uglifyjs build/roostr.iife.js --config-file uglify.config.json --output build/roostr.iife.min.js",
-    "test": "jest --coverage"
+    "build": "npm run build:lib && npm run test",
+    "build:lib": "node ./scripts/clear.js && tsc && npm run rollup && node ./scripts/copy.js",
+    "rollup": "rollup --config rollup.config.mjs",
+    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --coverage"
   },
   "files": [
     "dist/"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">= 22"
+  },
   "dependencies": {
     "@lcluber/type6js": "3.0.0"
   },
   "devDependencies": {
-    "@babel/core": "7.23.2",
-    "@babel/preset-env": "7.23.2",
-    "@rollup/plugin-babel": "6.0.4",
-    "@rollup/plugin-node-resolve": "15.3.0",
+    "@types/jest": "29.5.14",
+    "@types/node": "26.4.1",
     "jest": "29.7.0",
     "jest-environment-jsdom": "29.7.0",
-    "rollup": "4.24.0",
-    "typescript": "5.6.3",
-    "uglify-js": "3.19.3"
+    "rollup": "4.63.1",
+    "rollup-plugin-dts": "6.5.1",
+    "typescript": "6.0.3"
   }
 }
