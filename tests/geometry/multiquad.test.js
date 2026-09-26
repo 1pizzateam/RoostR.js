@@ -1,4 +1,4 @@
-import { MultiQuad } from "../../dist/roostr";
+import { MultiQuad, Rect } from "../../dist/roostr";
 
 test("starts with empty vertices, indices and uvs arrays", () => {
   const multiQuad = new MultiQuad(2, 2);
@@ -41,4 +41,11 @@ test("createQuads updates subMeshes[0].count to match total indices created", ()
   const multiQuad = new MultiQuad(2, 2);
   multiQuad.createQuads(4);
   expect(multiQuad.subMeshes[0].count).toBe(4 * 6);
+});
+
+test("supports initialization with Spock Rect", () => {
+  const rect = new Rect(4, 2);
+  const multiQuad = new MultiQuad(rect);
+  multiQuad.createQuads(1);
+  expect(multiQuad.vertices.slice(0, 3)).toEqual([2, -1, 0]);
 });

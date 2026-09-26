@@ -1,4 +1,4 @@
-import { Quad } from "../../dist/roostr";
+import { Quad, Rect } from "../../dist/roostr";
 
 test("creates a Quad with default dimensions when width and height are falsy", () => {
   const quad = new Quad(0, 0);
@@ -17,6 +17,17 @@ test("creates a Quad scaled by half width and half height", () => {
     -2, -1, 0.0,
     2, 1, 0.0,
     -2, 1, 0.0,
+  ]);
+});
+
+test("creates a Quad directly from a Spock Rect", () => {
+  const rect = new Rect(6, 4);
+  const quad = new Quad(rect);
+  expect(quad.vertices).toEqual([
+    3, -2, 0.0,
+    -3, -2, 0.0,
+    3, 2, 0.0,
+    -3, 2, 0.0,
   ]);
 });
 

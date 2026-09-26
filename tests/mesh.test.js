@@ -540,3 +540,63 @@ test("render sends normalMatrix uniform if present in program", () => {
   );
 });
 
+test("scaleBy multiplies current scale by vector or scalar", () => {
+  const { mesh } = createMesh();
+  mesh.setScale(2, 3, 4);
+  mesh.scaleBy(2);
+  expect(mesh.scale.toArray()).toEqual([4, 6, 8]);
+
+  mesh.scaleBy(new Vec3(0.5, 0.5, 0.5));
+  expect(mesh.scale.toArray()).toEqual([2, 3, 4]);
+});
+
+test("slerp interpolates mesh quaternion orientation", () => {
+  const { mesh } = createMesh();
+  const targetQ = new Quat().setAxisAngle(new Vec3(0, 1, 0), Math.PI);
+  mesh.slerp(targetQ, 0.5);
+
+  mesh.updateModelMatrix();
+  const arr = mesh.modelMatrix.toArray();
+  // half rotation around Y is PI/2, so cos(PI/2) = 0
+  expect(arr[0]).toBeCloseTo(0);
+});
+
+test("lookAt orients mesh towards target in 3D space", () => {
+  const { mesh } = createMesh();
+  mesh.setPosition(0, 0, 0);
+  mesh.lookAt(new Vec3(10, 0, 0)); // look toward +X
+
+  mesh.updateModelMatrix();
+  const arr = mesh.modelMatrix.toArray();
+  // Mesh facing +X means local -Z faces +X, so column 2 zAxis is (-1, 0, 0)
+  expect(arr[8]).toBeCloseTo(-1);
+
+  // Calling lookAt with same point as position is a no-op
+  mesh.lookAt(new Vec3(0, 0, 0));
+});
+
+test("getWorldDirection, distanceTo, and isInsideBounds calculate spatial relationships", () => {
+  const { mesh } = createMesh();
+  mesh.setPosition(0, 0, 5);
+  const graph = {
+    getWorldMatrix: () => new Mat4x3().identity(),
+    pushModelMatrix: () => {},
+    popModelMatrix: () => {},
+  };
+  mesh.computeWorldMatrix(graph);
+
+  const forward = mesh.getWorldDirection();
+  expect(forward.z).toBeCloseTo(-1);
+
+  const otherPos = new Vec3(0, 0, 15);
+  expect(mesh.distanceTo(otherPos)).toBeCloseTo(10);
+
+  const otherMesh = createMesh().mesh;
+  otherMesh.setPosition(0, 0, 15);
+  otherMesh.computeWorldMatrix(graph);
+  expect(mesh.distanceTo(otherMesh)).toBeCloseTo(10);
+
+  expect(mesh.isInsideBounds(new Vec3(-1, -1, 0), new Vec3(1, 1, 10))).toBe(true);
+  expect(mesh.isInsideBounds(new Vec3(10, 10, 10), new Vec3(20, 20, 20))).toBe(false);
+});
+

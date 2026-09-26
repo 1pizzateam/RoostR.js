@@ -1,3 +1,4 @@
+import { Vec3, Utils } from '@1pizzateam/spock';
 
 export class Renderer {
 
@@ -89,9 +90,27 @@ export class Renderer {
   }
 
   // This specifies what color values to use when calling the clear() method. The values are clamped between 0 and 1.
-  public setClearColor( red: number, green: number, blue: number, alpha: number ): void {
+  public setClearColor( rOrVec: Vec3 | number, g?: number, b?: number, a?: number ): void {
     if (this.context) {
-      this.context.clearColor( red, green, blue, alpha );
+      if (rOrVec instanceof Vec3) {
+        const alpha = g !== undefined ? Utils.clamp(g, 0, 1) : 1.0;
+        this.context.clearColor(
+          Utils.clamp(rOrVec.x, 0, 1),
+          Utils.clamp(rOrVec.y, 0, 1),
+          Utils.clamp(rOrVec.z, 0, 1),
+          alpha
+        );
+      } else {
+        const green = g !== undefined ? Utils.clamp(g, 0, 1) : 0;
+        const blue  = b !== undefined ? Utils.clamp(b, 0, 1) : 0;
+        const alpha = a !== undefined ? Utils.clamp(a, 0, 1) : 1.0;
+        this.context.clearColor(
+          Utils.clamp(rOrVec, 0, 1),
+          green,
+          blue,
+          alpha
+        );
+      }
     }
   }
 

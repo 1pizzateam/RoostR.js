@@ -1,3 +1,4 @@
+import { Rect } from '@1pizzateam/spock';
 import { BasicMesh } from './basic';
 import { SubMesh } from './submesh';
 
@@ -10,19 +11,21 @@ export class Quad extends BasicMesh {
   // nbSubMeshes : number;
   declare primitive   : string;
 
-  constructor(width: number, height: number) {
+  constructor(widthOrRect?: Rect | number, height?: number) {
     super();
-    width = width ? width * 0.5 : 1.0;
-    height = height ? height * 0.5 : 1.0;
-    // this.vertices = [  1.0,-1.0, 0.0,
-    //                   -1.0,-1.0, 0.0,
-    //                    1.0, 1.0, 0.0,
-    //                   -1.0, 1.0, 0.0
-    //                 ];
-    this.vertices = [  width, -height, 0.0,
-                      -width, -height, 0.0,
-                       width,  height, 0.0,
-                      -width,  height, 0.0
+    let width: number;
+    let h: number;
+    if (widthOrRect instanceof Rect) {
+      width = widthOrRect.size.x * 0.5;
+      h = widthOrRect.size.y * 0.5;
+    } else {
+      width = widthOrRect ? widthOrRect * 0.5 : 1.0;
+      h = height ? height * 0.5 : 1.0;
+    }
+    this.vertices = [  width, -h, 0.0,
+                      -width, -h, 0.0,
+                       width,  h, 0.0,
+                      -width,  h, 0.0
                     ];
     this.uvs = [ 1.0, 0.0,
                  0.0, 0.0,

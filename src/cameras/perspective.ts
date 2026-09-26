@@ -39,4 +39,15 @@ export class PerspectiveCamera extends Camera {
     this.projectionMatrix.perspective(this.fov, this.ratio, this.zNear, this.zFar);
   }
 
+  public setFov(fov: number): void {
+    this.fov = fov;
+    this.setProjectionMatrix();
+  }
+
+  public setNearFar(zNear: number, zFar: number): void {
+    this.zNear = zNear;
+    this.zFar  = zFar;
+    this.setProjectionMatrix();
+  }
+
 }

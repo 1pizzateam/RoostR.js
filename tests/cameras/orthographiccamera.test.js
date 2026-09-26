@@ -39,3 +39,16 @@ test("computes a view matrix on construction", () => {
   expect(view).toBeInstanceOf(Float32Array);
   expect(view.length).toBe(16);
 });
+
+test("setBounds updates bounds and recomputes projection matrix", () => {
+  const camera = new OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
+  const before = Array.from(camera.getProjectionMatrix());
+  camera.setBounds(-10, 10, 5, -5, 1, 200);
+  expect(camera.left).toBe(-10);
+  expect(camera.right).toBe(10);
+  expect(camera.top).toBe(5);
+  expect(camera.bottom).toBe(-5);
+  expect(camera.near).toBe(1);
+  expect(camera.far).toBe(200);
+  expect(Array.from(camera.getProjectionMatrix())).not.toEqual(before);
+});

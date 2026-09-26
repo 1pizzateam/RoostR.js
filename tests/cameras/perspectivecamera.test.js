@@ -123,3 +123,36 @@ test("setTarget and setUp accept scalar coordinates", () => {
   camera.setUp(0, 0, 1);
   expect(camera.up.toArray()).toEqual([0, 0, 1]);
 });
+
+test("setFov and setNearFar recompute projection matrix", () => {
+  const context = createMockContext();
+  const camera = new PerspectiveCamera(45, 0.1, 1000, context);
+  const origProj = Array.from(camera.getProjectionMatrix());
+
+  camera.setFov(60);
+  expect(camera.fov).toBe(60);
+  expect(Array.from(camera.getProjectionMatrix())).not.toEqual(origProj);
+
+  const prevProj = Array.from(camera.getProjectionMatrix());
+  camera.setNearFar(0.5, 500);
+  expect(camera.zNear).toBe(0.5);
+  expect(camera.zFar).toBe(500);
+  expect(Array.from(camera.getProjectionMatrix())).not.toEqual(prevProj);
+});
+
+test("getViewDirection, getDistance, and dolly work using Spock", () => {
+  const context = createMockContext();
+  const camera = new PerspectiveCamera(45, 0.1, 1000, context);
+  camera.setPosition(0, 0, 10);
+  camera.setTarget(0, 0, 0);
+
+  expect(camera.getDistance()).toBe(10);
+  const dir = camera.getViewDirection();
+  expect(dir.x).toBeCloseTo(0);
+  expect(dir.y).toBeCloseTo(0);
+  expect(dir.z).toBeCloseTo(-1);
+
+  camera.dolly(0.5); // move halfway toward target (0, 0, 0)
+  expect(camera.position.z).toBeCloseTo(5);
+  expect(camera.getDistance()).toBeCloseTo(5);
+});

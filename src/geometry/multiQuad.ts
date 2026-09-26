@@ -1,3 +1,4 @@
+import { Rect } from '@1pizzateam/spock';
 import { BasicMesh } from './basic';
 import { SubMesh } from './submesh';
 
@@ -12,16 +13,23 @@ export class MultiQuad extends BasicMesh{
   uvs  : number[];
   quad : IQuad;
 
-  constructor(width: number, height: number/*, quantity: number*/) {
+  constructor(widthOrRect?: Rect | number, height?: number/*, quantity: number*/) {
     super();
-    width = width ? width * 0.5 : 1.0;
-    height = height ? height * 0.5 : 1.0;
+    let width: number;
+    let h: number;
+    if (widthOrRect instanceof Rect) {
+      width = widthOrRect.size.x * 0.5;
+      h = widthOrRect.size.y * 0.5;
+    } else {
+      width = widthOrRect ? widthOrRect * 0.5 : 1.0;
+      h = height ? height * 0.5 : 1.0;
+    }
 
     this.quad = {
-      vertices : new Float32Array([  width, -height, 0.0,
-                                    -width,  height, 0.0,
-                                    -width, -height, 0.0,
-                                     width,  height, 0.0
+      vertices : new Float32Array([  width, -h, 0.0,
+                                    -width,  h, 0.0,
+                                    -width, -h, 0.0,
+                                     width,  h, 0.0
                                   ]),
       indices : new Int32Array([ 0,1,2,
                                  0,3,1

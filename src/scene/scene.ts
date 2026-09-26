@@ -7,6 +7,7 @@ import { DirectionalLight } from '../lights/directional';
 import { PointLight } from '../lights/point';
 import { SpotLight } from '../lights/spot';
 import { Camera } from '../cameras/camera';
+import { Time } from '@1pizzateam/spock';
 
 
 export class Scene {
@@ -78,7 +79,7 @@ export class Scene {
     return this.renderer.getParameter(this.context.BLEND);
   }
 
-  public render (camera: Camera, time: number): void {
+  public render (camera: Camera, time: number = Time.now()): void {
 
     this.computeWorldMatrices();
     const flatLights = this.lights.flatten();

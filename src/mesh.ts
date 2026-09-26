@@ -43,6 +43,7 @@ export class Mesh implements IMesh {
   rotationMatrix : Mat4x3;
   worldMatrix    : Mat4x3;
   normalMatrix   : Mat3;
+  private isLookingAt : boolean;
   private isTransformDirty : boolean;
 
   active : boolean;
@@ -113,6 +114,7 @@ export class Mesh implements IMesh {
     this.rotationMatrix = new Mat4x3();
     this.worldMatrix    = new Mat4x3();
     this.normalMatrix   = new Mat3();
+    this.isLookingAt    = false;
     this.isTransformDirty = false;
 
     this.modelMatrix.identity();
@@ -214,26 +216,29 @@ export class Mesh implements IMesh {
     return false;
   }
 
-  public setPosition(xOrVec: Vec3 | number, y?: number, z?: number): void {
+  public setPosition(xOrVec: Vec3 | number, y?: number, z?: number): this {
     if (xOrVec instanceof Vec3) {
       this.position.copy(xOrVec);
     } else {
       this.position.setScalar(xOrVec, y, z);
     }
     this.isTransformDirty = true;
+    return this;
   }
 
-  public setRotation(xOrVec: Vec3 | number, y?: number, z?: number): void {
+  public setRotation(xOrVec: Vec3 | number, y?: number, z?: number): this {
     if (xOrVec instanceof Vec3) {
       this.rotation.copy(xOrVec);
     } else {
       this.rotation.setScalar(xOrVec, y, z);
     }
-    this.quaternion.identity();
+    this.quaternion.setFromEuler(this.rotation);
+    this.isLookingAt = false;
     this.isTransformDirty = true;
+    return this;
   }
 
-  public setScale(xOrVec: Vec3 | number, y?: number, z?: number): void {
+  public setScale(xOrVec: Vec3 | number, y?: number, z?: number): this {
     if (xOrVec instanceof Vec3) {
       this.scale.copy(xOrVec);
     } else if (y === undefined && z === undefined) {
@@ -242,35 +247,66 @@ export class Mesh implements IMesh {
       this.scale.setScalar(xOrVec, y, z);
     }
     this.isTransformDirty = true;
+    return this;
   }
 
-  public setQuaternion(q: Quat): void {
+  public scaleBy(factorOrVec: Vec3 | number): this {
+    if (factorOrVec instanceof Vec3) {
+      this.scale.multiply(factorOrVec);
+    } else {
+      this.scale.scale(factorOrVec);
+    }
+    this.isTransformDirty = true;
+    return this;
+  }
+
+  public setQuaternion(q: Quat): this {
     this.quaternion.copy(q);
+    this.isLookingAt = false;
     this.isTransformDirty = true;
+    return this;
   }
 
-  public rotateX(angle: number): void {
+  public slerp(targetQuat: Quat, t: number): this {
+    this.quaternion.slerp(targetQuat, t);
+    this.isLookingAt = false;
+    this.isTransformDirty = true;
+    return this;
+  }
+
+  public rotateX(angle: number): this {
     this.rotation.x += angle;
+    this.quaternion.rotateX(angle);
+    this.isLookingAt = false;
     this.isTransformDirty = true;
+    return this;
   }
 
-  public rotateY(angle: number): void {
+  public rotateY(angle: number): this {
     this.rotation.y += angle;
+    this.quaternion.rotateY(angle);
+    this.isLookingAt = false;
     this.isTransformDirty = true;
+    return this;
   }
 
-  public rotateZ(angle: number): void {
+  public rotateZ(angle: number): this {
     this.rotation.z += angle;
+    this.quaternion.rotateZ(angle);
+    this.isLookingAt = false;
     this.isTransformDirty = true;
+    return this;
   }
 
-  public rotateOnAxis(axis: Vec3, angle: number): void {
+  public rotateOnAxis(axis: Vec3, angle: number): this {
     const q = new Quat().setAxisAngle(axis, angle);
     this.quaternion.multiply(q);
+    this.isLookingAt = false;
     this.isTransformDirty = true;
+    return this;
   }
 
-  public translate(xOrVec: Vec3 | number, y?: number, z?: number): void {
+  public translate(xOrVec: Vec3 | number, y?: number, z?: number): this {
     if (xOrVec instanceof Vec3) {
       this.position.add(xOrVec);
     } else {
@@ -279,6 +315,22 @@ export class Mesh implements IMesh {
       this.position.z += z ?? 0;
     }
     this.isTransformDirty = true;
+    return this;
+  }
+
+  public lookAt(target: Vec3, up: Vec3 = new Vec3(0, 1, 0)): this {
+    if (this.position.equals(target)) {
+      return this;
+    }
+    this.rotationMatrix.lookAtRH(this.position, target, up);
+    this.rotationMatrix.transposeLinear();
+    const arr = this.rotationMatrix.toArray();
+    arr[12] = 0; arr[13] = 0; arr[14] = 0;
+    this.quaternion.identity();
+    this.rotation.setScalar(0, 0, 0);
+    this.isLookingAt = true;
+    this.isTransformDirty = true;
+    return this;
   }
 
   public updateModelMatrix(): void {
@@ -295,6 +347,8 @@ export class Mesh implements IMesh {
         .rotateX(this.rotation.x)
         .rotateY(this.rotation.y)
         .rotateZ(this.rotation.z);
+      this.modelMatrix.multiply(this.rotationMatrix);
+    } else if (this.isLookingAt) {
       this.modelMatrix.multiply(this.rotationMatrix);
     }
     this.modelMatrix.scale(this.scale);
@@ -317,6 +371,21 @@ export class Mesh implements IMesh {
     const m = this.worldMatrix.toArray();
     target.setScalar(m[12], m[13], m[14]);
     return target;
+  }
+
+  public getWorldDirection(target: Vec3 = new Vec3()): Vec3 {
+    const m = this.worldMatrix.toArray();
+    target.setScalar(-m[8], -m[9], -m[10]);
+    return target.normalize();
+  }
+
+  public distanceTo(target: Mesh | Vec3): number {
+    const targetPos = target instanceof Vec3 ? target : target.getWorldPosition();
+    return this.getWorldPosition().getDistance(targetPos);
+  }
+
+  public isInsideBounds(min: Vec3, max: Vec3): boolean {
+    return this.getWorldPosition().isInBounds(min, max);
   }
 
   public setWorldMatrix(worldMatrix: Mat4x3): void {

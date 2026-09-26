@@ -24,15 +24,11 @@ export class Camera {
   }
 
   public setViewMatrix(): void {
-    if (this.position.equals(this.target)) {
-      this.viewMatrix.identity();
-    } else {
-      this.viewMatrix.lookAtRH(
-        this.position,
-        this.target,
-        this.up
-      );
-    }
+    this.viewMatrix.lookAtRH(
+      this.position,
+      this.target,
+      this.up
+    );
   }
 
   public setPosition(xOrVec: Vec3 | number, y?: number, z?: number): void {
@@ -64,6 +60,19 @@ export class Camera {
 
   public lookAt(target: Vec3): void {
     this.setTarget(target);
+  }
+
+  public getViewDirection(target: Vec3 = new Vec3()): Vec3 {
+    return target.subVectors(this.target, this.position).normalize();
+  }
+
+  public getDistance(): number {
+    return this.position.getDistance(this.target);
+  }
+
+  public dolly(amount: number): void {
+    this.position.lerp(this.target, amount);
+    this.setViewMatrix();
   }
 
   public getViewMatrix(): Float32Array {

@@ -78,9 +78,16 @@ test("render draws every active mesh using the camera's matrices", () => {
   scene.render(camera, 16);
 
   expect(renderSpy).toHaveBeenCalled();
-  const [projectionMatrix, viewMatrix] = renderSpy.mock.calls[0];
+  const [projectionMatrix, viewMatrix, , time] = renderSpy.mock.calls[0];
   expect(projectionMatrix).toEqual(camera.getProjectionMatrix());
   expect(viewMatrix).toEqual(camera.getViewMatrix());
+  expect(time).toBe(16);
+
+  // Calling scene.render without explicit time defaults to Time.now() (> 0)
+  scene.render(camera);
+  const [, , , defaultTime] = renderSpy.mock.calls[1];
+  expect(typeof defaultTime).toBe("number");
+  expect(defaultTime).toBeGreaterThan(0);
 });
 
 test("clearLights empties registered lights", () => {

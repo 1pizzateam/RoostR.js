@@ -1,4 +1,4 @@
-import { Renderer } from "../../dist/roostr";
+import { Renderer, Vec3 } from "../../dist/roostr";
 import { createMockContext, createMockCanvas } from "../helpers/webgl-mock";
 
 test("finds the canvas by id and resizes it to the default resolution", () => {
@@ -63,12 +63,20 @@ test("setViewport delegates to context.viewport with a (0, 0) origin", () => {
   expect(context.viewport).toHaveBeenLastCalledWith(0, 0, 800, 600);
 });
 
-test("setClearColor delegates to context.clearColor", () => {
+test("setClearColor delegates to context.clearColor and clamps values between 0 and 1", () => {
   const context = createMockContext();
   createMockCanvas("canvas", context);
   const renderer = new Renderer("canvas");
-  renderer.setClearColor(1, 0.5, 0.25, 1);
-  expect(context.clearColor).toHaveBeenLastCalledWith(1, 0.5, 0.25, 1);
+  renderer.setClearColor(1.5, -0.5, 0.25, 2.0);
+  expect(context.clearColor).toHaveBeenLastCalledWith(1, 0, 0.25, 1);
+});
+
+test("setClearColor accepts a Vec3 and alpha parameter", () => {
+  const context = createMockContext();
+  createMockCanvas("canvas", context);
+  const renderer = new Renderer("canvas");
+  renderer.setClearColor(new Vec3(0.2, 0.4, 0.6), 0.8);
+  expect(context.clearColor).toHaveBeenLastCalledWith(0.2, 0.4, 0.6, 0.8);
 });
 
 test("clearFrame clears the color and depth buffers", () => {
