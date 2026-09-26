@@ -1,4 +1,4 @@
-import { Vector3 } from '@lcluber/type6js';
+import { Vec3 } from '@1pizzateam/spock';
 import { Camera } from './camera';
 
 export class PerspectiveCamera extends Camera {
@@ -12,9 +12,9 @@ export class PerspectiveCamera extends Camera {
 
   constructor(fov: number, zNear: number, zFar: number, context : WebGLRenderingContext) {
 
-    super(  new Vector3(),
-            new Vector3(),
-            new Vector3(0.0, 1.0, 0.0)
+    super(  new Vec3(),
+            new Vec3(),
+            new Vec3(0.0, 1.0, 0.0)
           );
 
     this.fov   = fov;

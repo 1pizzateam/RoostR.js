@@ -1,6 +1,5 @@
 import { jest } from '@jest/globals';
-import { Mesh, Quad, Cube, Material } from "../dist/roostr";
-import { Matrix4x3 } from "@lcluber/type6js";
+import { Mesh, Quad, Cube, Material, Mat4x3, Vec3, Quat } from "../dist/roostr";
 import { createMockContext } from "./helpers/webgl-mock";
 
 function createMesh(context = createMockContext()) {
@@ -284,7 +283,7 @@ test("initializes modelMatrix and rotationMatrix to identity", () => {
 
 test("computeWorldMatrix preserves identity when local modelMatrix and parent are identity", () => {
   const { mesh } = createMesh();
-  const parentMatrix = new Matrix4x3();
+  const parentMatrix = new Mat4x3();
   parentMatrix.identity();
   const graph = {
     getWorldMatrix: jest.fn(() => parentMatrix),
@@ -459,5 +458,85 @@ test("destroy cleans up buffers, textures, and programs", () => {
   expect(mesh.texCoordBuffer).toBeNull();
   expect(mesh.WebGLTexture).toBeNull();
   expect(mesh.nbPrograms).toBe(0);
+});
+
+test("setPosition, setRotation, setScale and translate update transforms and modelMatrix", () => {
+  const { mesh } = createMesh();
+  mesh.setPosition(1, 2, 3);
+  mesh.setScale(2);
+  mesh.rotateY(Math.PI / 2);
+  mesh.translate(0, 1, 0);
+
+  expect(mesh.position.toArray()).toEqual([1, 3, 3]);
+  expect(mesh.scale.toArray()).toEqual([2, 2, 2]);
+
+  mesh.updateModelMatrix();
+  const arr = mesh.modelMatrix.toArray();
+  expect(arr[12]).toBe(1);
+  expect(arr[13]).toBe(3);
+  expect(arr[14]).toBe(3);
+});
+
+test("setQuaternion rotates mesh using quaternion and updates modelMatrix", () => {
+  const { mesh } = createMesh();
+  const q = new Quat().setAxisAngle(new Vec3(0, 1, 0), Math.PI);
+  mesh.setQuaternion(q);
+  mesh.setPosition(new Vec3(10, 0, 0));
+
+  mesh.updateModelMatrix();
+  const arr = mesh.modelMatrix.toArray();
+  expect(arr[12]).toBe(10);
+  expect(arr[13]).toBe(0);
+  expect(arr[14]).toBe(0);
+  // cos(PI) = -1
+  expect(arr[0]).toBeCloseTo(-1);
+  expect(arr[10]).toBeCloseTo(-1);
+});
+
+test("computeNormalMatrix computes the transposed inverse of worldMatrix linear part", () => {
+  const { mesh } = createMesh();
+  mesh.setPosition(5, 5, 5);
+  mesh.setScale(2, 2, 2);
+  mesh.updateModelMatrix();
+  mesh.setWorldMatrix(new Mat4x3().identity());
+
+  const normalMat = mesh.computeNormalMatrix();
+  const arr = normalMat.toArray();
+  // Normal matrix scales inverse: (1/2, 1/2, 1/2) along diagonal
+  expect(arr[0]).toBeCloseTo(0.5);
+  expect(arr[4]).toBeCloseTo(0.5);
+  expect(arr[8]).toBeCloseTo(0.5);
+});
+
+test("getWorldPosition extracts translation from worldMatrix", () => {
+  const { mesh } = createMesh();
+  mesh.setPosition(7, 8, 9);
+  const graph = {
+    getWorldMatrix: () => new Mat4x3().identity(),
+    pushModelMatrix: () => {},
+    popModelMatrix: () => {},
+  };
+  mesh.computeWorldMatrix(graph);
+  const worldPos = mesh.getWorldPosition();
+  expect(worldPos.toArray()).toEqual([7, 8, 9]);
+});
+
+test("render sends normalMatrix uniform if present in program", () => {
+  const { mesh, context } = createMesh();
+  mesh.addProgram("vert", "frag", new Material());
+  mesh.programs[0].normalMatrix = { name: "uNormalMatrix" };
+
+  const lights = {
+    position: [], diffuse: [], specular: [],
+    constantAttenuation: [], linearAttenuation: [], quadraticAttenuation: [],
+    cutoff: [], exponent: [], direction: [], type: [],
+  };
+
+  mesh.render(new Float32Array(16), new Float32Array(12), lights, 0, false);
+  expect(context.uniformMatrix3fv).toHaveBeenCalledWith(
+    { name: "uNormalMatrix" },
+    false,
+    expect.any(Float32Array)
+  );
 });
 

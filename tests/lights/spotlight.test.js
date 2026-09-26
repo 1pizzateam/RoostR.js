@@ -1,5 +1,4 @@
-import { SpotLight } from "../../dist/roostr";
-import { Vector3 } from "@lcluber/type6js";
+import { SpotLight, Vec3 } from "../../dist/roostr";
 
 test("inherits PointLight defaults", () => {
   const light = new SpotLight();
@@ -32,8 +31,11 @@ test("setExponent updates exponent", () => {
   expect(light.exponent).toBe(2);
 });
 
-test("setDirection copies the given direction vector", () => {
+test("setDirection copies the given direction vector or scalars", () => {
   const light = new SpotLight();
-  light.setDirection(new Vector3(0, -1, 0));
+  light.setDirection(new Vec3(0, -1, 0));
   expect(light.direction.toArray()).toEqual([0, -1, 0]);
+
+  light.setDirection(0, 0, -1);
+  expect(light.direction.toArray()).toEqual([0, 0, -1]);
 });

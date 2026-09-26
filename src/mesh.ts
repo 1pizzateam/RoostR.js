@@ -1,4 +1,4 @@
-import { Matrix4x3 } from '@lcluber/type6js';
+import { Mat4x3, Mat3, Vec3, Quat } from '@1pizzateam/spock';
 import { SceneGraph } from './scene/sceneGraph';
 import { Program } from './program';
 import { Texture } from './texture';
@@ -35,9 +35,15 @@ export class Mesh implements IMesh {
   normalBuffer   : WebGLBuffer | null;
   texCoordBuffer : WebGLBuffer | null;
 
-  modelMatrix    : Matrix4x3;
-  rotationMatrix : Matrix4x3;
-  worldMatrix    : Matrix4x3;
+  position       : Vec3;
+  rotation       : Vec3;
+  scale          : Vec3;
+  quaternion     : Quat;
+  modelMatrix    : Mat4x3;
+  rotationMatrix : Mat4x3;
+  worldMatrix    : Mat4x3;
+  normalMatrix   : Mat3;
+  private isTransformDirty : boolean;
 
   active : boolean;
 
@@ -99,13 +105,20 @@ export class Mesh implements IMesh {
                                                         ) 
                             : null;
 
-    this.modelMatrix    = new Matrix4x3();
-    this.rotationMatrix = new Matrix4x3();
-    this.worldMatrix    = new Matrix4x3();
+    this.position       = new Vec3();
+    this.rotation       = new Vec3();
+    this.scale          = new Vec3(1.0, 1.0, 1.0);
+    this.quaternion     = new Quat();
+    this.modelMatrix    = new Mat4x3();
+    this.rotationMatrix = new Mat4x3();
+    this.worldMatrix    = new Mat4x3();
+    this.normalMatrix   = new Mat3();
+    this.isTransformDirty = false;
 
     this.modelMatrix.identity();
     this.rotationMatrix.identity();
     this.worldMatrix.identity();
+    this.normalMatrix.identity();
 
     this.active = true;
 
@@ -201,7 +214,112 @@ export class Mesh implements IMesh {
     return false;
   }
 
-  public setWorldMatrix(worldMatrix:Matrix4x3): void {
+  public setPosition(xOrVec: Vec3 | number, y?: number, z?: number): void {
+    if (xOrVec instanceof Vec3) {
+      this.position.copy(xOrVec);
+    } else {
+      this.position.setScalar(xOrVec, y, z);
+    }
+    this.isTransformDirty = true;
+  }
+
+  public setRotation(xOrVec: Vec3 | number, y?: number, z?: number): void {
+    if (xOrVec instanceof Vec3) {
+      this.rotation.copy(xOrVec);
+    } else {
+      this.rotation.setScalar(xOrVec, y, z);
+    }
+    this.quaternion.identity();
+    this.isTransformDirty = true;
+  }
+
+  public setScale(xOrVec: Vec3 | number, y?: number, z?: number): void {
+    if (xOrVec instanceof Vec3) {
+      this.scale.copy(xOrVec);
+    } else if (y === undefined && z === undefined) {
+      this.scale.setScalar(xOrVec, xOrVec, xOrVec);
+    } else {
+      this.scale.setScalar(xOrVec, y, z);
+    }
+    this.isTransformDirty = true;
+  }
+
+  public setQuaternion(q: Quat): void {
+    this.quaternion.copy(q);
+    this.isTransformDirty = true;
+  }
+
+  public rotateX(angle: number): void {
+    this.rotation.x += angle;
+    this.isTransformDirty = true;
+  }
+
+  public rotateY(angle: number): void {
+    this.rotation.y += angle;
+    this.isTransformDirty = true;
+  }
+
+  public rotateZ(angle: number): void {
+    this.rotation.z += angle;
+    this.isTransformDirty = true;
+  }
+
+  public rotateOnAxis(axis: Vec3, angle: number): void {
+    const q = new Quat().setAxisAngle(axis, angle);
+    this.quaternion.multiply(q);
+    this.isTransformDirty = true;
+  }
+
+  public translate(xOrVec: Vec3 | number, y?: number, z?: number): void {
+    if (xOrVec instanceof Vec3) {
+      this.position.add(xOrVec);
+    } else {
+      this.position.x += xOrVec;
+      this.position.y += y ?? 0;
+      this.position.z += z ?? 0;
+    }
+    this.isTransformDirty = true;
+  }
+
+  public updateModelMatrix(): void {
+    if (!this.isTransformDirty) {
+      return;
+    }
+    this.modelMatrix.identity();
+    this.modelMatrix.translate(this.position);
+    if (!this.quaternion.isIdentity()) {
+      this.quaternion.toMat4x3(this.rotationMatrix);
+      this.modelMatrix.multiply(this.rotationMatrix);
+    } else if (!this.rotation.isOrigin()) {
+      this.rotationMatrix.identity()
+        .rotateX(this.rotation.x)
+        .rotateY(this.rotation.y)
+        .rotateZ(this.rotation.z);
+      this.modelMatrix.multiply(this.rotationMatrix);
+    }
+    this.modelMatrix.scale(this.scale);
+    this.isTransformDirty = false;
+  }
+
+  public computeNormalMatrix(): Mat3 {
+    const wm = new Mat4x3().copy(this.worldMatrix);
+    wm.invertAffine();
+    wm.transposeLinear();
+    const src = wm.toArray();
+    const dst = this.normalMatrix.toArray();
+    dst[0] = src[0]; dst[1] = src[1]; dst[2] = src[2];
+    dst[3] = src[4]; dst[4] = src[5]; dst[5] = src[6];
+    dst[6] = src[8]; dst[7] = src[9]; dst[8] = src[10];
+    return this.normalMatrix;
+  }
+
+  public getWorldPosition(target: Vec3 = new Vec3()): Vec3 {
+    const m = this.worldMatrix.toArray();
+    target.setScalar(m[12], m[13], m[14]);
+    return target;
+  }
+
+  public setWorldMatrix(worldMatrix: Mat4x3): void {
     this.worldMatrix.copy(worldMatrix).multiply(this.modelMatrix);
   }
 
@@ -245,6 +363,7 @@ export class Mesh implements IMesh {
     }
     // matrix uniforms
     this.addProgramUniform('modelMatrix');
+    this.addProgramUniform('normalMatrix');
     this.addProgramUniform('viewMatrix');
     this.addProgramUniform('projectionMatrix');
     // default uniforms
@@ -309,16 +428,15 @@ export class Mesh implements IMesh {
   }
 
   public computeWorldMatrix(graph:SceneGraph): void {
-    //if(this.isActive()) {
-      this.setWorldMatrix(graph.getWorldMatrix());
-      graph.pushModelMatrix(this.worldMatrix);
+    this.updateModelMatrix();
+    this.setWorldMatrix(graph.getWorldMatrix());
+    graph.pushModelMatrix(this.worldMatrix);
 
-      for ( let child of this.children ) {
-        child.computeWorldMatrix(graph);
-      }
+    for ( let child of this.children ) {
+      child.computeWorldMatrix(graph);
+    }
 
-      graph.popModelMatrix();
-    //}
+    graph.popModelMatrix();
   }
 
   public render(  projectionMatrix: Float32Array,
@@ -394,6 +512,10 @@ export class Mesh implements IMesh {
             // matrices
             if (program.modelMatrix) {
               this.context.uniformMatrix4fv(program.modelMatrix,      false, this.worldMatrix.toArray());
+            }
+            if (program.normalMatrix) {
+              this.computeNormalMatrix();
+              this.context.uniformMatrix3fv(program.normalMatrix,     false, this.normalMatrix.toArray());
             }
             if (program.projectionMatrix) {
               this.context.uniformMatrix4fv(program.projectionMatrix, false, projectionMatrix);

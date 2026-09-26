@@ -1,5 +1,4 @@
-import { PerspectiveCamera } from "../../dist/roostr";
-import { Vector3 } from "@lcluber/type6js";
+import { PerspectiveCamera, Vec3 } from "../../dist/roostr";
 import { createMockContext } from "../helpers/webgl-mock";
 
 test("initializes position, target and up vectors", () => {
@@ -49,18 +48,24 @@ test("setPosition updates camera position and recomputes view matrix", () => {
   const context = createMockContext();
   const camera = new PerspectiveCamera(45, 0.1, 1000, context);
   const oldViewMatrix = Array.from(camera.getViewMatrix());
-  camera.setPosition(new Vector3(0, 0, 10));
+  camera.setPosition(new Vec3(0, 0, 10));
   expect(camera.position.toArray()).toEqual([0, 0, 10]);
   expect(Array.from(camera.getViewMatrix())).not.toEqual(oldViewMatrix);
+
+  // Scalar overload
+  camera.setPosition(0, 5, 20);
+  expect(camera.position.toArray()).toEqual([0, 5, 20]);
 });
 
-test("setTarget and setUp update camera target and up vectors", () => {
+test("setTarget, lookAt and setUp update camera target and up vectors", () => {
   const context = createMockContext();
   const camera = new PerspectiveCamera(45, 0.1, 1000, context);
-  camera.setTarget(new Vector3(0, 1, 0));
+  camera.setTarget(new Vec3(0, 1, 0));
   expect(camera.target.toArray()).toEqual([0, 1, 0]);
-  camera.setUp(new Vector3(0, 0, 1));
+  camera.setUp(new Vec3(0, 0, 1));
   expect(camera.up.toArray()).toEqual([0, 0, 1]);
+  camera.lookAt(new Vec3(5, 5, 5));
+  expect(camera.target.toArray()).toEqual([5, 5, 5]);
 });
 
 test("default camera initializes view matrix to identity instead of zero", () => {
@@ -78,8 +83,8 @@ test("default camera initializes view matrix to identity instead of zero", () =>
 test("reverts to identity view matrix when position equals target", () => {
   const context = createMockContext();
   const camera = new PerspectiveCamera(45, 0.1, 1000, context);
-  camera.setPosition(new Vector3(0, 0, 10));
-  camera.setTarget(new Vector3(0, 0, 10));
+  camera.setPosition(new Vec3(0, 0, 10));
+  camera.setTarget(new Vec3(0, 0, 10));
   const identity = new Float32Array([
     1, 0, 0, 0,
     0, 1, 0, 0,
@@ -95,4 +100,26 @@ test("safely handles null or undefined viewport without throwing", () => {
   expect(() => new PerspectiveCamera(45, 0.1, 1000, context)).not.toThrow();
   const camera = new PerspectiveCamera(45, 0.1, 1000, context);
   expect(() => camera.setProjectionMatrix(null)).not.toThrow();
+});
+
+test("getViewMatrixObject and getProjectionMatrixObject return live Mat4x3 and Mat4 instances", () => {
+  const context = createMockContext();
+  const camera = new PerspectiveCamera(45, 0.1, 1000, context);
+  const viewMat = camera.getViewMatrixObject();
+  const projMat = camera.getProjectionMatrixObject();
+
+  expect(viewMat).toBe(camera.viewMatrix);
+  expect(projMat).toBe(camera.projectionMatrix);
+  expect(typeof viewMat.invertAffine).toBe("function");
+  expect(typeof projMat.invert).toBe("function");
+});
+
+test("setTarget and setUp accept scalar coordinates", () => {
+  const context = createMockContext();
+  const camera = new PerspectiveCamera(45, 0.1, 1000, context);
+  camera.setTarget(1, 2, 3);
+  expect(camera.target.toArray()).toEqual([1, 2, 3]);
+
+  camera.setUp(0, 0, 1);
+  expect(camera.up.toArray()).toEqual([0, 0, 1]);
 });

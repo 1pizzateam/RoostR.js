@@ -1,4 +1,4 @@
-import {Vector3} from '@lcluber/type6js';
+import { Vec3 } from '@1pizzateam/spock';
 
 import { PointLight } from './point';
 
@@ -6,40 +6,16 @@ export class SpotLight extends PointLight {
 
   cutoff : number;
   exponent : number;
-  direction : Vector3;
+  direction : Vec3;
 
   constructor() {
     super();
 
     this.cutoff = 180;
     this.exponent = 0;
-    this.direction = new Vector3(1.0,0.0,0.0);
+    this.direction = new Vec3(1.0, 0.0, 0.0);
     this.type = 'spot';
   }
-
-  // public setPosition(x,y,z){
-  //   this.pointLight.setPosition(x,y,z);
-  // }
-  //
-  // public setDiffuse(){
-  //   this.pointLight.setDiffuse(x,y,z);
-  // }
-  //
-  // public setSpecular(){
-  //   this.pointLight.setSpecular(x,y,z);
-  // }
-  //
-  // public setConstantAttenuation(){
-  //
-  // }
-  //
-  // public setLinearAttenuation(){
-  //
-  // }
-  //
-  // public setQuadraticAttenuation(){
-  //
-  // }
 
   public setCutoff(value: number): void {
     this.cutoff = value;
@@ -49,8 +25,12 @@ export class SpotLight extends PointLight {
     this.exponent = value;
   }
 
-  public setDirection(direction: Vector3): void {
-    this.direction.copy(direction);
+  public setDirection(xOrVec: Vec3 | number, y?: number, z?: number): void {
+    if (xOrVec instanceof Vec3) {
+      this.direction.copy(xOrVec);
+    } else {
+      this.direction.setScalar(xOrVec, y, z);
+    }
   }
 
   // public getPosition(){

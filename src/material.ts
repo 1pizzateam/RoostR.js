@@ -1,21 +1,21 @@
-import {Vector3} from '@lcluber/type6js';
+import { Vec3 } from '@1pizzateam/spock';
 
 import { Uniform } from './uniform';
 import { IMaterialUniforms } from './interfaces';
 
 export class Material {
 
-  ambient   : Vector3;
-  diffuse   : Vector3;
-  specular  : Vector3;
+  ambient   : Vec3;
+  diffuse   : Vec3;
+  specular  : Vec3;
   shininess : number;
 
   uniforms : IMaterialUniforms;
 
   constructor(){
-    this.ambient   = new Vector3(0.5, 0.5, 0.5);
-    this.diffuse   = new Vector3(0.6, 0.6, 0.6);
-    this.specular  = new Vector3(0.8, 0.8, 0.8);
+    this.ambient   = new Vec3(0.5, 0.5, 0.5);
+    this.diffuse   = new Vec3(0.6, 0.6, 0.6);
+    this.specular  = new Vec3(0.8, 0.8, 0.8);
     this.shininess = 8.0;
 
     this.uniforms = {
@@ -27,18 +27,30 @@ export class Material {
 
   }
 
-  public setAmbient(vector3: Vector3): void {
-    this.ambient.copy(vector3);
+  public setAmbient(xOrVec: Vec3 | number, y?: number, z?: number): void {
+    if (xOrVec instanceof Vec3) {
+      this.ambient.copy(xOrVec);
+    } else {
+      this.ambient.setScalar(xOrVec, y, z);
+    }
     this.uniforms.materialAmbient.value = this.ambient.toArray();
   }
 
-  public setDiffuse(vector3: Vector3): void {
-    this.diffuse.copy(vector3);
+  public setDiffuse(xOrVec: Vec3 | number, y?: number, z?: number): void {
+    if (xOrVec instanceof Vec3) {
+      this.diffuse.copy(xOrVec);
+    } else {
+      this.diffuse.setScalar(xOrVec, y, z);
+    }
     this.uniforms.materialDiffuse.value = this.diffuse.toArray();
   }
 
-  public setSpecular(vector3: Vector3): void {
-    this.specular.copy(vector3);
+  public setSpecular(xOrVec: Vec3 | number, y?: number, z?: number): void {
+    if (xOrVec instanceof Vec3) {
+      this.specular.copy(xOrVec);
+    } else {
+      this.specular.setScalar(xOrVec, y, z);
+    }
     this.uniforms.materialSpecular.value = this.specular.toArray();
   }
 

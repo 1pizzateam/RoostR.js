@@ -3,7 +3,7 @@ import dts from "rollup-plugin-dts";
 const config = [
   {
     input: "build/es6/roostr.js",
-    external: ["@lcluber/type6js"],
+    external: ["@1pizzateam/spock"],
     output: {
       file: "build/roostr.mjs",
       format: "es",

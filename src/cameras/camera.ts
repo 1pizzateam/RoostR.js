@@ -1,18 +1,18 @@
-import { Vector3, Matrix4x3, Matrix4x4 } from '@lcluber/type6js';
+import { Vec3, Mat4x3, Mat4 } from '@1pizzateam/spock';
 
 export class Camera {
 
-  viewMatrix : Matrix4x3;
-  projectionMatrix : Matrix4x4;
+  viewMatrix : Mat4x3;
+  projectionMatrix : Mat4;
 
-  position : Vector3;
-  target   : Vector3;
-  up       : Vector3;
+  position : Vec3;
+  target   : Vec3;
+  up       : Vec3;
 
-  constructor(position: Vector3, target: Vector3, up: Vector3) {
+  constructor(position: Vec3, target: Vec3, up: Vec3) {
 
-    this.viewMatrix = new Matrix4x3();
-    this.projectionMatrix = new Matrix4x4();
+    this.viewMatrix = new Mat4x3();
+    this.projectionMatrix = new Mat4();
 
     this.viewMatrix.identity();
     this.projectionMatrix.identity();
@@ -24,9 +24,7 @@ export class Camera {
   }
 
   public setViewMatrix(): void {
-    if (this.position.x === this.target.x && 
-        this.position.y === this.target.y && 
-        this.position.z === this.target.z) {
+    if (this.position.equals(this.target)) {
       this.viewMatrix.identity();
     } else {
       this.viewMatrix.lookAtRH(
@@ -37,19 +35,35 @@ export class Camera {
     }
   }
 
-  public setPosition(vector3:Vector3): void {
-    this.position.copy(vector3);
+  public setPosition(xOrVec: Vec3 | number, y?: number, z?: number): void {
+    if (xOrVec instanceof Vec3) {
+      this.position.copy(xOrVec);
+    } else {
+      this.position.setScalar(xOrVec, y, z);
+    }
     this.setViewMatrix();
   }
 
-  public setTarget(vector3:Vector3): void {
-    this.target.copy(vector3);
+  public setTarget(xOrVec: Vec3 | number, y?: number, z?: number): void {
+    if (xOrVec instanceof Vec3) {
+      this.target.copy(xOrVec);
+    } else {
+      this.target.setScalar(xOrVec, y, z);
+    }
     this.setViewMatrix();
   }
 
-  public setUp(vector3:Vector3): void {
-    this.up.copy(vector3);
+  public setUp(xOrVec: Vec3 | number, y?: number, z?: number): void {
+    if (xOrVec instanceof Vec3) {
+      this.up.copy(xOrVec);
+    } else {
+      this.up.setScalar(xOrVec, y, z);
+    }
     this.setViewMatrix();
+  }
+
+  public lookAt(target: Vec3): void {
+    this.setTarget(target);
   }
 
   public getViewMatrix(): Float32Array {
@@ -58,6 +72,14 @@ export class Camera {
 
   public getProjectionMatrix(): Float32Array {
     return this.projectionMatrix.toArray();
+  }
+
+  public getViewMatrixObject(): Mat4x3 {
+    return this.viewMatrix;
+  }
+
+  public getProjectionMatrixObject(): Mat4 {
+    return this.projectionMatrix;
   }
 
 }

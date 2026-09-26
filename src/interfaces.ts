@@ -3,7 +3,7 @@ import { SubMesh } from './geometry/submesh';
 import { MeshRenderer }  from './renderer/mesh';
 import { eDrawMethod } from './mesh';
 import { Material }  from './material';
-import { Matrix4x3 } from '@lcluber/type6js';
+import { Mat4x3, Vec3, Quat, Mat3 } from '@1pizzateam/spock';
 
 export interface IGeometry {
   vertices    : number[] | Float32Array | null;
@@ -38,9 +38,14 @@ export interface IMesh extends IGeometry {
   indexBuffer?   : WebGLBuffer | null;
   normalBuffer?   : WebGLBuffer | null;
   texCoordBuffer? : WebGLBuffer | null;
-  modelMatrix?    : Matrix4x3;
-  rotationMatrix? : Matrix4x3;
-  worldMatrix?    : Matrix4x3;
+  position?       : Vec3;
+  rotation?       : Vec3;
+  scale?          : Vec3;
+  quaternion?     : Quat;
+  modelMatrix?    : Mat4x3;
+  rotationMatrix? : Mat4x3;
+  worldMatrix?    : Mat4x3;
+  normalMatrix?   : Mat3;
   active? : boolean;
   drawMethod? : eDrawMethod;
   programs? : IProgram[];
@@ -75,6 +80,7 @@ export interface IProgram extends WebGLProgram {
   textureCoord      : GLint;
   sampler           : WebGLUniformLocation | null;
   modelMatrix       : WebGLUniformLocation | null;
+  normalMatrix?     : WebGLUniformLocation | null;
   projectionMatrix  : WebGLUniformLocation | null;
   viewMatrix        : WebGLUniformLocation | null;
   time              : WebGLUniformLocation | null;

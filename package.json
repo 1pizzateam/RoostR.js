@@ -52,9 +52,6 @@
   "engines": {
     "node": ">= 22"
   },
-  "dependencies": {
-    "@lcluber/type6js": "3.0.0"
-  },
   "devDependencies": {
     "@types/jest": "29.5.14",
     "@types/node": "26.4.1",
@@ -63,5 +60,8 @@
     "rollup": "4.63.1",
     "rollup-plugin-dts": "6.5.1",
     "typescript": "6.0.3"
+  },
+  "dependencies": {
+    "@1pizzateam/spock": "4.2.0"
   }
 }

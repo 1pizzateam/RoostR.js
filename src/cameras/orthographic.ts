@@ -1,4 +1,4 @@
-import { Vector3 } from '@lcluber/type6js';
+import { Vec3 } from '@1pizzateam/spock';
 import { Camera } from './camera';
 
 export class OrthographicCamera extends Camera {
@@ -19,9 +19,9 @@ export class OrthographicCamera extends Camera {
               far: number
             ) {
 
-    super(  new Vector3(),
-            new Vector3(),
-            new Vector3(0.0, 1.0, 0.0)
+    super(  new Vec3(),
+            new Vec3(),
+            new Vec3(0.0, 1.0, 0.0)
           );
 
     this.left = left;

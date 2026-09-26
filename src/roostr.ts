@@ -22,3 +22,4 @@
  export { Program }            from './program';
  export { Shader }             from './shader';
  export { Uniform }            from './uniform';
+ export { Vec3, Vec2, Mat4x3, Mat4, Mat3, Quat, Trigo } from '@1pizzateam/spock';
