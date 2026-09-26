@@ -12,16 +12,26 @@ export class Program {
     if (program) {
       let vshader = Shader.create(context, vertexShader, 'VERTEX_SHADER');
       let fshader = Shader.create(context, fragmentShader, 'FRAGMENT_SHADER');
-      if (vshader) {
-        context.attachShader(program, vshader);
+      if (!vshader || !fshader) {
+        if (vshader) {
+          context.deleteShader(vshader);
+        }
+        if (fshader) {
+          context.deleteShader(fshader);
+        }
+        context.deleteProgram(program);
+        return null;
       }
-      if (fshader) {
-        context.attachShader(program, fshader);
-      }
+      context.attachShader(program, vshader);
+      context.attachShader(program, fshader);
       context.linkProgram(program);
     
       if(!context.getProgramParameter(program, context.LINK_STATUS)){
         console.log(context.getProgramInfoLog(program));
+        context.deleteShader(vshader);
+        context.deleteShader(fshader);
+        context.deleteProgram(program);
+        return null;
       }
     }
 

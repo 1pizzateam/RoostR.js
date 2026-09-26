@@ -1,5 +1,6 @@
 import { jest } from '@jest/globals';
-import { Mesh, Quad, Material } from "../dist/roostr";
+import { Mesh, Quad, Cube, Material } from "../dist/roostr";
+import { Matrix4x3 } from "@lcluber/type6js";
 import { createMockContext } from "./helpers/webgl-mock";
 
 function createMesh(context = createMockContext()) {
@@ -191,3 +192,272 @@ test("activateBlendMode / deactivateBlendMode toggle the blendMode flag", () => 
   mesh.deactivateBlendMode();
   expect(mesh.blendMode).toBe(false);
 });
+
+test("render binds normal buffer and sets 3-component normal attribute pointer when geometry has normals", () => {
+  const context = createMockContext();
+  const cube = new Cube(2);
+  const mesh = new Mesh(cube, context);
+  mesh.addProgram("vertex-src", "fragment-src", new Material());
+
+  const lights = {
+    position: [], diffuse: [], specular: [],
+    constantAttenuation: [], linearAttenuation: [], quadraticAttenuation: [],
+    cutoff: [], exponent: [], direction: [], type: [],
+  };
+
+  mesh.render(new Float32Array(16), new Float32Array(12), lights, 0, false);
+
+  expect(context.bindBuffer).toHaveBeenCalledWith(context.ARRAY_BUFFER, mesh.normalBuffer);
+  expect(context.vertexAttribPointer).toHaveBeenCalledWith(
+    expect.anything(),
+    3,
+    context.FLOAT,
+    false,
+    0,
+    0
+  );
+});
+
+test("render does not crash when active mesh has no programs", () => {
+  const { mesh } = createMesh();
+  const lights = {
+    position: [], diffuse: [], specular: [],
+    constantAttenuation: [], linearAttenuation: [], quadraticAttenuation: [],
+    cutoff: [], exponent: [], direction: [], type: [],
+  };
+  expect(() => {
+    mesh.render(new Float32Array(16), new Float32Array(12), lights, 0, false);
+  }).not.toThrow();
+});
+
+test("addProgram returns false if shader program fails to link", () => {
+  const context = createMockContext();
+  context.getProgramParameter.mockReturnValue(false);
+  const quad = new Quad(2, 2);
+  const mesh = new Mesh(quad, context);
+  const result = mesh.addProgram("vert", "frag", new Material());
+  expect(result).toBe(false);
+  expect(mesh.nbPrograms).toBe(0);
+});
+
+test("drawArrays respects submesh start offset", () => {
+  const context = createMockContext();
+  const geometry = {
+    vertices: [0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0],
+    indices: null,
+    normals: null,
+    uvs: null,
+    itemSize: 3,
+    primitive: "TRIANGLES",
+    subMeshes: [{ start: 1, count: 3 }],
+  };
+  const mesh = new Mesh(geometry, context);
+  mesh.addProgram("vert", "frag", new Material());
+  const lights = {
+    position: [], diffuse: [], specular: [],
+    constantAttenuation: [], linearAttenuation: [], quadraticAttenuation: [],
+    cutoff: [], exponent: [], direction: [], type: [],
+  };
+  mesh.render(new Float32Array(16), new Float32Array(12), lights, 0, false);
+  expect(context.drawArrays).toHaveBeenCalledWith(context.TRIANGLES, 1, 3);
+});
+
+test("setTexture after addProgram updates sampler uniform on existing programs", () => {
+  const { mesh, context } = createMesh();
+  mesh.addProgram("vertex-src", "fragment-src", new Material());
+  const img = document.createElement("img");
+  mesh.setTexture(img);
+  expect(context.getUniformLocation).toHaveBeenCalledWith(expect.anything(), "uSampler");
+});
+
+test("initializes modelMatrix and rotationMatrix to identity", () => {
+  const { mesh } = createMesh();
+  const identity = new Float32Array([
+    1, 0, 0, 0,
+    0, 1, 0, 0,
+    0, 0, 1, 0,
+    0, 0, 0, 1
+  ]);
+  expect(mesh.modelMatrix.toArray()).toEqual(identity);
+  expect(mesh.rotationMatrix.toArray()).toEqual(identity);
+});
+
+test("computeWorldMatrix preserves identity when local modelMatrix and parent are identity", () => {
+  const { mesh } = createMesh();
+  const parentMatrix = new Matrix4x3();
+  parentMatrix.identity();
+  const graph = {
+    getWorldMatrix: jest.fn(() => parentMatrix),
+    pushModelMatrix: jest.fn(),
+    popModelMatrix: jest.fn(),
+  };
+  mesh.computeWorldMatrix(graph);
+  const identity = new Float32Array([
+    1, 0, 0, 0,
+    0, 1, 0, 0,
+    0, 0, 1, 0,
+    0, 0, 0, 1
+  ]);
+  expect(mesh.worldMatrix.toArray()).toEqual(identity);
+});
+
+test("addCustomUniform after addProgram updates uniform location on existing programs", () => {
+  const { mesh, context } = createMesh();
+  mesh.addProgram("vertex-src", "fragment-src", new Material());
+  context.getUniformLocation.mockClear();
+  mesh.addCustomUniform("customAlpha", "uniform1f", 0.5);
+  expect(context.getUniformLocation).toHaveBeenCalledWith(expect.anything(), "uCustomAlpha");
+});
+
+test("render falls back to last material when mesh has more submeshes than materials", () => {
+  const context = createMockContext();
+  const geometry = {
+    vertices: [0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0],
+    indices: [0, 1, 2, 1, 2, 3],
+    normals: null,
+    uvs: null,
+    itemSize: 3,
+    primitive: "TRIANGLES",
+    subMeshes: [
+      { start: 0, count: 3 },
+      { start: 3, count: 3 },
+    ],
+  };
+  const mesh = new Mesh(geometry, context);
+  const material = new Material();
+  mesh.addProgram("vert", "frag", material);
+
+  const lights = {
+    position: [], diffuse: [], specular: [],
+    constantAttenuation: [], linearAttenuation: [], quadraticAttenuation: [],
+    cutoff: [], exponent: [], direction: [], type: [],
+  };
+
+  expect(() => {
+    mesh.render(new Float32Array(16), new Float32Array(12), lights, 0, false);
+  }).not.toThrow();
+  expect(context.drawElements).toHaveBeenCalledTimes(2);
+});
+
+test("parent mesh with 0 programs still renders active children", () => {
+  const { mesh: parent } = createMesh(); // no programs added
+  const { mesh: child, context } = createMesh();
+  child.addProgram("vert", "frag", new Material());
+  parent.addChild(child);
+
+  const lights = {
+    position: [], diffuse: [], specular: [],
+    constantAttenuation: [], linearAttenuation: [], quadraticAttenuation: [],
+    cutoff: [], exponent: [], direction: [], type: [],
+  };
+
+  parent.render(new Float32Array(16), new Float32Array(12), lights, 0, false);
+  expect(context.drawArrays).toHaveBeenCalled();
+});
+
+test("addChild ignores duplicate children and removeChild detaches child", () => {
+  const { mesh: parent } = createMesh();
+  const { mesh: child } = createMesh();
+  parent.addChild(child);
+  parent.addChild(child);
+  expect(parent.children.length).toBe(1);
+
+  expect(parent.removeChild(child)).toBe(true);
+  expect(parent.children).toEqual([]);
+  expect(parent.removeChild(child)).toBe(false);
+});
+
+test("clearPrograms deletes WebGL programs via context.deleteProgram", () => {
+  const { mesh, context } = createMesh();
+  mesh.addProgram("vert", "frag", new Material());
+  expect(mesh.programs.length).toBe(1);
+  mesh.clearPrograms();
+  expect(context.deleteProgram).toHaveBeenCalled();
+  expect(mesh.nbPrograms).toBe(0);
+});
+
+test("setTexture deletes previous texture on reassignment to prevent memory leak", () => {
+  const { mesh, context } = createMesh();
+  const img1 = document.createElement("img");
+  const img2 = document.createElement("img");
+  mesh.setTexture(img1);
+  const firstTexture = mesh.WebGLTexture;
+  mesh.setTexture(img2);
+  expect(context.deleteTexture).toHaveBeenCalledWith(firstTexture);
+});
+
+test("addMaterial after addProgram resolves uniform locations without throwing", () => {
+  const context = createMockContext();
+  const geometry = {
+    vertices: [0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0],
+    indices: [0, 1, 2, 1, 2, 3],
+    normals: null,
+    uvs: null,
+    itemSize: 3,
+    primitive: "TRIANGLES",
+    subMeshes: [
+      { start: 0, count: 3 },
+      { start: 3, count: 3 },
+    ],
+  };
+  const mesh = new Mesh(geometry, context);
+  mesh.addProgram("vert", "frag", new Material());
+  expect(() => {
+    mesh.addMaterial(new Material());
+  }).not.toThrow();
+  expect(mesh.materials.length).toBe(2);
+});
+
+test("render passes false for transpose to custom matrix uniforms", () => {
+  const { mesh, context } = createMesh();
+  mesh.addProgram("vert", "frag", new Material());
+  const matrixData = new Float32Array(16);
+  mesh.addCustomUniform("testMatrix", "uniformMatrix4fv", matrixData);
+  mesh.programs[0].testMatrix = { id: "testMatrixLoc" };
+
+  const lights = {
+    position: [], diffuse: [], specular: [],
+    constantAttenuation: [], linearAttenuation: [], quadraticAttenuation: [],
+    cutoff: [], exponent: [], direction: [], type: [],
+  };
+
+  mesh.render(new Float32Array(16), new Float32Array(12), lights, 0, false);
+  expect(context.uniformMatrix4fv).toHaveBeenCalledWith(
+    { id: "testMatrixLoc" },
+    false,
+    matrixData
+  );
+});
+
+test("render binds UV buffer when geometry has uvs even without a WebGLTexture", () => {
+  const { mesh, context } = createMesh(); // Quad has uvs but no WebGLTexture set
+  mesh.addProgram("vert", "frag", new Material());
+  mesh.programs[0].textureCoord = 2; // attribute exists and is enabled
+
+  const lights = {
+    position: [], diffuse: [], specular: [],
+    constantAttenuation: [], linearAttenuation: [], quadraticAttenuation: [],
+    cutoff: [], exponent: [], direction: [], type: [],
+  };
+
+  mesh.render(new Float32Array(16), new Float32Array(12), lights, 0, false);
+  expect(context.bindBuffer).toHaveBeenCalledWith(context.ARRAY_BUFFER, mesh.texCoordBuffer);
+  expect(context.vertexAttribPointer).toHaveBeenCalledWith(2, 2, context.FLOAT, false, 0, 0);
+});
+
+test("destroy cleans up buffers, textures, and programs", () => {
+  const { mesh, context } = createMesh();
+  mesh.addProgram("vert", "frag", new Material());
+  mesh.setTexture(document.createElement("img"));
+
+  mesh.destroy();
+
+  expect(context.deleteBuffer).toHaveBeenCalled();
+  expect(context.deleteTexture).toHaveBeenCalled();
+  expect(context.deleteProgram).toHaveBeenCalled();
+  expect(mesh.vertexBuffer).toBeNull();
+  expect(mesh.texCoordBuffer).toBeNull();
+  expect(mesh.WebGLTexture).toBeNull();
+  expect(mesh.nbPrograms).toBe(0);
+});
+

@@ -3,7 +3,7 @@ import { SubMesh } from './submesh';
 
 export class FullscreenQuad extends BasicMesh {
 
-  uvs: number[];
+  declare uvs: number[];
 
   constructor() {
     super();

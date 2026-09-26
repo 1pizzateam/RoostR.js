@@ -22,8 +22,10 @@ export class SceneGraph {
     this.model[this.modelStackTop].copy(modelMatrix);
   }
 
-  public popModelMatrix(): void{
-    this.modelStackTop--;
+  public popModelMatrix(): void {
+    if (this.modelStackTop > 0) {
+      this.modelStackTop--;
+    }
   }
 
   public getWorldMatrix(): Matrix4x3 {

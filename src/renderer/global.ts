@@ -1,23 +1,30 @@
 
 export class Renderer {
 
-  canvas: HTMLCanvasElement;
-  context: WebGLRenderingContext;
+  canvas: HTMLCanvasElement | null;
+  context: WebGLRenderingContext | null;
 
   constructor(canvasID:string) {
-    this.canvas = this.findById(canvasID) as HTMLCanvasElement;
-    // default resolution
-    this.canvas.width = 1280;
-    this.canvas.height = 720;
-    this.context = <WebGLRenderingContext>this.canvas.getContext("webgl") || 
-                   <WebGLRenderingContext>this.canvas.getContext("experimental-webgl",
-                                                                 {alpha:false}
-                                                                );
+    this.canvas = this.findById(canvasID);
+    this.context = null;
+    if (this.canvas) {
+      // default resolution
+      this.canvas.width = 1280;
+      this.canvas.height = 720;
+      const options = { alpha: false };
+      this.context = (<WebGLRenderingContext>this.canvas.getContext("webgl", options) || 
+                      <WebGLRenderingContext>this.canvas.getContext("experimental-webgl", options)) || null;
 
-    this.defaultSettings();
+      if (this.context) {
+        this.defaultSettings();
+      }
+    }
   }
 
   public defaultSettings (): void {
+    if (!this.context) {
+      return;
+    }
     this.context.getExtension('OES_standard_derivatives');
     this.setFrontFace('CW');
     this.enable('CULL_FACE');
@@ -34,7 +41,9 @@ export class Renderer {
   // gl.CW: Clock-wise winding.
   // gl.CCW: Counter-clock-wise winding.
   public setFrontFace( mode: string ): void {
-    this.context.frontFace(this.context[mode]);
+    if (this.context) {
+      this.context.frontFace(this.context[mode]);
+    }
   }
 
   // specifying which WebGL capability to enable. Possible values:
@@ -51,11 +60,15 @@ export class Renderer {
   // Transparency is best implemented using blend function (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA) with primitives sorted from farthest to nearest. Note that this transparency calculation does not require the presence of alpha bitplanes in the frame buffer.
   // Blend function (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA) is also useful for rendering antialiased points and lines in arbitrary order.
   public enable( capability: string ): void {
-    this.context.enable(this.context[capability]);
+    if (this.context) {
+      this.context.enable(this.context[capability]);
+    }
   }
 
   public disable( capability: string ): void {
-    this.context.disable(this.context[capability]);
+    if (this.context) {
+      this.context.disable(this.context[capability]);
+    }
   }
 
   // specifying whether front- or back-facing polygons are candidates for culling. The default value is gl.BACK. Possible values are:
@@ -63,26 +76,46 @@ export class Renderer {
   // gl.BACK
   // gl.FRONT_AND_BACK
   public setCullFace( mode: string ): void {
-    this.context.cullFace(this.context[mode]);
+    if (this.context) {
+      this.context.cullFace(this.context[mode]);
+    }
   }
 
   // specifies the affine transformation of x and y from normalized device coordinates to window coordinates.
   public setViewport( width: number, height: number ): void {
-    this.context.viewport(0, 0, width, height); //defaut values
+    if (this.context) {
+      this.context.viewport(0, 0, width, height); //defaut values
+    }
   }
 
   // This specifies what color values to use when calling the clear() method. The values are clamped between 0 and 1.
   public setClearColor( red: number, green: number, blue: number, alpha: number ): void {
-    this.context.clearColor( red, green, blue, alpha );
+    if (this.context) {
+      this.context.clearColor( red, green, blue, alpha );
+    }
   }
 
   public clearFrame(): void {
-    this.context.clear(this.context.COLOR_BUFFER_BIT | this.context.DEPTH_BUFFER_BIT);
+    if (this.context) {
+      this.context.clear(this.context.COLOR_BUFFER_BIT | this.context.DEPTH_BUFFER_BIT);
+    }
   }
 
   public getContext(): WebGLRenderingContext | null {
     return this.context;
-	}
+  }
+
+  public getCanvas(): HTMLCanvasElement | null {
+    return this.canvas;
+  }
+
+  public setSize(width: number, height: number): void {
+    if (this.canvas) {
+      this.canvas.width = width;
+      this.canvas.height = height;
+    }
+    this.setViewport(width, height);
+  }
 
   private findById(id: string): HTMLCanvasElement | null {
     return document.getElementById(id) as HTMLCanvasElement;

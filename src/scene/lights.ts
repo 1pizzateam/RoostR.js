@@ -49,6 +49,18 @@ export class Lights {
     this['nb' + this.ucfirst(type) + 's']++;
   }
 
+  public removeLight(light:DirectionalLight | PointLight | SpotLight): boolean {
+    let type = light.type;
+    const array = this[type + 's'];
+    const index = array ? array.indexOf(light) : -1;
+    if (index !== -1) {
+      array.splice(index, 1);
+      this['nb' + this.ucfirst(type) + 's']--;
+      return true;
+    }
+    return false;
+  }
+
   private ClearFlatArrays(): void {
     for (var property in this.flatArrays){
       if (this.flatArrays.hasOwnProperty(property)){
@@ -66,9 +78,9 @@ export class Lights {
           if (this[type][j].hasOwnProperty(property) && this.flatArrays.hasOwnProperty(property)){
             var lightProperty = this[type][j][property];
             var flatArraysProperty = this.flatArrays[property];
-            if(typeof lightProperty.toArray === 'function'){//vector
+            if(lightProperty != null && typeof lightProperty.toArray === 'function'){//vector
               flatArraysProperty.push.apply(flatArraysProperty, lightProperty.toArray());
-            }else{//floats, integers, strings
+            }else if (lightProperty !== undefined) {//floats, integers, strings
               flatArraysProperty.push(lightProperty);
             }
           }
@@ -78,10 +90,21 @@ export class Lights {
     return this.flatArrays;
   }
 
-  public getFlatArray(property: string) {
+  public clear(): void {
+    this.directionals = [];
+    this.points = [];
+    this.spots = [];
+    this.nbDirectionals = 0;
+    this.nbPoints = 0;
+    this.nbSpots = 0;
+    this.ClearFlatArrays();
+  }
+
+  public getFlatArray(property: string): (number | string)[] | undefined {
     if(this.flatArrays.hasOwnProperty(property)){
       return this.flatArrays[property];
     }
+    return undefined;
   }
 
 }

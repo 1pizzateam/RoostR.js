@@ -11,6 +11,8 @@ export class Shader {
       if(!context.getShaderParameter(shader, context.COMPILE_STATUS)){
         //console.log(str);
         console.log(context.getShaderInfoLog(shader));
+        context.deleteShader(shader);
+        return null;
       }
     }
     return shader;

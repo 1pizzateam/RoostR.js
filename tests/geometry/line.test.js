@@ -29,3 +29,11 @@ test("sets itemSize to 3 and primitive to LINE_STRIP", () => {
   expect(line.itemSize).toBe(3);
   expect(line.primitive).toBe("LINE_STRIP");
 });
+
+test("inherits null indices, normals and uvs from BasicMesh", () => {
+  const line = new Line([0, 0, 0, 1, 1, 1], 1);
+  expect(line.indices).toBeNull();
+  expect(line.normals).toBeNull();
+  expect(line.uvs).toBeNull();
+});
+

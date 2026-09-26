@@ -12,10 +12,10 @@ export enum eDrawMethod { drawElements = 'drawElements', drawArrays = 'drawArray
 
 export class Mesh implements IMesh {
 
-  vertices    : number[] | null;
-  indices     : number[] | null;
-  normals     : number[] | null;
-  uvs         : number[] | null;
+  vertices    : number[] | Float32Array | null;
+  indices     : number[] | Int32Array | Uint16Array | null;
+  normals     : number[] | Float32Array | null;
+  uvs         : number[] | Float32Array | null;
   itemSize    : number | null;
   subMeshes   : SubMesh[];
   nbSubMeshes : number;
@@ -103,8 +103,9 @@ export class Mesh implements IMesh {
     this.rotationMatrix = new Matrix4x3();
     this.worldMatrix    = new Matrix4x3();
 
+    this.modelMatrix.identity();
+    this.rotationMatrix.identity();
     this.worldMatrix.identity();
-    //this.rotationMatrix.identity();
 
     this.active = true;
 
@@ -139,14 +140,30 @@ export class Mesh implements IMesh {
     return this.active;
   }
 
-  public addChild(mesh: Mesh): void{
-    this.children.push(mesh);
+  public addChild(mesh: Mesh): void {
+    if (this.children.indexOf(mesh) === -1) {
+      this.children.push(mesh);
+    }
+  }
+
+  public removeChild(mesh: Mesh): boolean {
+    const index = this.children.indexOf(mesh);
+    if (index !== -1) {
+      this.children.splice(index, 1);
+      return true;
+    }
+    return false;
   }
 
   public addProgram(vertexShader:string, fragmentShader:string, material:Material): boolean {
     if(this.nbPrograms < this.nbSubMeshes) {
 
-      this.programs.push(Program.create( this.context, vertexShader, fragmentShader ) as IProgram);
+      const program = Program.create( this.context, vertexShader, fragmentShader ) as IProgram | null;
+      if (!program) {
+        return false;
+      }
+
+      this.programs.push(program);
 
       this.addMaterial(material);
 
@@ -156,7 +173,10 @@ export class Mesh implements IMesh {
     return false;
   }
 
-  public clearPrograms(){
+  public clearPrograms(): void {
+    for (let program of this.programs) {
+      this.context.deleteProgram(program);
+    }
     this.programs = [];
     this.nbPrograms = 0;
     this.materials = [];
@@ -169,7 +189,11 @@ export class Mesh implements IMesh {
       let materialUniforms = material.uniforms;
       for(let property in materialUniforms){
         if (materialUniforms.hasOwnProperty(property)) {
-          this.addProgramUniform(property);
+          for (let program of this.programs) {
+            if (program[property] === undefined) {
+              program[property] = this.context.getUniformLocation(program, 'u' + this.ucfirst(property));
+            }
+          }
         }
       }
       return true;
@@ -182,16 +206,29 @@ export class Mesh implements IMesh {
   }
 
   public setTexture(img: HTMLImageElement): void {
+    if (this.WebGLTexture) {
+      this.context.deleteTexture(this.WebGLTexture);
+    }
     this.WebGLTexture = Texture.create(img, this.context);
-  }
-
-  public addCustomUniform(name:string, type:string, value:number|Array<number>): void {
-    if (!this.customUniforms.hasOwnProperty(name)){
-      this.customUniforms[name] = new Uniform(type, value);
+    for (let program of this.programs) {
+      if (program.sampler === undefined) {
+        program.sampler = this.context.getUniformLocation(program, 'uSampler');
+      }
     }
   }
 
-  public setCustomUniform(name: string, value: number|number[]): void {
+  public addCustomUniform(name:string, type:string, value:number|Array<number>|Float32Array|Int32Array): void {
+    if (!this.customUniforms.hasOwnProperty(name)){
+      this.customUniforms[name] = new Uniform(type, value);
+      for (let program of this.programs) {
+        if (program[name] === undefined) {
+          program[name] = this.context.getUniformLocation(program, 'u' + this.ucfirst(name));
+        }
+      }
+    }
+  }
+
+  public setCustomUniform(name: string, value: number|number[]|Float32Array|Int32Array): void {
     if (this.customUniforms.hasOwnProperty(name)){
       this.customUniforms[name].value = value;
     }
@@ -203,7 +240,7 @@ export class Mesh implements IMesh {
     if (this.normals) {
       this.addProgramAttribute('vertexNormal');
     }
-    if (this.uvs && this.WebGLTexture) {
+    if (this.uvs) {
       this.addProgramAttribute('textureCoord');
     }
     // matrix uniforms
@@ -221,26 +258,40 @@ export class Mesh implements IMesh {
       }
     }
 
-    // texture
-    if (this.WebGLTexture) {
-      this.addProgramUniform('sampler');
+    // material uniforms
+    for (let mat of this.materials) {
+      for (let property in mat.uniforms) {
+        if (mat.uniforms.hasOwnProperty(property) && program[property] === undefined) {
+          this.addProgramUniform(property);
+        }
+      }
     }
+
+    // texture
+    this.addProgramUniform('sampler');
 
     this.renderer.useProgram(program);//use program before adding static uniforms
 
     // send static uniforms
-    let viewport = this.context.getParameter(this.context.VIEWPORT);
-    this.context.uniform2f(program.screenResolution, viewport[2], viewport[3]);
+    if (program.screenResolution) {
+      let viewport = this.context.getParameter(this.context.VIEWPORT);
+      if (viewport && viewport.length >= 4) {
+        this.context.uniform2f(program.screenResolution, viewport[2], viewport[3]);
+      }
+    }
 
     this.nbPrograms ++;
 
   }
 
   private addProgramAttribute(name:string): void {
-    this.programs[this.nbPrograms][name] = this.context.getAttribLocation(this.programs[this.nbPrograms], 
-                                                                          'a' + this.ucfirst(name)
-                                                                         );
-    this.context.enableVertexAttribArray(this.programs[this.nbPrograms][name]);
+    const loc = this.context.getAttribLocation(this.programs[this.nbPrograms], 
+                                               'a' + this.ucfirst(name)
+                                              );
+    this.programs[this.nbPrograms][name] = loc;
+    if (loc !== -1) {
+      this.context.enableVertexAttribArray(loc);
+    }
   }
 
   private addProgramUniform(name:string): void {
@@ -278,77 +329,100 @@ export class Mesh implements IMesh {
                 ): void {
     if(this.isActive()) {
 
-      let program = this.programs[0];
-      // let material = null;
-      for(let i = 0 ; i < this.nbSubMeshes ; i++) {
-        if(this.blendMode === blendMode) {
-          program = this.programs[i] || this.programs[this.nbPrograms - 1] ;
+      if(this.nbPrograms > 0) {
+        let program = this.programs[0];
+        // let material = null;
+        for(let i = 0 ; i < this.nbSubMeshes ; i++) {
+          if(this.blendMode === blendMode) {
+            program = this.programs[i] || this.programs[this.nbPrograms - 1] ;
 
-          this.renderer.useProgram(program);
-          // materials
-          if (this.materials[i]) {
-            let materialUniforms = this.materials[i].uniforms;
-            for(let property in materialUniforms){
-              if (materialUniforms.hasOwnProperty(property)) {
-                let uniform = materialUniforms[property];
-                this.context[uniform.type](program[property], uniform.value);
+            this.renderer.useProgram(program);
+            // materials
+            const material = this.materials[i] || this.materials[this.materials.length - 1];
+            if (material) {
+              material.updateUniforms();
+              let materialUniforms = material.uniforms;
+              for(let property in materialUniforms){
+                if (materialUniforms.hasOwnProperty(property) && program[property]) {
+                  let uniform = materialUniforms[property];
+                  this.context[uniform.type](program[property], uniform.value);
+                }
               }
             }
-          }
-          // positions
-          if(this.indices) {
-            this.renderer.bindBuffer('ELEMENT_ARRAY_BUFFER', <WebGLBuffer>this.indexBuffer);
-          }
-          this.renderer.bindBuffer('ARRAY_BUFFER', <WebGLBuffer>this.vertexBuffer);
-          this.renderer.vertexAttribPointer(  program.vertexPosition, 
-                                              <number>this.itemSize, 
-                                              'FLOAT', 
-                                              false, 
-                                              0, 
-                                              0
-                                           );
-
-          // normals
-          if (this.normals) {
-            this.renderer.vertexAttribPointer(  program.vertexNormal, 
-                                                <number>this.itemSize, 
-                                                'FLOAT', 
-                                                false, 
-                                                0, 
-                                                0
-                                              );
-          }
-
-          // uvs
-          if (this.uvs && this.WebGLTexture) {
-            this.renderer.bindBuffer('ARRAY_BUFFER', <WebGLBuffer>this.texCoordBuffer );
-            this.renderer.vertexAttribPointer(program.textureCoord, 2, 'FLOAT', false, 0, 0);
-          }
-
-          // texture
-          if(this.WebGLTexture){
-            this.context.activeTexture(this.context.TEXTURE0);
-            this.context.bindTexture(this.context.TEXTURE_2D, this.WebGLTexture);
-            this.context.uniform1i(program.sampler, 0);
-          }
-
-          // matrices
-          this.context.uniformMatrix4fv(program.modelMatrix,      false, this.worldMatrix.toArray());
-          this.context.uniformMatrix4fv(program.projectionMatrix, false, projectionMatrix);
-          this.context.uniformMatrix4fv(program.viewMatrix,       false, viewMatrix);
-
-          // default (time)
-          this.context.uniform1f(program.time, time);
-
-          // custom
-          for (let property in this.customUniforms) {
-            if (this.customUniforms.hasOwnProperty(property)) {
-              let uniform = this.customUniforms[property];
-              this.context[uniform.type](program[property], uniform.value);
+            // positions
+            if(this.indices) {
+              this.renderer.bindBuffer('ELEMENT_ARRAY_BUFFER', <WebGLBuffer>this.indexBuffer);
             }
-          }
+            this.renderer.bindBuffer('ARRAY_BUFFER', <WebGLBuffer>this.vertexBuffer);
+            if (program.vertexPosition !== -1 && program.vertexPosition !== undefined) {
+              this.renderer.vertexAttribPointer(  program.vertexPosition, 
+                                                  <number>this.itemSize, 
+                                                  'FLOAT', 
+                                                  false, 
+                                                  0, 
+                                                  0
+                                               );
+            }
 
-          this.renderer[this.drawMethod](<string>this.primitive, this.subMeshes[i]);
+            // normals
+            if (this.normals && program.vertexNormal !== -1 && program.vertexNormal !== undefined) {
+              this.renderer.bindBuffer('ARRAY_BUFFER', <WebGLBuffer>this.normalBuffer);
+              this.renderer.vertexAttribPointer(  program.vertexNormal, 
+                                                  3, 
+                                                  'FLOAT', 
+                                                  false, 
+                                                  0, 
+                                                  0
+                                                );
+            }
+
+            // uvs
+            if (this.uvs && program.textureCoord !== -1 && program.textureCoord !== undefined) {
+              this.renderer.bindBuffer('ARRAY_BUFFER', <WebGLBuffer>this.texCoordBuffer );
+              this.renderer.vertexAttribPointer(program.textureCoord, 2, 'FLOAT', false, 0, 0);
+            }
+
+            // texture
+            if(this.WebGLTexture){
+              this.context.activeTexture(this.context.TEXTURE0);
+              this.context.bindTexture(this.context.TEXTURE_2D, this.WebGLTexture);
+              if (program.sampler) {
+                this.context.uniform1i(program.sampler, 0);
+              }
+            }
+
+            // matrices
+            if (program.modelMatrix) {
+              this.context.uniformMatrix4fv(program.modelMatrix,      false, this.worldMatrix.toArray());
+            }
+            if (program.projectionMatrix) {
+              this.context.uniformMatrix4fv(program.projectionMatrix, false, projectionMatrix);
+            }
+            if (program.viewMatrix) {
+              this.context.uniformMatrix4fv(program.viewMatrix,       false, viewMatrix);
+            }
+
+            // default (time)
+            if (program.time) {
+              this.context.uniform1f(program.time, time);
+            }
+
+            // custom
+            for (let property in this.customUniforms) {
+              if (this.customUniforms.hasOwnProperty(property)) {
+                let uniform = this.customUniforms[property];
+                if (program[property]) {
+                  if (uniform.type.indexOf('Matrix') !== -1) {
+                    this.context[uniform.type](program[property], false, uniform.value);
+                  } else {
+                    this.context[uniform.type](program[property], uniform.value);
+                  }
+                }
+              }
+            }
+
+            this.renderer[this.drawMethod](<string>this.primitive, this.subMeshes[i]);
+          }
         }
       }
 
@@ -361,6 +435,30 @@ export class Mesh implements IMesh {
                     );
       }
 
+    }
+  }
+
+  public destroy(): void {
+    this.clearPrograms();
+    if (this.vertexBuffer) {
+      this.context.deleteBuffer(this.vertexBuffer);
+      this.vertexBuffer = null;
+    }
+    if (this.indexBuffer) {
+      this.context.deleteBuffer(this.indexBuffer);
+      this.indexBuffer = null;
+    }
+    if (this.normalBuffer) {
+      this.context.deleteBuffer(this.normalBuffer);
+      this.normalBuffer = null;
+    }
+    if (this.texCoordBuffer) {
+      this.context.deleteBuffer(this.texCoordBuffer);
+      this.texCoordBuffer = null;
+    }
+    if (this.WebGLTexture) {
+      this.context.deleteTexture(this.WebGLTexture);
+      this.WebGLTexture = null;
     }
   }
 

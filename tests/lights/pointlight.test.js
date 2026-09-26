@@ -18,3 +18,21 @@ test("initializes attenuation defaults", () => {
   expect(light.linearAttenuation).toBe(1.0);
   expect(light.quadraticAttenuation).toBe(0);
 });
+
+test("setConstantAttenuation updates constantAttenuation", () => {
+  const light = new PointLight();
+  light.setConstantAttenuation(0.5);
+  expect(light.constantAttenuation).toBe(0.5);
+});
+
+test("setLinearAttenuation updates linearAttenuation", () => {
+  const light = new PointLight();
+  light.setLinearAttenuation(0.25);
+  expect(light.linearAttenuation).toBe(0.25);
+});
+
+test("setQuadraticAttenuation updates quadraticAttenuation", () => {
+  const light = new PointLight();
+  light.setQuadraticAttenuation(0.05);
+  expect(light.quadraticAttenuation).toBe(0.05);
+});

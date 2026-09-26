@@ -36,3 +36,9 @@ test("createQuads with length 0 leaves arrays empty", () => {
   expect(multiQuad.indices).toEqual([]);
   expect(multiQuad.uvs).toEqual([]);
 });
+
+test("createQuads updates subMeshes[0].count to match total indices created", () => {
+  const multiQuad = new MultiQuad(2, 2);
+  multiQuad.createQuads(4);
+  expect(multiQuad.subMeshes[0].count).toBe(4 * 6);
+});

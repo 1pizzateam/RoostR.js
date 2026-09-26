@@ -24,14 +24,18 @@ export class PerspectiveCamera extends Camera {
 
     //this.context = context;
 
-    this.setProjectionMatrix(context.getParameter(context.VIEWPORT));
+    const viewport = context ? context.getParameter(context.VIEWPORT) : null;
+    this.setProjectionMatrix(viewport);
     super.setViewMatrix();
 
   }
 
-  public setProjectionMatrix(viewport: Int32Array): void {
-    //let viewport = this.context.getParameter(this.context.VIEWPORT);
-    this.ratio = viewport[2] / Math.max(1, viewport[3]);
+  public setProjectionMatrix(viewport?: Int32Array | number[] | null): void {
+    if (viewport && viewport.length >= 4) {
+      this.ratio = viewport[2] / Math.max(1, viewport[3]);
+    } else {
+      this.ratio = this.ratio || 1;
+    }
     this.projectionMatrix.perspective(this.fov, this.ratio, this.zNear, this.zFar);
   }
 

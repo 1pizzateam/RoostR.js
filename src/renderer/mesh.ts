@@ -82,7 +82,7 @@ export class MeshRenderer {
     // gl.TRIANGLE_STRIP
     // gl.TRIANGLE_FAN
     // gl.TRIANGLES: Draws a triangle for a group of three vertices.
-    this.context.drawArrays(this.context[primitive], 0, subMesh.count);
+    this.context.drawArrays(this.context[primitive], subMesh.start, subMesh.count);
   }
 
   // gl.ACTIVE_TEXTURE	GLenum

@@ -4,7 +4,7 @@ import { SubMesh } from './submesh';
 export class Quad extends BasicMesh {
 
   declare vertices    : number[];
-  uvs                 : number[];
+  declare uvs         : number[];
   declare subMeshes   : SubMesh[];
   declare itemSize    : number;
   // nbSubMeshes : number;

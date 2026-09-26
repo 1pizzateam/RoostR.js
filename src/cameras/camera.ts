@@ -14,31 +14,40 @@ export class Camera {
     this.viewMatrix = new Matrix4x3();
     this.projectionMatrix = new Matrix4x4();
 
+    this.viewMatrix.identity();
+    this.projectionMatrix.identity();
+
     this.position = position;
     this.target   = target;
     this.up       = up;
 
   }
 
-  protected setViewMatrix(): void {
-    this.viewMatrix.lookAtRH(
-      this.position,
-      this.target,
-      this.up
-    );
+  public setViewMatrix(): void {
+    if (this.position.x === this.target.x && 
+        this.position.y === this.target.y && 
+        this.position.z === this.target.z) {
+      this.viewMatrix.identity();
+    } else {
+      this.viewMatrix.lookAtRH(
+        this.position,
+        this.target,
+        this.up
+      );
+    }
   }
 
-  protected setPosition(vector3:Vector3): void {
+  public setPosition(vector3:Vector3): void {
     this.position.copy(vector3);
     this.setViewMatrix();
   }
 
-  protected setTarget(vector3:Vector3): void {
+  public setTarget(vector3:Vector3): void {
     this.target.copy(vector3);
     this.setViewMatrix();
   }
 
-  protected setUp(vector3:Vector3): void {
+  public setUp(vector3:Vector3): void {
     this.up.copy(vector3);
     this.setViewMatrix();
   }

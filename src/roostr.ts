@@ -19,3 +19,6 @@
  export { PointLight }         from './lights/point';
  export { SpotLight }          from './lights/spot';
  export { Material }           from './material';
+ export { Program }            from './program';
+ export { Shader }             from './shader';
+ export { Uniform }            from './uniform';

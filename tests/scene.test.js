@@ -82,3 +82,48 @@ test("render draws every active mesh using the camera's matrices", () => {
   expect(projectionMatrix).toEqual(camera.getProjectionMatrix());
   expect(viewMatrix).toEqual(camera.getViewMatrix());
 });
+
+test("clearLights empties registered lights", () => {
+  const { scene } = createScene();
+  scene.addLight(new DirectionalLight());
+  scene.clearLights();
+  const positions = scene.getLightsProperty("position");
+  expect(positions).toEqual([]);
+});
+
+test("getLightsProperty returns undefined for unknown property", () => {
+  const { scene } = createScene();
+  expect(scene.getLightsProperty("unknownProperty")).toBeUndefined();
+});
+
+test("addMesh ignores duplicate mesh additions", () => {
+  const { scene, context } = createScene();
+  const mesh = new Mesh(new Quad(2, 2), context);
+  scene.addMesh(mesh);
+  scene.addMesh(mesh);
+  expect(scene.meshes.length).toBe(1);
+  expect(scene.nbMeshes).toBe(1);
+});
+
+test("removeMesh removes a mesh and decrements count", () => {
+  const { scene, context } = createScene();
+  const mesh1 = new Mesh(new Quad(2, 2), context);
+  const mesh2 = new Mesh(new Quad(2, 2), context);
+  scene.addMesh(mesh1);
+  scene.addMesh(mesh2);
+  expect(scene.removeMesh(mesh1)).toBe(true);
+  expect(scene.meshes).toEqual([mesh2]);
+  expect(scene.nbMeshes).toBe(1);
+  expect(scene.removeMesh(mesh1)).toBe(false);
+});
+
+test("removeLight removes a light and updates scene lights", () => {
+  const { scene } = createScene();
+  const light = new DirectionalLight();
+  scene.addLight(light);
+  expect(scene.lights.nbDirectionals).toBe(1);
+  expect(scene.removeLight(light)).toBe(true);
+  expect(scene.lights.nbDirectionals).toBe(0);
+  expect(scene.removeLight(light)).toBe(false);
+});
+

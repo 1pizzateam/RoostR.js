@@ -41,16 +41,16 @@ export class SpotLight extends PointLight {
   //
   // }
 
-  public setCutoff(): void {
-
+  public setCutoff(value: number): void {
+    this.cutoff = value;
   }
 
-  public setExponent(): void {
-
+  public setExponent(value: number): void {
+    this.exponent = value;
   }
 
-  public setDirection(): void {
-
+  public setDirection(direction: Vector3): void {
+    this.direction.copy(direction);
   }
 
   // public getPosition(){

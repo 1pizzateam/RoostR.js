@@ -1,4 +1,5 @@
 import { SpotLight } from "../../dist/roostr";
+import { Vector3 } from "@lcluber/type6js";
 
 test("inherits PointLight defaults", () => {
   const light = new SpotLight();
@@ -17,4 +18,22 @@ test("initializes cutoff, exponent and direction defaults", () => {
   expect(light.cutoff).toBe(180);
   expect(light.exponent).toBe(0);
   expect(light.direction.toArray()).toEqual([1.0, 0.0, 0.0]);
+});
+
+test("setCutoff updates cutoff", () => {
+  const light = new SpotLight();
+  light.setCutoff(45);
+  expect(light.cutoff).toBe(45);
+});
+
+test("setExponent updates exponent", () => {
+  const light = new SpotLight();
+  light.setExponent(2);
+  expect(light.exponent).toBe(2);
+});
+
+test("setDirection copies the given direction vector", () => {
+  const light = new SpotLight();
+  light.setDirection(new Vector3(0, -1, 0));
+  expect(light.direction.toArray()).toEqual([0, -1, 0]);
 });

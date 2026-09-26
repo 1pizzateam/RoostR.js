@@ -1,7 +1,8 @@
 
 import { SubMesh } from './submesh';
+import { IGeometry } from '../interfaces';
 
-export class CustomMesh {
+export class CustomMesh implements IGeometry {
 
   vertices    : Float32Array | null;
   indices     : Int32Array | null;
@@ -38,23 +39,23 @@ export class CustomMesh {
                       ];
   }
 
-  public setVertices(array: Float32Array): void {
-    this.vertices = array.slice(0);
+  public setVertices(array: Float32Array | number[]): void {
+    this.vertices = array instanceof Float32Array ? array.slice(0) : new Float32Array(array);
   }
 
-  public setIndices(array: Int32Array): void {
-    this.indices = array.slice(0);
+  public setIndices(array: Int32Array | number[]): void {
+    this.indices = array instanceof Int32Array ? array.slice(0) : new Int32Array(array);
   }
 
-  public setNormals(array: Float32Array): void {
-    this.normals = array.slice(0);
+  public setNormals(array: Float32Array | number[]): void {
+    this.normals = array instanceof Float32Array ? array.slice(0) : new Float32Array(array);
   }
 
-  public setUvs(array: Float32Array): void {
-    this.uvs = array.slice(0);
+  public setUvs(array: Float32Array | number[]): void {
+    this.uvs = array instanceof Float32Array ? array.slice(0) : new Float32Array(array);
   }
 
-  public addSubMeshes(array: Float32Array): void {
+  public addSubMeshes(array: Float32Array | Int32Array | number[]): void {
     for(var i = 0 ; i < array.length ; i+=2 ){
       this.addSubMesh( array[i], array[i+1] );
     }

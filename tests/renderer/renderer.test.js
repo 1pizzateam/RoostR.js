@@ -78,3 +78,44 @@ test("clearFrame clears the color and depth buffers", () => {
   renderer.clearFrame();
   expect(context.clear).toHaveBeenCalledWith(context.COLOR_BUFFER_BIT | context.DEPTH_BUFFER_BIT);
 });
+
+test("handles missing canvas element gracefully without throwing", () => {
+  let renderer;
+  expect(() => {
+    renderer = new Renderer("non_existent_canvas_id");
+  }).not.toThrow();
+  expect(renderer.canvas).toBeNull();
+  expect(renderer.context).toBeNull();
+  expect(renderer.getContext()).toBeNull();
+  expect(() => {
+    renderer.setFrontFace("CW");
+    renderer.enable("CULL_FACE");
+    renderer.disable("CULL_FACE");
+    renderer.setCullFace("BACK");
+    renderer.setViewport(100, 100);
+    renderer.setClearColor(0, 0, 0, 1);
+    renderer.clearFrame();
+    renderer.defaultSettings();
+  }).not.toThrow();
+});
+
+test("getCanvas returns the canvas element or null", () => {
+  const context = createMockContext();
+  const canvas = createMockCanvas("canvas", context);
+  const renderer = new Renderer("canvas");
+  expect(renderer.getCanvas()).toBe(canvas);
+
+  const emptyRenderer = new Renderer("missing");
+  expect(emptyRenderer.getCanvas()).toBeNull();
+});
+
+test("setSize updates canvas dimensions and viewport", () => {
+  const context = createMockContext();
+  const canvas = createMockCanvas("canvas", context);
+  const renderer = new Renderer("canvas");
+  renderer.setSize(1920, 1080);
+  expect(canvas.width).toBe(1920);
+  expect(canvas.height).toBe(1080);
+  expect(context.viewport).toHaveBeenLastCalledWith(0, 0, 1920, 1080);
+});
+

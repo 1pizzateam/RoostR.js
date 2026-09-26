@@ -48,7 +48,9 @@ export class MultiQuad extends BasicMesh{
       this.indices!.push.apply(this.indices, this.createIndices(i));
       this.uvs.push(...this.quad.uvs);
     }
-
+    if (this.subMeshes.length > 0 && length > 0) {
+      this.subMeshes[0].count = this.indices!.length;
+    }
   }
 
   private createIndices(quadIndex: number): number[] {

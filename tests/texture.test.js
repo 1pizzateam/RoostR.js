@@ -53,3 +53,12 @@ test("unbinds the texture after uploading", () => {
   Texture.create(img, context);
   expect(context.bindTexture).toHaveBeenLastCalledWith(context.TEXTURE_2D, null);
 });
+
+test("returns null if context.createTexture returns null", () => {
+  const context = createMockContext();
+  context.createTexture.mockReturnValue(null);
+  const img = document.createElement("img");
+  const result = Texture.create(img, context);
+  expect(result).toBeNull();
+  expect(context.bindTexture).not.toHaveBeenCalled();
+});

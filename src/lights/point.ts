@@ -27,16 +27,16 @@ export class PointLight extends DirectionalLight {
   //   this.directionalLight.setSpecular(x,y,z);
   // }
 
-  public setConstantAttenuation(){
-
+  public setConstantAttenuation(value: number): void {
+    this.constantAttenuation = value;
   }
 
-  public setLinearAttenuation(){
-
+  public setLinearAttenuation(value: number): void {
+    this.linearAttenuation = value;
   }
 
-  public setQuadraticAttenuation(){
-
+  public setQuadraticAttenuation(value: number): void {
+    this.quadraticAttenuation = value;
   }
 
   // getPosition(){

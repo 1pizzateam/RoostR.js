@@ -97,3 +97,42 @@ test("setPrimitive rejects an unsupported primitive and returns false", () => {
   expect(mesh.setPrimitive("NOT_A_PRIMITIVE")).toBe(false);
   expect(mesh.primitive).toBe("TRIANGLES");
 });
+
+test("setVertices accepts a regular number array and converts to Float32Array", () => {
+  const mesh = new CustomMesh();
+  mesh.setVertices([1, 2, 3]);
+  expect(mesh.vertices).toBeInstanceOf(Float32Array);
+  expect(Array.from(mesh.vertices)).toEqual([1, 2, 3]);
+});
+
+test("setIndices accepts a regular number array and converts to Int32Array", () => {
+  const mesh = new CustomMesh();
+  mesh.setIndices([0, 1, 2]);
+  expect(mesh.indices).toBeInstanceOf(Int32Array);
+  expect(Array.from(mesh.indices)).toEqual([0, 1, 2]);
+});
+
+test("setNormals accepts a regular number array and converts to Float32Array", () => {
+  const mesh = new CustomMesh();
+  mesh.setNormals([0, 1, 0]);
+  expect(mesh.normals).toBeInstanceOf(Float32Array);
+  expect(Array.from(mesh.normals)).toEqual([0, 1, 0]);
+});
+
+test("setUvs accepts a regular number array and converts to Float32Array", () => {
+  const mesh = new CustomMesh();
+  mesh.setUvs([0, 0, 1, 1]);
+  expect(mesh.uvs).toBeInstanceOf(Float32Array);
+  expect(Array.from(mesh.uvs)).toEqual([0, 0, 1, 1]);
+});
+
+test("addSubMeshes accepts a regular number array", () => {
+  const mesh = new CustomMesh();
+  mesh.addSubMeshes([0, 3, 3, 6]);
+  expect(mesh.subMeshes.length).toBe(2);
+  expect(mesh.subMeshes[0].start).toBe(0);
+  expect(mesh.subMeshes[0].count).toBe(3);
+  expect(mesh.subMeshes[1].start).toBe(3);
+  expect(mesh.subMeshes[1].count).toBe(6);
+});
+

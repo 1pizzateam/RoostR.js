@@ -27,8 +27,20 @@ export class Scene {
   }
 
   public addMesh( mesh: Mesh ): void {
-    this.meshes.push(mesh);
-    this.nbMeshes++;
+    if (this.meshes.indexOf(mesh) === -1) {
+      this.meshes.push(mesh);
+      this.nbMeshes++;
+    }
+  }
+
+  public removeMesh( mesh: Mesh ): boolean {
+    const index = this.meshes.indexOf(mesh);
+    if (index !== -1) {
+      this.meshes.splice(index, 1);
+      this.nbMeshes--;
+      return true;
+    }
+    return false;
   }
 
   public addLight( light: DirectionalLight | PointLight | SpotLight ): void {
@@ -37,12 +49,20 @@ export class Scene {
     //this.nbLights++;
   }
 
+  public removeLight( light: DirectionalLight | PointLight | SpotLight ): boolean {
+    return this.lights.removeLight(light);
+  }
+
   public clearMeshes(): void {
     this.meshes = [];
     this.nbMeshes = 0;
   }
 
-  public getLightsProperty (property: string): number[] {
+  public clearLights(): void {
+    this.lights.clear();
+  }
+
+  public getLightsProperty (property: string): (number | string)[] | undefined {
     return this.lights.getFlatArray(property);
   }
 
@@ -61,7 +81,7 @@ export class Scene {
   public render (camera: Camera, time: number): void {
 
     this.computeWorldMatrices();
-    this.lights.flatten();
+    const flatLights = this.lights.flatten();
     //this.order();
     //if (this.getRendererBlendMode()){
       this.disableBlendMode();
@@ -70,14 +90,14 @@ export class Scene {
       //if (!this.meshes[i].blendMode) {
         mesh.render(  camera.getProjectionMatrix(),
                       camera.getViewMatrix(),
-                      this.lights.flatten(),
+                      flatLights,
                       time,
                       false
                     );
       //}
     }
 
-    this.renderBlended(camera, time);
+    this.renderBlended(camera, time, flatLights);
   }
 
   private computeWorldMatrices(): void {
@@ -86,13 +106,13 @@ export class Scene {
     }
   }
 
-  private renderBlended (camera: Camera, time: number): void {
+  private renderBlended (camera: Camera, time: number, flatLights: any): void {
     this.enableBlendMode('FUNC_ADD', 'SRC_ALPHA', 'ONE');
     for (let mesh of this.meshes) {
       //if (this.meshes[i].blendMode) {
         mesh.render(  camera.getProjectionMatrix(),
                       camera.getViewMatrix(),
-                      this.lights.flatten(),
+                      flatLights,
                       time,
                       true
                     );

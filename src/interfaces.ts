@@ -6,13 +6,13 @@ import { Material }  from './material';
 import { Matrix4x3 } from '@lcluber/type6js';
 
 export interface IGeometry {
-  vertices    : number[] | null;
-  indices     : number[] | null;
-  normals     : number[] | null;
+  vertices    : number[] | Float32Array | null;
+  indices     : number[] | Int32Array | Uint16Array | null;
+  normals     : number[] | Float32Array | null;
   subMeshes   : SubMesh[];
   itemSize    : number | null;
   primitive   : string | null;
-  uvs?        : number[] | null;
+  uvs?        : number[] | Float32Array | null;
   nbSubMeshes? : number;
   quad? : {
     vertices: number[] | null;
@@ -73,12 +73,12 @@ export interface IProgram extends WebGLProgram {
   vertexNormal      : GLint;
   vertexPosition    : GLint;
   textureCoord      : GLint;
-  sampler           : WebGLUniformLocation;
-  modelMatrix       : WebGLUniformLocation;
-  projectionMatrix  : WebGLUniformLocation;
-  viewMatrix        : WebGLUniformLocation;
-  time              : WebGLUniformLocation;
-  screenResolution  : WebGLUniformLocation;
+  sampler           : WebGLUniformLocation | null;
+  modelMatrix       : WebGLUniformLocation | null;
+  projectionMatrix  : WebGLUniformLocation | null;
+  viewMatrix        : WebGLUniformLocation | null;
+  time              : WebGLUniformLocation | null;
+  screenResolution  : WebGLUniformLocation | null;
   // [key: string]: any;
 }
 
@@ -92,5 +92,5 @@ export interface IFlatLights{
   cutoff : number[];
   exponent : number[];
   direction : number[];
-  type : number[]
+  type : (string | number)[];
 }
