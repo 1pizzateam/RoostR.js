@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals';
-import { Mesh, Quad, Cube, Material, Mat4x3, Vec3, Quat } from "../dist/roostr";
+import { Mesh, Quad, Cube, Material, Mat4x3, Vec3, Quat, Ray } from "../dist/roostr";
 import { createMockContext } from "./helpers/webgl-mock";
 
 function createMesh(context = createMockContext()) {
@@ -599,4 +599,125 @@ test("getWorldDirection, distanceTo, and isInsideBounds calculate spatial relati
   expect(mesh.isInsideBounds(new Vec3(-1, -1, 0), new Vec3(1, 1, 10))).toBe(true);
   expect(mesh.isInsideBounds(new Vec3(10, 10, 10), new Vec3(20, 20, 20))).toBe(false);
 });
+
+test("computeBoundingBox and computeBoundingSphere compute spatial bounds", () => {
+  const context = createMockContext();
+  const mesh = new Mesh(new Cube(2.0), context);
+
+  const box = mesh.computeBoundingBox();
+  expect(box).not.toBeNull();
+  expect(box.min.x).toBeCloseTo(-1);
+  expect(box.max.x).toBeCloseTo(1);
+
+  const sphere = mesh.computeBoundingSphere();
+  expect(sphere).not.toBeNull();
+  expect(sphere.radius).toBeGreaterThan(1);
+});
+
+test("mesh.raycast tests ray intersection in world space", () => {
+  const context = createMockContext();
+  const mesh = new Mesh(new Cube(2.0), context);
+  mesh.setPosition(0, 0, 0);
+
+  const hitRay = new Ray(new Vec3(0, 0, 10), new Vec3(0, 0, -1));
+  const hit = mesh.raycast(hitRay);
+  expect(hit).not.toBeNull();
+  expect(hit.point.z).toBeCloseTo(Math.sqrt(3));
+  expect(hit.distance).toBeCloseTo(10 - Math.sqrt(3));
+
+  const missRay = new Ray(new Vec3(50, 50, 10), new Vec3(0, 0, -1));
+  expect(mesh.raycast(missRay)).toBeNull();
+});
+
+test("computeBoundingBox and computeBoundingSphere cache results until transformed", () => {
+  const context = createMockContext();
+  const mesh = new Mesh(new Cube(2.0), context);
+  mesh.updateModelMatrix();
+  mesh.setWorldMatrix(new Mat4x3().identity());
+
+  const box1 = mesh.computeBoundingBox();
+  expect(box1.min.x).toBeCloseTo(-1);
+  expect(box1.max.x).toBeCloseTo(1);
+  expect(mesh.isBoundsDirty).toBe(false);
+
+  // Calling again returns cached box without recomputing
+  const box2 = mesh.computeBoundingBox();
+  expect(box2).toBe(box1);
+
+  // Modifying position marks bounds dirty
+  mesh.setPosition(5, 0, 0);
+  expect(mesh.isBoundsDirty).toBe(true);
+  mesh.updateModelMatrix();
+  mesh.setWorldMatrix(new Mat4x3().identity());
+
+  const box3 = mesh.computeBoundingBox();
+  expect(box3.min.x).toBeCloseTo(4);
+  expect(box3.max.x).toBeCloseTo(6);
+  expect(mesh.isBoundsDirty).toBe(false);
+});
+
+test("computeNormalMatrix caches normalMatrix until transform changes", () => {
+  const context = createMockContext();
+  const mesh = new Mesh(new Cube(2.0), context);
+  mesh.setScale(2, 2, 2);
+  mesh.updateModelMatrix();
+  mesh.setWorldMatrix(new Mat4x3().identity());
+
+  expect(mesh.isNormalMatrixDirty).toBe(true);
+  const nm1 = mesh.computeNormalMatrix();
+  expect(mesh.isNormalMatrixDirty).toBe(false);
+  expect(nm1.toArray()[0]).toBeCloseTo(0.5);
+
+  // Calling again returns cached normalMatrix without recomputing
+  const nm2 = mesh.computeNormalMatrix();
+  expect(nm2).toBe(nm1);
+
+  // Modifying rotation marks normal matrix dirty
+  mesh.rotateY(Math.PI / 2);
+  expect(mesh.isNormalMatrixDirty).toBe(true);
+});
+
+test("computeNormalMatrix transforms normals correctly under rotation", () => {
+  const context = createMockContext();
+  const mesh = new Mesh(new Cube(2.0), context);
+  mesh.setRotation(0, Math.PI / 2, 0); // 90 deg around Y
+  mesh.updateModelMatrix();
+  mesh.setWorldMatrix(new Mat4x3().identity());
+
+  const nm = mesh.computeNormalMatrix().toArray();
+  // For normal (0, 0, 1), transformed normal components are column 2: nm[6], nm[7], nm[8]
+  expect(nm[6]).toBeCloseTo(1);
+  expect(nm[7]).toBeCloseTo(0);
+  expect(nm[8]).toBeCloseTo(0);
+});
+
+test("render binds fog uniforms and camera position", () => {
+  const { mesh, context } = createMesh();
+  mesh.addProgram("vert", "frag", new Material());
+  mesh.programs[0].hasFog = { name: "uHasFog" };
+  mesh.programs[0].fogColor = { name: "uFogColor" };
+  mesh.programs[0].fogNear = { name: "uFogNear" };
+  mesh.programs[0].fogFar = { name: "uFogFar" };
+  mesh.programs[0].cameraPosition = { name: "uCameraPosition" };
+
+  const lights = {
+    position: [], diffuse: [], specular: [],
+    constantAttenuation: [], linearAttenuation: [], quadraticAttenuation: [],
+    cutoff: [], exponent: [], direction: [], type: [],
+    floatPosition: new Float32Array(0),
+    floatDiffuse: new Float32Array(0),
+  };
+
+  const fog = { color: new Vec3(0.5, 0.6, 0.7), near: 10, far: 50 };
+  const camPos = new Vec3(1, 2, 3);
+
+  mesh.render(new Float32Array(16), new Float32Array(16), lights, 0, false, camPos, fog);
+
+  expect(context.uniform1i).toHaveBeenCalledWith({ name: "uHasFog" }, 1);
+  expect(context.uniform3f).toHaveBeenCalledWith({ name: "uFogColor" }, 0.5, 0.6, 0.7);
+  expect(context.uniform1f).toHaveBeenCalledWith({ name: "uFogNear" }, 10);
+  expect(context.uniform1f).toHaveBeenCalledWith({ name: "uFogFar" }, 50);
+  expect(context.uniform3f).toHaveBeenCalledWith({ name: "uCameraPosition" }, 1, 2, 3);
+});
+
 

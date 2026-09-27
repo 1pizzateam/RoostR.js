@@ -3,6 +3,13 @@ import { Vec3 } from '@1pizzateam/spock';
 import { Uniform } from './uniform';
 import { IMaterialUniforms } from './interfaces';
 
+export interface IMaterialOptions {
+  ambient?: Vec3 | number[];
+  diffuse?: Vec3 | number[];
+  specular?: Vec3 | number[];
+  shininess?: number;
+}
+
 export class Material {
 
   ambient   : Vec3;
@@ -12,7 +19,7 @@ export class Material {
 
   uniforms : IMaterialUniforms;
 
-  constructor(){
+  constructor(options?: IMaterialOptions){
     this.ambient   = new Vec3(0.5, 0.5, 0.5);
     this.diffuse   = new Vec3(0.6, 0.6, 0.6);
     this.specular  = new Vec3(0.8, 0.8, 0.8);
@@ -25,6 +32,12 @@ export class Material {
       materialShininess : new Uniform('uniform1f', this.shininess)
     };
 
+    if (options) {
+      if (options.ambient) this.setAmbient(options.ambient as any);
+      if (options.diffuse) this.setDiffuse(options.diffuse as any);
+      if (options.specular) this.setSpecular(options.specular as any);
+      if (options.shininess !== undefined) this.setShininess(options.shininess);
+    }
   }
 
   public setAmbient(xOrVec: Vec3 | number, y?: number, z?: number): void {

@@ -1,0 +1,26 @@
+{
+  "name": "roostr-docs",
+  "version": "0.6.0",
+  "description": "Documentation for RoostR.js.",
+  "private": true,
+  "scripts": {
+    "dev": "vitepress dev docs --host --port 5176",
+    "build": "vitepress build docs",
+    "preview": "vitepress preview docs --port 5176"
+  },
+  "author": "Ludovic Cluber",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/1pizzateam/RoostR.js.git",
+    "directory": "website"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3",
+    "vitepress": "1.6.4"
+  },
+  "dependencies": {
+    "@1pizzateam/spock": "^4.2.0",
+    "@1pizzateam/loopr": "2.1.0"
+  }
+}

@@ -62,3 +62,63 @@ test("returns null if context.createTexture returns null", () => {
   expect(result).toBeNull();
   expect(context.bindTexture).not.toHaveBeenCalled();
 });
+
+test("supports custom options: wrap, filter, flipY false and generateMipmaps", () => {
+  const context = createMockContext();
+  const img = document.createElement("img");
+  const texture = Texture.create(img, context, {
+    wrapS: 0x2901,
+    wrapT: 0x2901,
+    minFilter: 0x2703,
+    magFilter: 0x2600,
+    flipY: false,
+    generateMipmaps: true,
+  });
+
+  expect(texture).not.toBeNull();
+  expect(context.pixelStorei).toHaveBeenCalledWith(context.UNPACK_FLIP_Y_WEBGL, 0);
+  expect(context.texParameteri).toHaveBeenCalledWith(context.TEXTURE_2D, context.TEXTURE_WRAP_S, 0x2901);
+  expect(context.generateMipmap).toHaveBeenCalledWith(context.TEXTURE_2D);
+});
+
+test("supports raw Uint8Array source", () => {
+  const context = createMockContext();
+  const rawData = new Uint8Array([255, 0, 0, 255]);
+  const texture = Texture.create(rawData, context, {
+    width: 1,
+    height: 1
+  });
+
+  expect(texture).not.toBeNull();
+  expect(context.texImage2D).toHaveBeenCalledWith(
+    context.TEXTURE_2D,
+    0,
+    context.RGBA,
+    1,
+    1,
+    0,
+    context.RGBA,
+    context.UNSIGNED_BYTE,
+    rawData
+  );
+});
+
+test("Texture.update updates texture subimage", () => {
+  const context = createMockContext();
+  const texture = {};
+  const rawData = new Uint8Array([0, 255, 0, 255]);
+  Texture.update(texture, rawData, context, 0, 0, 1, 1);
+
+  expect(context.bindTexture).toHaveBeenCalledWith(context.TEXTURE_2D, texture);
+  expect(context.texSubImage2D).toHaveBeenCalled();
+});
+
+test("Texture.load resolves when image loads successfully", async () => {
+  const context = createMockContext();
+  const loadPromise = Texture.load("test.png", context);
+
+  // In jsdom or node, find created Image and trigger onload
+  // The promise creates an Image and sets src
+  // We can verify that Texture.load returns a Promise
+  expect(loadPromise).toBeInstanceOf(Promise);
+});

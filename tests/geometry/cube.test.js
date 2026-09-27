@@ -41,3 +41,14 @@ test("inherits itemSize 3 and primitive TRIANGLES from BasicMesh", () => {
   expect(cube.itemSize).toBe(3);
   expect(cube.primitive).toBe("TRIANGLES");
 });
+
+test("creates flat Cube with 24 vertices and face normals", () => {
+  const cube = new Cube(2, true);
+  expect(cube.vertices.length).toBe(72); // 24 * 3
+  expect(cube.normals.length).toBe(72);
+  expect(cube.indices.length).toBe(36);
+  // Top face normal is (0, 1, 0)
+  expect(cube.normals[24 + 1]).toBe(1);
+  // Bottom face normal is (0, -1, 0)
+  expect(cube.normals[36 + 1]).toBe(-1);
+});

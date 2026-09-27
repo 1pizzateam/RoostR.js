@@ -37,6 +37,7 @@ export class OrthographicCamera extends Camera {
 
   public setProjectionMatrix(): void {
     this.projectionMatrix.orthographic(this.left, this.right, this.top, this.bottom, this.near, this.far);
+    super.setProjectionMatrix();
   }
 
   public setBounds(left: number, right: number, top: number, bottom: number, near?: number, far?: number): void {

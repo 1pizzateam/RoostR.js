@@ -1,0 +1,76 @@
+import { jest } from '@jest/globals';
+import { OrbitControls, PerspectiveCamera } from '../../dist/roostr.js';
+import { createMockContext } from '../helpers/webgl-mock.js';
+
+describe('OrbitControls', () => {
+  let context;
+  beforeEach(() => {
+    context = createMockContext();
+  });
+
+  test('initializes angles from camera position and target', () => {
+    const camera = new PerspectiveCamera(45, 0.1, 100, context);
+    camera.setPosition(0, 0, 10);
+    camera.setTarget(0, 0, 0);
+
+    const fakeDom = {
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      clientHeight: 600
+    };
+
+    const controls = new OrbitControls(camera, fakeDom);
+    expect(controls.distance).toBeCloseTo(10);
+    expect(fakeDom.addEventListener).toHaveBeenCalled();
+
+    controls.dispose();
+    expect(fakeDom.removeEventListener).toHaveBeenCalled();
+  });
+
+  test('update recomputes camera position around target', () => {
+    const camera = new PerspectiveCamera(45, 0.1, 100, context);
+    camera.setPosition(0, 0, 10);
+    camera.setTarget(0, 0, 0);
+
+    const fakeDom = {
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn()
+    };
+
+    const controls = new OrbitControls(camera, fakeDom);
+    controls.distance = 20;
+    controls.azimuth = 0;
+    controls.elevation = 0;
+    controls.update();
+
+    expect(camera.position.z).toBeCloseTo(20);
+    expect(camera.position.x).toBeCloseTo(0);
+    expect(camera.position.y).toBeCloseTo(0);
+
+    controls.dispose();
+  });
+
+  test('handles wheel zoom event', () => {
+    const camera = new PerspectiveCamera(45, 0.1, 100, context);
+    camera.setPosition(0, 0, 10);
+    camera.setTarget(0, 0, 0);
+
+    const listeners = {};
+    const fakeDom = {
+      addEventListener: jest.fn((evt, cb) => { listeners[evt] = cb; }),
+      removeEventListener: jest.fn()
+    };
+
+    const controls = new OrbitControls(camera, fakeDom);
+    expect(listeners['wheel']).toBeDefined();
+
+    const initialDistance = controls.targetDistance;
+    listeners['wheel']({ deltaY: 100, preventDefault: jest.fn() });
+    expect(controls.targetDistance).toBeGreaterThan(initialDistance);
+
+    listeners['wheel']({ deltaY: -100, preventDefault: jest.fn() });
+    expect(controls.targetDistance).toBeCloseTo(initialDistance);
+
+    controls.dispose();
+  });
+});

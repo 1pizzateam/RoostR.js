@@ -46,3 +46,17 @@ test("setSpecular copies the given vector or scalars", () => {
   light.setSpecular(1, 1, 1);
   expect(light.specular.toArray()).toEqual([1, 1, 1]);
 });
+
+test("initializes default direction to (0, -1, 0)", () => {
+  const light = new DirectionalLight();
+  expect(light.direction.toArray()).toEqual([0, -1, 0]);
+});
+
+test("setDirection copies the given vector or scalars", () => {
+  const light = new DirectionalLight();
+  light.setDirection(new Vec3(1, 0, 0));
+  expect(light.direction.toArray()).toEqual([1, 0, 0]);
+
+  light.setDirection(0, 0, -1);
+  expect(light.direction.toArray()).toEqual([0, 0, -1]);
+});

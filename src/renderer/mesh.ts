@@ -63,7 +63,7 @@ export class MeshRenderer {
     this.context.vertexAttribPointer(index, size, this.context[type], normalized, stride, offset);
   }
 
-  public drawElements(primitive: string, subMesh: SubMesh): void {
+  public drawElements(primitive: string | number, subMesh: SubMesh): void {
     // gl.POINTS: Draws a single dot.
     // gl.LINE_STRIP: Draws a straight line to the next vertex.
     // gl.LINE_LOOP: Draws a straight line to the next vertex, and connects the last vertex back to the first.
@@ -71,10 +71,11 @@ export class MeshRenderer {
     // gl.TRIANGLE_STRIP
     // gl.TRIANGLE_FAN
     // gl.TRIANGLES: Draws a triangle for a group of three vertices.
-    this.context.drawElements(this.context[primitive], subMesh.count, this.context.UNSIGNED_SHORT, subMesh.start * 2);
+    const mode = typeof primitive === 'number' ? primitive : (this.context[primitive] ?? this.context.TRIANGLES);
+    this.context.drawElements(mode, subMesh.count, this.context.UNSIGNED_SHORT, subMesh.start * 2);
   }
 
-  public drawArrays(primitive: string, subMesh: SubMesh): void {
+  public drawArrays(primitive: string | number, subMesh: SubMesh): void {
     // gl.POINTS: Draws a single dot.
     // gl.LINE_STRIP: Draws a straight line to the next vertex.
     // gl.LINE_LOOP: Draws a straight line to the next vertex, and connects the last vertex back to the first.
@@ -82,7 +83,8 @@ export class MeshRenderer {
     // gl.TRIANGLE_STRIP
     // gl.TRIANGLE_FAN
     // gl.TRIANGLES: Draws a triangle for a group of three vertices.
-    this.context.drawArrays(this.context[primitive], subMesh.start, subMesh.count);
+    const mode = typeof primitive === 'number' ? primitive : (this.context[primitive] ?? this.context.TRIANGLES);
+    this.context.drawArrays(mode, subMesh.start, subMesh.count);
   }
 
   // gl.ACTIVE_TEXTURE	GLenum

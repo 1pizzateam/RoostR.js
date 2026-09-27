@@ -85,7 +85,23 @@ export interface IProgram extends WebGLProgram {
   viewMatrix        : WebGLUniformLocation | null;
   time              : WebGLUniformLocation | null;
   screenResolution  : WebGLUniformLocation | null;
-  // [key: string]: any;
+  // lights
+  lightPosition?    : WebGLUniformLocation | null;
+  lightDiffuse?     : WebGLUniformLocation | null;
+  lightSpecular?    : WebGLUniformLocation | null;
+  lightDirection?   : WebGLUniformLocation | null;
+  lightAttenuation? : WebGLUniformLocation | null;
+  lightCutoff?      : WebGLUniformLocation | null;
+  lightExponent?    : WebGLUniformLocation | null;
+  lightType?        : WebGLUniformLocation | null;
+  nbLights?         : WebGLUniformLocation | null;
+  ambientLight?     : WebGLUniformLocation | null;
+  ambientColor?     : WebGLUniformLocation | null;
+  // fog
+  fogColor?         : WebGLUniformLocation | null;
+  fogNear?          : WebGLUniformLocation | null;
+  fogFar?           : WebGLUniformLocation | null;
+  [key: string]: any;
 }
 
 export interface IFlatLights{
@@ -99,4 +115,16 @@ export interface IFlatLights{
   exponent : number[];
   direction : number[];
   type : (string | number)[];
+  ambient?: number[];
+  floatPosition?: Float32Array;
+  floatDiffuse?: Float32Array;
+  floatSpecular?: Float32Array;
+  floatDirection?: Float32Array;
+  floatAttenuation?: Float32Array;
+  floatCutoff?: Float32Array;
+  floatExponent?: Float32Array;
+  floatType?: Float32Array;
+  floatAmbient?: Float32Array;
+  [key: string]: any;
 }
+

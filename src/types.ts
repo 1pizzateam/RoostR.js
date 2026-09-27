@@ -1,1 +1,1 @@
-export type Light = 'directional'|'point'|'spot';
+export type Light = 'directional'|'point'|'spot'|'ambient';

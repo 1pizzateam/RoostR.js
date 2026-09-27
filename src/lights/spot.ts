@@ -8,13 +8,19 @@ export class SpotLight extends PointLight {
   exponent : number;
   direction : Vec3;
 
-  constructor() {
-    super();
+  constructor(positionOrOptions?: Vec3 | number[] | { position?: Vec3 | number[]; direction?: Vec3 | number[]; diffuse?: Vec3 | number[]; specular?: Vec3 | number[]; cutoff?: number; exponent?: number; constantAttenuation?: number; linearAttenuation?: number; quadraticAttenuation?: number }) {
+    super(positionOrOptions as any);
 
     this.cutoff = 180;
     this.exponent = 0;
     this.direction = new Vec3(1.0, 0.0, 0.0);
     this.type = 'spot';
+
+    if (positionOrOptions && typeof positionOrOptions === 'object' && !(positionOrOptions instanceof Vec3) && !Array.isArray(positionOrOptions)) {
+      if (positionOrOptions.direction) this.setDirection(positionOrOptions.direction as any);
+      if (positionOrOptions.cutoff !== undefined) this.setCutoff(positionOrOptions.cutoff);
+      if (positionOrOptions.exponent !== undefined) this.setExponent(positionOrOptions.exponent);
+    }
   }
 
   public setCutoff(value: number): void {
@@ -32,41 +38,5 @@ export class SpotLight extends PointLight {
       this.direction.setScalar(xOrVec, y, z);
     }
   }
-
-  // public getPosition(){
-  //   return this.PointLight.getPosition();
-  // }
-
-  // public getDiffuse(){
-  //   return this.PointLight.getDiffuse();
-  // }
-  //
-  // public getSpecular(){
-  //   return this.PointLight.getSpecular();
-  // }
-  //
-  // public getConstantAttenuation(){
-  //
-  // }
-  //
-  // public getLinearAttenuation(){
-  //
-  // }
-  //
-  // public getQuadraticAttenuation(){
-  //
-  // }
-
-  // public getCutoff(): number {
-  //   return this.cutoff;
-  // }
-  //
-  // public getExponent(): number {
-  //   return this.exponent;
-  // }
-  //
-  // public getDirection(): Vector3 {
-  //   return this.direction;
-  // }
 
 }

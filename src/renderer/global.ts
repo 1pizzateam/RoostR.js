@@ -5,8 +5,8 @@ export class Renderer {
   canvas: HTMLCanvasElement | null;
   context: WebGLRenderingContext | null;
 
-  constructor(canvasID:string) {
-    this.canvas = this.findById(canvasID);
+  constructor(canvasID: string | HTMLCanvasElement) {
+    this.canvas = typeof canvasID === 'string' ? this.findById(canvasID) : canvasID;
     this.context = null;
     if (this.canvas) {
       // default resolution
