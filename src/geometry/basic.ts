@@ -1,5 +1,5 @@
-import { IGeometry } from '../interfaces';
-import { SubMesh } from './submesh';
+import type { IGeometry } from '../interfaces';
+import type { SubMesh } from './submesh';
 
 export class BasicMesh implements IGeometry {
 

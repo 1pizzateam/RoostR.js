@@ -1,26 +1,36 @@
+import { Vec3 } from '@1pizzateam/spock';
 import { BasicMesh } from './basic';
 import { SubMesh } from './submesh';
 
 export class Cube extends BasicMesh {
 
-  constructor(size: number = 1.0, flat: boolean = false) {
+  constructor(sizeOrDimensions: Vec3 | number = 1.0, flat: boolean = false) {
     super();
-    size = size ? size * 0.5 : 1.0;
+    let sx: number, sy: number, sz: number;
+    if (sizeOrDimensions instanceof Vec3) {
+      const half = sizeOrDimensions.clone().halve();
+      sx = half.x || 0.5;
+      sy = half.y || 0.5;
+      sz = half.z || 0.5;
+    } else {
+      const s = sizeOrDimensions ? sizeOrDimensions * 0.5 : 1.0;
+      sx = s; sy = s; sz = s;
+    }
 
     if (flat) {
       this.vertices = [
         // Front (+Z)
-        -size, -size,  size,   size, -size,  size,   size,  size,  size,  -size,  size,  size,
+        -sx, -sy,  sz,   sx, -sy,  sz,   sx,  sy,  sz,  -sx,  sy,  sz,
         // Back (-Z)
-         size, -size, -size,  -size, -size, -size,  -size,  size, -size,   size,  size, -size,
+         sx, -sy, -sz,  -sx, -sy, -sz,  -sx,  sy, -sz,   sx,  sy, -sz,
         // Top (+Y)
-        -size,  size,  size,   size,  size,  size,   size,  size, -size,  -size,  size, -size,
+        -sx,  sy,  sz,   sx,  sy,  sz,   sx,  sy, -sz,  -sx,  sy, -sz,
         // Bottom (-Y)
-        -size, -size, -size,   size, -size, -size,   size, -size,  size,  -size, -size,  size,
+        -sx, -sy, -sz,   sx, -sy, -sz,   sx, -sy,  sz,  -sx, -sy,  sz,
         // Right (+X)
-         size, -size,  size,   size, -size, -size,   size,  size, -size,   size,  size,  size,
+         sx, -sy,  sz,   sx, -sy, -sz,   sx,  sy, -sz,   sx,  sy,  sz,
         // Left (-X)
-        -size, -size, -size,  -size, -size,  size,  -size,  size,  size,  -size,  size, -size
+        -sx, -sy, -sz,  -sx, -sy,  sz,  -sx,  sy,  sz,  -sx,  sy, -sz
       ];
 
       this.normals = [
@@ -53,14 +63,14 @@ export class Cube extends BasicMesh {
       return;
     }
 
-    this.vertices = [  size,-size,-size,
-                      -size,-size, size,
-                       size,-size, size,
-                      -size, size, size,
-                       size, size,-size,
-                       size, size, size,
-                      -size,-size,-size,
-                      -size, size,-size
+    this.vertices = [  sx,-sy,-sz,
+                      -sx,-sy, sz,
+                       sx,-sy, sz,
+                      -sx, sy, sz,
+                       sx, sy,-sz,
+                       sx, sy, sz,
+                      -sx,-sy,-sz,
+                      -sx, sy,-sz
                     ];
     this.indices = [  2,5,3, 2,3,1,
                       4,0,6, 4,6,7,

@@ -23,9 +23,8 @@ export class SceneGraph {
   }
 
   public popModelMatrix(): void {
-    if (this.modelStackTop > 0) {
+    if (this.modelStackTop > 0)
       this.modelStackTop--;
-    }
   }
 
   public getWorldMatrix(): Mat4x3 {

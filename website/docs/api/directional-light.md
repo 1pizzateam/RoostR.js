@@ -16,7 +16,14 @@ scene.addLight(sun);
 ## Constructor
 
 ```typescript
-new DirectionalLight(direction?: Vec3)
+new DirectionalLight(
+  directionOrOptions?: Vec3 | number[] | {
+    direction?: Vec3 | number[];
+    diffuse?: Vec3 | number[];
+    specular?: Vec3 | number[];
+    position?: Vec3 | number[];
+  }
+)
 ```
 
 The light direction points from the light source towards the illuminated surfaces. Direction vectors are automatically normalized.
@@ -28,6 +35,7 @@ The light direction points from the light source towards the illuminated surface
 | Property | Type | Description |
 | :--- | :--- | :--- |
 | `direction` | `Vec3` | Normalized light propagation vector. |
+| `position` | `Vec3` | Light origin reference vector. |
 | `diffuse` | `Vec3` | Diffuse RGB color intensity in range $[0, 1]$. |
 | `specular` | `Vec3` | Specular highlight RGB color intensity. |
 
@@ -35,18 +43,18 @@ The light direction points from the light source towards the illuminated surface
 
 ## Methods
 
-### `setDirection(x: number | Vec3, y?: number, z?: number): void`
+### `setDirection(xOrVec: Vec3 | number, y?: number, z?: number): void`
 
 Set the direction vector pointing from the light source towards the scene.
 
-### `setDiffuse(r: number | Vec3 | number[], g?: number, b?: number): void`
+### `setPosition(xOrVec: Vec3 | number, y?: number, z?: number): void`
+
+Set the reference position vector.
+
+### `setDiffuse(xOrVec: Vec3 | number, y?: number, z?: number): void`
 
 Set the diffuse color.
 
-### `setSpecular(r: number | Vec3 | number[], g?: number, b?: number): void`
+### `setSpecular(xOrVec: Vec3 | number, y?: number, z?: number): void`
 
 Set the specular highlight color.
-
-### `clone(): DirectionalLight`
-
-Create an independent duplicate of this directional light.

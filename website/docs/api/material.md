@@ -1,6 +1,6 @@
 # Material
 
-Defines the optical surface properties used during Blinn-Phong lighting shading.
+Defines optical surface appearance properties used during Blinn-Phong lighting shading.
 
 ```javascript
 import { Material, Vec3 } from '@1pizzateam/roostr';
@@ -21,41 +21,51 @@ const gold = new Material({
 new Material(options?: IMaterialOptions)
 ```
 
-### Parameters
+### Options (`IMaterialOptions`)
 
-| Name | Type | Default | Description |
+| Option | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `ambient` | `Vec3 \| number[]` | `[0.2, 0.2, 0.2]` | Ambient reflectivity coefficient. |
-| `diffuse` | `Vec3 \| number[]` | `[0.8, 0.8, 0.8]` | Diffuse color reflectivity. |
-| `specular` | `Vec3 \| number[]` | `[1.0, 1.0, 1.0]` | Specular reflection highlight color. |
-| `shininess` | `number` | `32.0` | Specular highlight sharpness exponent (higher = sharper). |
-| `opacity` | `number` | `1.0` | Surface opacity $\in [0, 1]$. |
-| `blendMode` | `boolean` | `false` | Enable alpha blending mode. |
+| `ambient` | `Vec3 \| number[]` | `[0.5, 0.5, 0.5]` | Ambient reflection coefficient. |
+| `diffuse` | `Vec3 \| number[]` | `[0.6, 0.6, 0.6]` | Diffuse color reflectivity. |
+| `specular` | `Vec3 \| number[]` | `[0.8, 0.8, 0.8]` | Specular reflection highlight color. |
+| `shininess` | `number` | `8.0` | Specular highlight sharpness exponent (higher = sharper). |
+
+::: tip Transparency & Blending
+Alpha blending in RoostR is configured on the [`Mesh`](/api/mesh) via `mesh.blendMode = true` and rendered with `scene.renderBlended(camera)`.
+:::
+
+---
+
+## Properties
+
+| Property | Type | Description |
+| :--- | :--- | :--- |
+| `ambient` | `Vec3` | Ambient color vector. |
+| `diffuse` | `Vec3` | Diffuse color vector. |
+| `specular` | `Vec3` | Specular color vector. |
+| `shininess` | `number` | Specular highlight sharpness exponent. |
+| `uniforms` | `IMaterialUniforms` | Uniform objects mapped to shader properties. |
 
 ---
 
 ## Methods
 
-### `setAmbient(r: number | Vec3, g?: number, b?: number): void`
+### `setAmbient(xOrVec: Vec3 | number, y?: number, z?: number): void`
 
 Set ambient reflection RGB values in range $[0, 1]$.
 
-### `setDiffuse(r: number | Vec3, g?: number, b?: number): void`
+### `setDiffuse(xOrVec: Vec3 | number, y?: number, z?: number): void`
 
 Set diffuse color RGB values in range $[0, 1]$.
 
-### `setSpecular(r: number | Vec3, g?: number, b?: number): void`
+### `setSpecular(xOrVec: Vec3 | number, y?: number, z?: number): void`
 
 Set specular highlight RGB values in range $[0, 1]$.
 
 ### `setShininess(shininess: number): void`
 
-Set specular exponent. Typical values range from `4.0` (dull rough plastic) to `256.0` (polished metallic chrome).
+Set specular exponent. Typical values range from `4.0` (dull rough plastic) to `128.0` (polished metallic chrome).
 
-### `setOpacity(opacity: number): void`
+### `updateUniforms(): void`
 
-Set surface opacity. Automatically configures transparency blending when opacity $< 1.0$.
-
-### `clone(): Material`
-
-Create an independent clone of this material instance.
+Synchronizes the internal `Uniform` buffer values with the current `ambient`, `diffuse`, `specular`, and `shininess` properties.

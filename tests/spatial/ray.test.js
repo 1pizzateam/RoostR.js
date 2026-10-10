@@ -37,6 +37,18 @@ describe('Ray', () => {
     expect(missRay.intersectBox(box)).toBeNull();
   });
 
+  test('intersectBox handles ray parallel to axis with origin on boundary without NaN', () => {
+    // origin x is exactly on box.min.x, direction.x is 0
+    const ray = new Ray(new Vec3(-1, 0, -10), new Vec3(0, 0, 1));
+    const box = new BoundingBox(new Vec3(-1, -1, -1), new Vec3(1, 1, 1));
+    const hit = ray.intersectBox(box);
+    expect(hit).not.toBeNull();
+    expect(isNaN(hit.x)).toBe(false);
+    expect(isNaN(hit.y)).toBe(false);
+    expect(isNaN(hit.z)).toBe(false);
+    expect(hit.z).toBeCloseTo(-1);
+  });
+
   test('intersectTriangle detects hit and miss on triangle', () => {
     const ray = new Ray(new Vec3(0.2, 0.2, -5), new Vec3(0, 0, 1));
     const a = new Vec3(0, 0, 0);

@@ -1,4 +1,4 @@
-import { Line } from "../../dist/roostr";
+import { Line, Vec3 } from "../../dist/roostr";
 
 test("stores the given vertices as-is", () => {
   const vertices = [0, 0, 0, 1, 1, 1, 2, 2, 2];
@@ -35,5 +35,12 @@ test("inherits null indices, normals and uvs from BasicMesh", () => {
   expect(line.indices).toBeNull();
   expect(line.normals).toBeNull();
   expect(line.uvs).toBeNull();
+});
+
+test("supports Vec3 array for vertices", () => {
+  const points = [new Vec3(0, 0, 0), new Vec3(1, 2, 3), new Vec3(4, 5, 6)];
+  const line = new Line(points, 2);
+  expect(line.vertices).toEqual([0, 0, 0, 1, 2, 3, 4, 5, 6]);
+  expect(line.subMeshes[0].count).toBe(3);
 });
 

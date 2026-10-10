@@ -1,4 +1,4 @@
-import { PerspectiveCamera, Vec3 } from "../../dist/roostr";
+import { PerspectiveCamera, Vec3, Vec2 } from "../../dist/roostr";
 import { createMockContext } from "../helpers/webgl-mock";
 
 test("initializes position, target and up vectors", () => {
@@ -42,6 +42,9 @@ test("setProjectionMatrix recomputes the ratio and projection matrix from a new 
   const camera = new PerspectiveCamera(45, 0.1, 1000, context);
   camera.setProjectionMatrix(new Int32Array([0, 0, 640, 480]));
   expect(camera.ratio).toBeCloseTo(640 / 480);
+
+  camera.setProjectionMatrix(new Vec2(1920, 1080));
+  expect(camera.ratio).toBeCloseTo(1920 / 1080);
 });
 
 test("setPosition updates camera position and recomputes view matrix", () => {

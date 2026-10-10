@@ -1,4 +1,4 @@
-import { OrthographicCamera } from "../../dist/roostr";
+import { OrthographicCamera, Rect } from "../../dist/roostr";
 
 test("initializes position, target and up vectors", () => {
   const camera = new OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
@@ -15,6 +15,26 @@ test("stores the given frustum bounds", () => {
   expect(camera.bottom).toBe(-1);
   expect(camera.near).toBe(0.5);
   expect(camera.far).toBe(50);
+});
+
+test("supports Spock Rect in constructor and setBounds", () => {
+  const rect = new Rect(20, 10, 0, 0);
+  const camera = new OrthographicCamera(rect, 0.5, 100);
+  expect(camera.left).toBe(-10);
+  expect(camera.right).toBe(10);
+  expect(camera.bottom).toBe(-5);
+  expect(camera.top).toBe(5);
+  expect(camera.near).toBe(0.5);
+  expect(camera.far).toBe(100);
+
+  const rect2 = new Rect(40, 20, 0, 0);
+  camera.setBounds(rect2, 1, 500);
+  expect(camera.left).toBe(-20);
+  expect(camera.right).toBe(20);
+  expect(camera.bottom).toBe(-10);
+  expect(camera.top).toBe(10);
+  expect(camera.near).toBe(1);
+  expect(camera.far).toBe(500);
 });
 
 test("computes a 4x4 projection matrix on construction", () => {

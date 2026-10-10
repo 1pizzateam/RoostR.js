@@ -1,5 +1,7 @@
 # BoundingBox
 
+> Implemented by Spock's `Box` and re-exported from RoostR as `BoundingBox`.
+
 A 3D Axis-Aligned Bounding Box (AABB) defined by minimum and maximum extents, utilized for broad-phase collision detection, viewing frustum culling, and ray intersection testing.
 
 ```javascript

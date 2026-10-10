@@ -1,5 +1,14 @@
 import { Shader } from './shader';
 
+interface ICachedProgram {
+  program: WebGLProgram;
+  key: string;
+  refs: number;
+}
+
+const caches = new WeakMap<object, Map<string, ICachedProgram>>();
+const owners = new WeakMap<object, ICachedProgram>();
+
 export class Program {
 
   static create( context: WebGLRenderingContext, 
@@ -13,12 +22,10 @@ export class Program {
       let vshader = Shader.create(context, vertexShader, 'VERTEX_SHADER');
       let fshader = Shader.create(context, fragmentShader, 'FRAGMENT_SHADER');
       if (!vshader || !fshader) {
-        if (vshader) {
+        if (vshader)
           context.deleteShader(vshader);
-        }
-        if (fshader) {
+        if (fshader)
           context.deleteShader(fshader);
-        }
         context.deleteProgram(program);
         return null;
       }
@@ -27,14 +34,60 @@ export class Program {
       context.linkProgram(program);
     
       if(!context.getProgramParameter(program, context.LINK_STATUS)){
-        console.log(context.getProgramInfoLog(program));
+        console.error('Program link failed:', context.getProgramInfoLog(program));
         context.deleteShader(vshader);
         context.deleteShader(fshader);
         context.deleteProgram(program);
         return null;
       }
+
+      // The linked program keeps its own copy of the compiled code.
+      context.detachShader(program, vshader);
+      context.detachShader(program, fshader);
+      context.deleteShader(vshader);
+      context.deleteShader(fshader);
     }
 
     return program;
+  }
+
+  // Returns a program shared by every caller using the same shader sources on this context.
+  // Pair each call with Program.release.
+  static acquire( context: WebGLRenderingContext,
+                  vertexShader: string,
+                  fragmentShader: string
+                ): WebGLProgram | null {
+    let cache = caches.get(context);
+    if (!cache) {
+      cache = new Map();
+      caches.set(context, cache);
+    }
+    const key = vertexShader + '\u0000' + fragmentShader;
+    let entry = cache.get(key);
+    if (!entry) {
+      const program = Program.create(context, vertexShader, fragmentShader);
+      if (!program)
+        return null;
+      entry = { program, key, refs: 0 };
+      cache.set(key, entry);
+      owners.set(program, entry);
+    }
+    entry.refs++;
+    return entry.program;
+  }
+
+  // Drops one reference; the program is deleted when no user remains.
+  // Programs that did not come from acquire are deleted immediately.
+  static release(context: WebGLRenderingContext, program: WebGLProgram): void {
+    const entry = owners.get(program);
+    if (!entry) {
+      context.deleteProgram(program);
+      return;
+    }
+    if (--entry.refs > 0)
+      return;
+    caches.get(context)?.delete(entry.key);
+    owners.delete(program);
+    context.deleteProgram(program);
   }
 }

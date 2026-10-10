@@ -3,7 +3,7 @@ import { SubMesh } from './geometry/submesh';
 import { MeshRenderer }  from './renderer/mesh';
 import { eDrawMethod } from './mesh';
 import { Material }  from './material';
-import { Mat4x3, Vec3, Quat, Mat3 } from '@1pizzateam/spock';
+import { Mat4x3, Vec3, Vec2, Quat, Mat3 } from '@1pizzateam/spock';
 
 export interface IGeometry {
   vertices    : number[] | Float32Array | null;
@@ -43,7 +43,6 @@ export interface IMesh extends IGeometry {
   scale?          : Vec3;
   quaternion?     : Quat;
   modelMatrix?    : Mat4x3;
-  rotationMatrix? : Mat4x3;
   worldMatrix?    : Mat4x3;
   normalMatrix?   : Mat3;
   active? : boolean;
@@ -60,6 +59,19 @@ export interface IMesh extends IGeometry {
   //   uvs? : number[] | null;
   // };
   // [key: string]: Uniform;
+}
+
+// Identifies a rendered frame so per-frame uniforms are uploaded once per program.
+export interface IFrameInfo {
+  id: number;
+  resolution?: Vec2;
+}
+
+// GL names as in WebGL constants, e.g. { equation: 'FUNC_ADD', source: 'SRC_ALPHA', destination: 'ONE_MINUS_SRC_ALPHA' }.
+export interface IBlendOptions {
+  equation: string;
+  source: string;
+  destination: string;
 }
 
 export interface ICustomUniforms {
@@ -94,6 +106,10 @@ export interface IProgram extends WebGLProgram {
   lightCutoff?      : WebGLUniformLocation | null;
   lightExponent?    : WebGLUniformLocation | null;
   lightType?        : WebGLUniformLocation | null;
+  // packed vec4 light arrays used by PhongShader
+  lightPositionType?     : WebGLUniformLocation | null;
+  lightDiffuseCutoff?    : WebGLUniformLocation | null;
+  lightSpecularExponent? : WebGLUniformLocation | null;
   nbLights?         : WebGLUniformLocation | null;
   ambientLight?     : WebGLUniformLocation | null;
   ambientColor?     : WebGLUniformLocation | null;
@@ -125,6 +141,9 @@ export interface IFlatLights{
   floatExponent?: Float32Array;
   floatType?: Float32Array;
   floatAmbient?: Float32Array;
+  packedPosition?: Float32Array;
+  packedDiffuse?: Float32Array;
+  packedSpecular?: Float32Array;
   [key: string]: any;
 }
 

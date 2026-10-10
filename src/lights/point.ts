@@ -14,10 +14,10 @@ export class PointLight extends DirectionalLight {
     this.quadraticAttenuation = 0;
     this.type = 'point';
 
-    if (positionOrOptions) {
-      if (positionOrOptions instanceof Vec3 || Array.isArray(positionOrOptions)) {
+    if (positionOrOptions)
+      if (positionOrOptions instanceof Vec3 || Array.isArray(positionOrOptions))
         this.setPosition(positionOrOptions as any);
-      } else if (typeof positionOrOptions === 'object') {
+      else if (typeof positionOrOptions === 'object') {
         if (positionOrOptions.position) this.setPosition(positionOrOptions.position as any);
         if (positionOrOptions.diffuse) this.setDiffuse(positionOrOptions.diffuse as any);
         if (positionOrOptions.specular) this.setSpecular(positionOrOptions.specular as any);
@@ -25,7 +25,6 @@ export class PointLight extends DirectionalLight {
         if (positionOrOptions.linearAttenuation !== undefined) this.setLinearAttenuation(positionOrOptions.linearAttenuation);
         if (positionOrOptions.quadraticAttenuation !== undefined) this.setQuadraticAttenuation(positionOrOptions.quadraticAttenuation);
       }
-    }
   }
 
   public setConstantAttenuation(value: number): void {

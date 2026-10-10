@@ -9,3 +9,9 @@ tests/coverage/
 
 # APM dependencies
 apm_modules/
+
+# VitePress cache & build outputs
+.vitepress/cache/
+.vitepress/dist/
+website/docs/.vitepress/cache/
+website/docs/.vitepress/dist/

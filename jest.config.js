@@ -26,9 +26,7 @@ export default {
   ],
 
   // A map from regular expressions to module names that allow to stub out resources with a single module
-  moduleNameMapper: {
-    "^@lcluber/type6js$": "<rootDir>/node_modules/@lcluber/type6js/dist/type6.cjs.js"
-  },
+  moduleNameMapper: {},
 
   // The test environment that will be used for testing
   testEnvironment: "jest-environment-jsdom",

@@ -1,21 +1,37 @@
+import { Vec2, Utils } from '@1pizzateam/spock';
 import { BasicMesh } from './basic';
 import { SubMesh } from './submesh';
 
 export class Plane extends BasicMesh {
 
   constructor(
-    width: number = 1.0,
-    height: number = 1.0,
-    widthSegments: number = 1,
-    heightSegments: number = 1,
+    sizeOrWidth: Vec2 | number = 1.0,
+    heightOrWidthSegments: number = 1.0,
+    widthOrHeightSegments: number = 1,
+    heightSegmentsOrOrientation?: number | ('xy' | 'xz'),
     orientation: 'xy' | 'xz' = 'xz'
   ) {
     super();
 
-    const w = width || 1.0;
-    const h = height || 1.0;
-    const gridX = Math.max(1, Math.floor(widthSegments || 1));
-    const gridY = Math.max(1, Math.floor(heightSegments || 1));
+    let w: number;
+    let h: number;
+    let gridX: number;
+    let gridY: number;
+    let orient: 'xy' | 'xz';
+
+    if (sizeOrWidth instanceof Vec2) {
+      w = sizeOrWidth.x || 1.0;
+      h = sizeOrWidth.y || 1.0;
+      gridX = Utils.clamp(Utils.floor(heightOrWidthSegments || 1, 0), 1, Infinity);
+      gridY = Utils.clamp(Utils.floor(widthOrHeightSegments || 1, 0), 1, Infinity);
+      orient = (typeof heightSegmentsOrOrientation === 'string' ? heightSegmentsOrOrientation : orientation) || 'xz';
+    } else {
+      w = sizeOrWidth || 1.0;
+      h = heightOrWidthSegments || 1.0;
+      gridX = Utils.clamp(Utils.floor(widthOrHeightSegments || 1, 0), 1, Infinity);
+      gridY = Utils.clamp(Utils.floor((typeof heightSegmentsOrOrientation === 'number' ? heightSegmentsOrOrientation : 1) || 1, 0), 1, Infinity);
+      orient = orientation || 'xz';
+    }
 
     const gridX1 = gridX + 1;
     const gridY1 = gridY + 1;
@@ -36,7 +52,7 @@ export class Plane extends BasicMesh {
       for (let ix = 0; ix < gridX1; ix++) {
         const x = ix * segmentWidth - halfW;
 
-        if (orientation === 'xz') {
+        if (orient === 'xz') {
           vertices.push(x, 0, y);
           normals.push(0, 1, 0);
         } else {
@@ -48,7 +64,7 @@ export class Plane extends BasicMesh {
       }
     }
 
-    for (let iy = 0; iy < gridY; iy++) {
+    for (let iy = 0; iy < gridY; iy++)
       for (let ix = 0; ix < gridX; ix++) {
         const a = ix + gridX1 * iy;
         const b = ix + gridX1 * (iy + 1);
@@ -58,7 +74,6 @@ export class Plane extends BasicMesh {
         indices.push(a, b, d);
         indices.push(b, c, d);
       }
-    }
 
     this.vertices = vertices;
     this.normals = normals;

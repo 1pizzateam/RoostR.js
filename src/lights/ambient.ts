@@ -1,5 +1,6 @@
 import { Vec3 } from '@1pizzateam/spock';
 import { Light } from '../types';
+import { assignVec3, Vec3Like } from '../vector';
 
 export class AmbientLight {
 
@@ -19,12 +20,11 @@ export class AmbientLight {
     this.type = 'ambient';
   }
 
-  public setColor(xOrVec: Vec3 | number, y?: number, z?: number): this {
-    if (xOrVec instanceof Vec3) {
-      this.diffuse.copy(xOrVec);
-    } else {
+  public setColor(xOrVec: Vec3Like | number, y?: number, z?: number): this {
+    if (typeof xOrVec === 'number')
       this.diffuse.setScalar(xOrVec, y ?? 0, z ?? 0);
-    }
+    else
+      assignVec3(this.diffuse, xOrVec);
     return this;
   }
 

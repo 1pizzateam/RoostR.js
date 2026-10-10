@@ -1,5 +1,7 @@
 # BoundingSphere
 
+> Implemented by Spock's `Sphere` and re-exported from RoostR as `BoundingSphere`.
+
 A 3D spherical bounding volume defined by a central coordinate and radius. Ideal for fast radial distance checks, rapid culling, and camera depth sorting.
 
 ```javascript

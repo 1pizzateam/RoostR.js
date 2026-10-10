@@ -23,10 +23,10 @@ const scene = new Scene({
 Create a new `Scene` instance.
 
 ```typescript
-new Scene(options: ISceneOptions)
+new Scene(optionsOrContext?: ISceneOptions | WebGLRenderingContext)
 ```
 
-### Parameters
+### Options (`ISceneOptions`)
 
 | Name | Type | Description |
 | :--- | :--- | :--- |
@@ -114,13 +114,27 @@ scene.renderBlended(camera);
 Cast a 3D ray through all meshes in the scene and return an array of hit results sorted from nearest to furthest.
 
 ```javascript
-const ray = camera.getRay(mouseX, mouseY, width, height);
+const rect = canvas.getBoundingClientRect();
+const ndcX = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+const ndcY = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
+
+const ray = camera.getRay(new Vec2(ndcX, ndcY));
 const hits = scene.raycast(ray);
 
 if (hits.length > 0) {
   const closest = hits[0];
-  console.log(`Hit mesh ${closest.mesh.id} at distance ${closest.distance}`);
+  console.log(`Hit mesh at distance ${closest.distance}`, closest.mesh);
 }
+```
+
+### `setSize(sizeOrWidth: Vec2 | number, height?: number): void`
+
+Updates the viewport dimensions and underlying canvas size:
+
+```javascript
+scene.setSize(new Vec2(window.innerWidth, window.innerHeight));
+// Or:
+scene.setSize(1280, 720);
 ```
 
 ### `setViewport(x: number, y: number, width: number, height: number): void`
@@ -130,3 +144,19 @@ Update the WebGL viewport dimensions.
 ### `setClearColor(r: number, g: number, b: number, a?: number): void`
 
 Update the scene background clear color.
+
+### `setFog(color: Vec3 | number[], near: number, far?: number): this`
+
+Enables atmospheric linear distance fog for built-in `PhongShader` meshes. A legacy numeric overload `setFog(r, g, b, near?, far?)` is also accepted.
+
+### `clearFog(): void`
+
+Disables distance fog.
+
+### `getCanvas(): HTMLCanvasElement | null`
+
+Returns the canvas element attached to this scene.
+
+### `destroy(destroyMeshes: boolean = false): void`
+
+Cleans up scene resources, deletes renderer state, and optionally calls `destroy()` on all registered meshes.

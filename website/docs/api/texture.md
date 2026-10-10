@@ -1,56 +1,87 @@
 # Texture
 
-Hardware WebGL texture wrapper supporting image loading, canvas drawing, typed array pixel buffers, NPOT wrapping, and mipmap generation.
+Utility object for creating, loading, updating, and configuring WebGL 2D textures (`WebGLTexture`).
 
 ```javascript
-import { Texture } from '@1pizzateam/roostr';
+import { Texture, Mesh, Cube, BasicShader } from '@1pizzateam/roostr';
 
-const texture = new Texture(gl);
-texture.load('/assets/wood.jpg', {
+// 1. Load an image texture asynchronously
+const webGLTexture = await Texture.load('/assets/wood.jpg', gl, {
   generateMipmaps: true,
-  filter: 'LINEAR_MIPMAP_LINEAR',
-  wrap: 'REPEAT'
+  minFilter: gl.LINEAR_MIPMAP_LINEAR,
+  magFilter: gl.LINEAR,
+  wrapS: gl.REPEAT,
+  wrapT: gl.REPEAT
 });
+
+// 2. Or attach directly to a mesh
+mesh.setTexture(webGLTexture);
 ```
-
----
-
-## Constructor
-
-```typescript
-new Texture(context: WebGLRenderingContext, options?: ITextureOptions)
-```
-
-### Options
-
-| Option | Type | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `filter` | `string` | `'LINEAR'` | Minification filter (`'NEAREST'`, `'LINEAR'`, `'LINEAR_MIPMAP_LINEAR'`). |
-| `magFilter` | `string` | `'LINEAR'` | Magnification filter (`'NEAREST'`, `'LINEAR'`). |
-| `wrap` | `string` | `'CLAMP_TO_EDGE'` | Wrapping mode (`'CLAMP_TO_EDGE'`, `'REPEAT'`, `'MIRRORED_REPEAT'`). |
-| `generateMipmaps`| `boolean` | `true` | Generate mipmap pyramid (only for power-of-two textures). |
-| `format` | `number` | `gl.RGBA` | Pixel data format. |
 
 ---
 
 ## Methods
 
-### `load(source: TextureSource, options?: ITextureOptions): Promise<Texture>`
+### `Texture.create(source: TextureSource, context: WebGLRenderingContext, options?: ITextureOptions): WebGLTexture | null`
 
-Load an image from URL, `HTMLImageElement`, or `HTMLCanvasElement`. Automatically detects power-of-two dimensions; if the texture is non-power-of-two (NPOT), gracefully falls back to `CLAMP_TO_EDGE` and disables mipmaps to satisfy WebGL 1.0 specifications.
+Creates and uploads a WebGL texture from an image, canvas, or typed array buffer.
 
-### `uploadPixels(data: ArrayBufferView, width: number, height: number): void`
+#### `TextureSource` Types
+- `HTMLImageElement`
+- `HTMLCanvasElement`
+- `ImageData`
+- `ImageBitmap`
+- `Uint8Array` (raw pixel buffer)
 
-Directly upload raw typed array byte buffers (e.g. `Uint8Array`) into GPU texture memory.
+#### `ITextureOptions`
 
-### `updateSubImage(data: ArrayBufferView, x: number, y: number, width: number, height: number): void`
+| Option | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `wrapS` | `number` | `gl.CLAMP_TO_EDGE` | S-coordinate horizontal wrap mode (`gl.CLAMP_TO_EDGE`, `gl.REPEAT`, `gl.MIRRORED_REPEAT`). |
+| `wrapT` | `number` | `gl.CLAMP_TO_EDGE` | T-coordinate vertical wrap mode. |
+| `minFilter` | `number` | `gl.LINEAR` | Texture minification filter (e.g. `gl.LINEAR`, `gl.NEAREST`, `gl.LINEAR_MIPMAP_LINEAR`). |
+| `magFilter` | `number` | `gl.LINEAR` | Texture magnification filter (`gl.LINEAR`, `gl.NEAREST`). |
+| `flipY` | `boolean` | `true` | Unpack flip Y parameter for proper texture orientation. |
+| `generateMipmaps`| `boolean` | `false` | Generates a mipmap pyramid using `gl.generateMipmap(gl.TEXTURE_2D)`. |
+| `width` | `number` | `1` | Buffer width when `source` is a `Uint8Array`. |
+| `height` | `number` | `1` | Buffer height when `source` is a `Uint8Array`. |
 
-Partially update a rectangular region of the texture using `gl.texSubImage2D` without reallocating texture memory.
+---
 
-### `bind(unit: number = 0): void`
+### `Texture.load(url: string, context: WebGLRenderingContext, options?: ITextureOptions): Promise<WebGLTexture | null>`
 
-Bind this texture to the designated WebGL texture unit (`gl.TEXTURE0 + unit`).
+Asynchronously loads an image from a URL and resolves with the allocated `WebGLTexture`. Automatically sets `crossOrigin = 'anonymous'`.
 
-### `destroy(): void`
+```javascript
+const texture = await Texture.load('textures/grass.png', gl, {
+  wrapS: gl.REPEAT,
+  wrapT: gl.REPEAT,
+  generateMipmaps: true
+});
+```
 
-Delete the underlying WebGL texture object (`gl.deleteTexture`).
+---
+
+### `Texture.update(texture: WebGLTexture, source: TextureSource, context: WebGLRenderingContext, xOffset: number = 0, yOffset: number = 0, width?: number, height?: number): void`
+
+Partially or fully updates pixel data in an existing GPU texture using `gl.texSubImage2D` without reallocating texture memory.
+
+```javascript
+// Update a 128x128 sub-region of an active texture
+Texture.update(webGLTexture, newPixelData, gl, 0, 0, 128, 128);
+```
+
+---
+
+## Mesh Integration
+
+Textures are most commonly applied directly via [`mesh.setTexture()`](/api/mesh#settexture):
+
+```javascript
+// Directly from an Image or Canvas element
+mesh.setTexture(imageElement, { generateMipmaps: true });
+
+// Or via convenient material helpers
+mesh.useBasicMaterial({ texture: imageElement });
+mesh.usePhongMaterial({ texture: imageElement, diffuse: new Vec3(1, 1, 1) });
+```

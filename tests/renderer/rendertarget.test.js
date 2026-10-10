@@ -1,4 +1,4 @@
-import { RenderTarget } from '../../dist/roostr.js';
+import { RenderTarget, Vec2 } from '../../dist/roostr.js';
 import { createMockContext } from '../helpers/webgl-mock.js';
 
 describe('RenderTarget', () => {
@@ -18,6 +18,13 @@ describe('RenderTarget', () => {
     target.dispose();
   });
 
+  test('creates RenderTarget using Vec2 size', () => {
+    const target = new RenderTarget(new Vec2(512, 256), context);
+    expect(target.width).toBe(512);
+    expect(target.height).toBe(256);
+    target.dispose();
+  });
+
   test('bind and unbind update WebGL state', () => {
     const target = new RenderTarget(256, 256, context);
     target.bind();
@@ -25,7 +32,12 @@ describe('RenderTarget', () => {
 
     target.unbind(800, 600);
     expect(context.bindFramebuffer).toHaveBeenCalledWith(context.FRAMEBUFFER, null);
+    expect(context.viewport).toHaveBeenCalledWith(0, 0, 800, 600);
 
+    target.unbind(new Vec2(1024, 768));
+    expect(context.viewport).toHaveBeenCalledWith(0, 0, 1024, 768);
+
+    expect(target.getSize().toArray()).toEqual([256, 256]);
     target.dispose();
   });
 
@@ -34,6 +46,10 @@ describe('RenderTarget', () => {
     target.setSize(1024, 1024);
     expect(target.width).toBe(1024);
     expect(target.height).toBe(1024);
+
+    target.setSize(new Vec2(800, 600));
+    expect(target.width).toBe(800);
+    expect(target.height).toBe(600);
 
     target.dispose();
   });

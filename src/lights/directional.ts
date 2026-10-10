@@ -1,5 +1,6 @@
 import { Vec3 } from '@1pizzateam/spock';
 import { Light } from '../types';
+import { assignVec3, Vec3Like } from '../vector';
 
 
 export class DirectionalLight {
@@ -17,48 +18,31 @@ export class DirectionalLight {
     this.specular  = new Vec3(0.8, 0.8, 0.8);
     this.type      = 'directional';
 
-    if (directionOrOptions) {
-      if (directionOrOptions instanceof Vec3 || Array.isArray(directionOrOptions)) {
-        this.setDirection(directionOrOptions as any);
-      } else if (typeof directionOrOptions === 'object') {
-        if (directionOrOptions.direction) this.setDirection(directionOrOptions.direction as any);
-        if (directionOrOptions.diffuse) this.setDiffuse(directionOrOptions.diffuse as any);
-        if (directionOrOptions.specular) this.setSpecular(directionOrOptions.specular as any);
-        if (directionOrOptions.position) this.setPosition(directionOrOptions.position as any);
+    if (directionOrOptions)
+      if (directionOrOptions instanceof Vec3 || Array.isArray(directionOrOptions))
+        this.setDirection(directionOrOptions);
+      else if (typeof directionOrOptions === 'object') {
+        if (directionOrOptions.direction) this.setDirection(directionOrOptions.direction);
+        if (directionOrOptions.diffuse) this.setDiffuse(directionOrOptions.diffuse);
+        if (directionOrOptions.specular) this.setSpecular(directionOrOptions.specular);
+        if (directionOrOptions.position) this.setPosition(directionOrOptions.position);
       }
-    }
   }
 
-  public setPosition(xOrVec: Vec3 | number, y?: number, z?: number): void {
-    if (xOrVec instanceof Vec3) {
-      this.position.copy(xOrVec);
-    } else {
-      this.position.setScalar(xOrVec, y, z);
-    }
+  public setPosition(xOrVec: Vec3Like | number, y?: number, z?: number): void {
+    assignVec3(this.position, xOrVec, y, z);
   }
 
-  public setDirection(xOrVec: Vec3 | number, y?: number, z?: number): void {
-    if (xOrVec instanceof Vec3) {
-      this.direction.copy(xOrVec).normalize();
-    } else {
-      this.direction.setScalar(xOrVec, y, z).normalize();
-    }
+  public setDirection(xOrVec: Vec3Like | number, y?: number, z?: number): void {
+    assignVec3(this.direction, xOrVec, y, z).normalize();
   }
 
-  public setDiffuse(xOrVec: Vec3 | number, y?: number, z?: number): void {
-    if (xOrVec instanceof Vec3) {
-      this.diffuse.copy(xOrVec);
-    } else {
-      this.diffuse.setScalar(xOrVec, y, z);
-    }
+  public setDiffuse(xOrVec: Vec3Like | number, y?: number, z?: number): void {
+    assignVec3(this.diffuse, xOrVec, y, z);
   }
 
-  public setSpecular(xOrVec: Vec3 | number, y?: number, z?: number): void {
-    if (xOrVec instanceof Vec3) {
-      this.specular.copy(xOrVec);
-    } else {
-      this.specular.setScalar(xOrVec, y, z);
-    }
+  public setSpecular(xOrVec: Vec3Like | number, y?: number, z?: number): void {
+    assignVec3(this.specular, xOrVec, y, z);
   }
 
 }

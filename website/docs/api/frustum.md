@@ -1,5 +1,7 @@
 # Frustum Culling
 
+> `Frustum` and `Plane` (re-exported as `SpatialPlane`) are implemented in Spock.
+
 Represents the 6-sided pyramid viewing volume of a camera (Left, Right, Bottom, Top, Near, Far planes). Meshes lying entirely outside any of the 6 planes are culled prior to GPU rendering.
 
 ```javascript

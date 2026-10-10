@@ -1,31 +1,67 @@
-import { Vec3, Utils } from '@1pizzateam/spock';
+import { Vec3, Vec2, Utils } from '@1pizzateam/spock';
+
+export interface IRendererOptions {
+  width?: number;
+  height?: number;
+  // Forwarded to canvas.getContext('webgl', ...). alpha defaults to false.
+  contextAttributes?: WebGLContextAttributes;
+  // GPU resources are lost with the context: recreate meshes, textures and programs on restore.
+  onContextLost?: () => void;
+  onContextRestored?: () => void;
+}
 
 export class Renderer {
 
   canvas: HTMLCanvasElement | null;
   context: WebGLRenderingContext | null;
+  isContextLost: boolean = false;
 
-  constructor(canvasID: string | HTMLCanvasElement) {
+  private options: IRendererOptions;
+  private onContextLostBound: (e: Event) => void;
+  private onContextRestoredBound: () => void;
+
+  constructor(canvasID: string | HTMLCanvasElement, options: IRendererOptions = {}) {
+    this.options = options;
+    this.onContextLostBound = (e: Event) => {
+      e.preventDefault();
+      this.isContextLost = true;
+      this.options.onContextLost?.();
+    };
+    this.onContextRestoredBound = () => {
+      this.isContextLost = false;
+      this.defaultSettings();
+      this.options.onContextRestored?.();
+    };
+
     this.canvas = typeof canvasID === 'string' ? this.findById(canvasID) : canvasID;
     this.context = null;
     if (this.canvas) {
       // default resolution
-      this.canvas.width = 1280;
-      this.canvas.height = 720;
-      const options = { alpha: false };
-      this.context = (<WebGLRenderingContext>this.canvas.getContext("webgl", options) || 
-                      <WebGLRenderingContext>this.canvas.getContext("experimental-webgl", options)) || null;
+      this.canvas.width = options.width ?? 1280;
+      this.canvas.height = options.height ?? 720;
+      const attributes = { alpha: false, ...options.contextAttributes };
+      this.context = (<WebGLRenderingContext>this.canvas.getContext("webgl", attributes) || 
+                      <WebGLRenderingContext>this.canvas.getContext("experimental-webgl", attributes)) || null;
 
       if (this.context) {
+        if (typeof this.canvas.addEventListener === 'function') {
+          this.canvas.addEventListener('webglcontextlost', this.onContextLostBound);
+          this.canvas.addEventListener('webglcontextrestored', this.onContextRestoredBound);
+        }
         this.defaultSettings();
       }
     }
   }
 
-  public defaultSettings (): void {
-    if (!this.context) {
-      return;
+  public dispose(): void {
+    if (this.canvas && typeof this.canvas.removeEventListener === 'function') {
+      this.canvas.removeEventListener('webglcontextlost', this.onContextLostBound);
+      this.canvas.removeEventListener('webglcontextrestored', this.onContextRestoredBound);
     }
+  }
+
+  public defaultSettings (): void {
+    if (!this.context) return;
     this.context.getExtension('OES_standard_derivatives');
     this.setFrontFace('CW');
     this.enable('CULL_FACE');
@@ -42,9 +78,8 @@ export class Renderer {
   // gl.CW: Clock-wise winding.
   // gl.CCW: Counter-clock-wise winding.
   public setFrontFace( mode: string ): void {
-    if (this.context) {
+    if (this.context)
       this.context.frontFace(this.context[mode]);
-    }
   }
 
   // specifying which WebGL capability to enable. Possible values:
@@ -61,15 +96,13 @@ export class Renderer {
   // Transparency is best implemented using blend function (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA) with primitives sorted from farthest to nearest. Note that this transparency calculation does not require the presence of alpha bitplanes in the frame buffer.
   // Blend function (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA) is also useful for rendering antialiased points and lines in arbitrary order.
   public enable( capability: string ): void {
-    if (this.context) {
+    if (this.context)
       this.context.enable(this.context[capability]);
-    }
   }
 
   public disable( capability: string ): void {
-    if (this.context) {
+    if (this.context)
       this.context.disable(this.context[capability]);
-    }
   }
 
   // specifying whether front- or back-facing polygons are candidates for culling. The default value is gl.BACK. Possible values are:
@@ -77,21 +110,19 @@ export class Renderer {
   // gl.BACK
   // gl.FRONT_AND_BACK
   public setCullFace( mode: string ): void {
-    if (this.context) {
+    if (this.context)
       this.context.cullFace(this.context[mode]);
-    }
   }
 
   // specifies the affine transformation of x and y from normalized device coordinates to window coordinates.
   public setViewport( width: number, height: number ): void {
-    if (this.context) {
+    if (this.context)
       this.context.viewport(0, 0, width, height); //defaut values
-    }
   }
 
   // This specifies what color values to use when calling the clear() method. The values are clamped between 0 and 1.
   public setClearColor( rOrVec: Vec3 | number, g?: number, b?: number, a?: number ): void {
-    if (this.context) {
+    if (this.context)
       if (rOrVec instanceof Vec3) {
         const alpha = g !== undefined ? Utils.clamp(g, 0, 1) : 1.0;
         this.context.clearColor(
@@ -111,13 +142,11 @@ export class Renderer {
           alpha
         );
       }
-    }
   }
 
   public clearFrame(): void {
-    if (this.context) {
+    if (this.context)
       this.context.clear(this.context.COLOR_BUFFER_BIT | this.context.DEPTH_BUFFER_BIT);
-    }
   }
 
   public getContext(): WebGLRenderingContext | null {
@@ -128,12 +157,14 @@ export class Renderer {
     return this.canvas;
   }
 
-  public setSize(width: number, height: number): void {
+  public setSize(sizeOrWidth: Vec2 | number, height?: number): void {
+    const w = sizeOrWidth instanceof Vec2 ? sizeOrWidth.x : sizeOrWidth;
+    const h = sizeOrWidth instanceof Vec2 ? sizeOrWidth.y : (height ?? 0);
     if (this.canvas) {
-      this.canvas.width = width;
-      this.canvas.height = height;
+      this.canvas.width = w;
+      this.canvas.height = h;
     }
-    this.setViewport(width, height);
+    this.setViewport(w, h);
   }
 
   private findById(id: string): HTMLCanvasElement | null {

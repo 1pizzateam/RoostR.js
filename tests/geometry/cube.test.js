@@ -1,4 +1,4 @@
-import { Cube } from "../../dist/roostr";
+import { Cube, Vec3 } from "../../dist/roostr";
 
 test("creates a Cube with default half-size scaling when size is falsy", () => {
   const cube = new Cube(0);
@@ -12,6 +12,13 @@ test("creates a Cube scaled by half the given size", () => {
   expect(cube.vertices[0]).toBe(2);
   expect(cube.vertices[1]).toBe(-2);
   expect(cube.vertices[2]).toBe(-2);
+});
+
+test("creates a Cube with Vec3 dimensions", () => {
+  const cube = new Cube(new Vec3(4, 6, 8));
+  expect(cube.vertices[0]).toBe(2);  // 4 * 0.5
+  expect(cube.vertices[1]).toBe(-3); // -6 * 0.5
+  expect(cube.vertices[2]).toBe(-4); // -8 * 0.5
 });
 
 test("has 8 vertices (3 components each)", () => {

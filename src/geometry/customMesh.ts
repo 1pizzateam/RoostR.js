@@ -1,6 +1,7 @@
 
+import { Vec3 } from '@1pizzateam/spock';
 import { SubMesh } from './submesh';
-import { IGeometry } from '../interfaces';
+import type { IGeometry } from '../interfaces';
 
 export class CustomMesh implements IGeometry {
 
@@ -39,16 +40,26 @@ export class CustomMesh implements IGeometry {
                       ];
   }
 
-  public setVertices(array: Float32Array | number[]): void {
-    this.vertices = array instanceof Float32Array ? array.slice(0) : new Float32Array(array);
+  private static toFloat32(array: Vec3[] | Float32Array | number[]): Float32Array {
+    if (array.length > 0 && array[0] instanceof Vec3) {
+      const flat = new Float32Array(array.length * 3);
+      for (let i = 0; i < array.length; i++)
+        (array as Vec3[])[i].toArray(flat, i * 3);
+      return flat;
+    }
+    return array instanceof Float32Array ? array.slice(0) : new Float32Array(array as number[]);
+  }
+
+  public setVertices(array: Vec3[] | Float32Array | number[]): void {
+    this.vertices = CustomMesh.toFloat32(array);
   }
 
   public setIndices(array: Int32Array | number[]): void {
     this.indices = array instanceof Int32Array ? array.slice(0) : new Int32Array(array);
   }
 
-  public setNormals(array: Float32Array | number[]): void {
-    this.normals = array instanceof Float32Array ? array.slice(0) : new Float32Array(array);
+  public setNormals(array: Vec3[] | Float32Array | number[]): void {
+    this.normals = CustomMesh.toFloat32(array);
   }
 
   public setUvs(array: Float32Array | number[]): void {
@@ -56,9 +67,8 @@ export class CustomMesh implements IGeometry {
   }
 
   public addSubMeshes(array: Float32Array | Int32Array | number[]): void {
-    for(var i = 0 ; i < array.length ; i+=2 ){
+    for (let i = 0; i < array.length; i += 2)
       this.addSubMesh( array[i], array[i+1] );
-    }
   }
 
   public addSubMesh(start: number, count: number): void {
@@ -70,73 +80,64 @@ export class CustomMesh implements IGeometry {
   }
 
   public setPrimitive(primitive: string): boolean {
-    for (var i = 0 ; i < this.primitives.length ; i++) {
-      if(this.primitives[i] === primitive){
+    for (let i = 0; i < this.primitives.length; i++)
+      if(this.primitives[i] === primitive) {
         this.primitive = primitive;
         return true;
       }
-    }
     return false;
   }
 
+  private static _vA = new Vec3();
+  private static _vB = new Vec3();
+  private static _vC = new Vec3();
+  private static _e1 = new Vec3();
+  private static _e2 = new Vec3();
+  private static _n = new Vec3();
+  private static _sum = new Vec3();
+  private static readonly UP = new Vec3(0, 1, 0);
+
+  // Adds the face normal n to the accumulated normal of the vertex at offset.
+  private static accumulate(normals: Float32Array, offset: number, n: Vec3): void {
+    CustomMesh._sum.setArray(normals, offset).add(n).toArray(normals, offset);
+  }
+
+  // Area-weighted smooth normals (indexed) or flat normals (non-indexed).
   public computeVertexNormals(): Float32Array | null {
     if (!this.vertices || this.vertices.length === 0) return null;
 
-    const normals = new Float32Array(this.vertices.length);
+    const vertices = this.vertices;
+    const normals = new Float32Array(vertices.length);
+    const vA = CustomMesh._vA, vB = CustomMesh._vB, vC = CustomMesh._vC;
+    const e1 = CustomMesh._e1, e2 = CustomMesh._e2, n = CustomMesh._n;
 
-    if (this.indices && this.indices.length > 0) {
-      for (let i = 0; i < this.indices.length; i += 3) {
+    const faceNormal = (iA: number, iB: number, iC: number): Vec3 => {
+      vA.setArray(vertices, iA);
+      vB.setArray(vertices, iB);
+      vC.setArray(vertices, iC);
+      return n.crossVectors(e1.subVectors(vB, vA), e2.subVectors(vC, vA));
+    };
+
+    if (this.indices && this.indices.length > 0)
+      for (let i = 0; i + 2 < this.indices.length; i += 3) {
         const iA = this.indices[i] * 3;
         const iB = this.indices[i + 1] * 3;
         const iC = this.indices[i + 2] * 3;
-
-        const ax = this.vertices[iA], ay = this.vertices[iA + 1], az = this.vertices[iA + 2];
-        const bx = this.vertices[iB], by = this.vertices[iB + 1], bz = this.vertices[iB + 2];
-        const cx = this.vertices[iC], cy = this.vertices[iC + 1], cz = this.vertices[iC + 2];
-
-        // edge1 = B - A, edge2 = C - A
-        const e1x = bx - ax, e1y = by - ay, e1z = bz - az;
-        const e2x = cx - ax, e2y = cy - ay, e2z = cz - az;
-
-        // cross product
-        const nx = e1y * e2z - e1z * e2y;
-        const ny = e1z * e2x - e1x * e2z;
-        const nz = e1x * e2y - e1y * e2x;
-
-        normals[iA] += nx; normals[iA + 1] += ny; normals[iA + 2] += nz;
-        normals[iB] += nx; normals[iB + 1] += ny; normals[iB + 2] += nz;
-        normals[iC] += nx; normals[iC + 1] += ny; normals[iC + 2] += nz;
+        faceNormal(iA, iB, iC);
+        CustomMesh.accumulate(normals, iA, n);
+        CustomMesh.accumulate(normals, iB, n);
+        CustomMesh.accumulate(normals, iC, n);
       }
-    } else {
-      for (let i = 0; i < this.vertices.length; i += 9) {
-        const ax = this.vertices[i], ay = this.vertices[i + 1], az = this.vertices[i + 2];
-        const bx = this.vertices[i + 3], by = this.vertices[i + 4], bz = this.vertices[i + 5];
-        const cx = this.vertices[i + 6], cy = this.vertices[i + 7], cz = this.vertices[i + 8];
-
-        const e1x = bx - ax, e1y = by - ay, e1z = bz - az;
-        const e2x = cx - ax, e2y = cy - ay, e2z = cz - az;
-
-        const nx = e1y * e2z - e1z * e2y;
-        const ny = e1z * e2x - e1x * e2z;
-        const nz = e1x * e2y - e1y * e2x;
-
-        normals[i] = nx; normals[i + 1] = ny; normals[i + 2] = nz;
-        normals[i + 3] = nx; normals[i + 4] = ny; normals[i + 5] = nz;
-        normals[i + 6] = nx; normals[i + 7] = ny; normals[i + 8] = nz;
+    else
+      for (let i = 0; i + 8 < vertices.length; i += 9) {
+        faceNormal(i, i + 3, i + 6);
+        n.toArray(normals, i);
+        n.toArray(normals, i + 3);
+        n.toArray(normals, i + 6);
       }
-    }
 
-    // Normalize all normals
-    for (let i = 0; i < normals.length; i += 3) {
-      const len = Math.hypot(normals[i], normals[i + 1], normals[i + 2]);
-      if (len > 0) {
-        normals[i] /= len;
-        normals[i + 1] /= len;
-        normals[i + 2] /= len;
-      } else {
-        normals[i + 1] = 1.0;
-      }
-    }
+    for (let i = 0; i < normals.length; i += 3)
+      n.setArray(normals, i).normalize(CustomMesh.UP).toArray(normals, i);
 
     this.normals = normals;
     return this.normals;

@@ -1,3 +1,5 @@
+import { Vec2 } from '@1pizzateam/spock';
+
 export class RenderTarget {
 
   width: number;
@@ -7,10 +9,20 @@ export class RenderTarget {
   texture: WebGLTexture | null;
   depthBuffer: WebGLRenderbuffer | null;
 
-  constructor(width: number, height: number, context: WebGLRenderingContext) {
-    this.width = width;
-    this.height = height;
-    this.context = context;
+  constructor(
+    sizeOrWidth: Vec2 | number,
+    heightOrContext: number | WebGLRenderingContext,
+    context?: WebGLRenderingContext
+  ) {
+    if (sizeOrWidth instanceof Vec2) {
+      this.width = sizeOrWidth.x;
+      this.height = sizeOrWidth.y;
+      this.context = heightOrContext as WebGLRenderingContext;
+    } else {
+      this.width = sizeOrWidth;
+      this.height = heightOrContext as number;
+      this.context = context!;
+    }
 
     this.framebuffer = null;
     this.texture = null;
@@ -85,18 +97,25 @@ export class RenderTarget {
     gl.viewport(0, 0, this.width, this.height);
   }
 
-  public unbind(viewportWidth?: number, viewportHeight?: number): void {
+  public unbind(viewportWidthOrSize?: Vec2 | number, viewportHeight?: number): void {
     const gl = this.context;
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    if (viewportWidth !== undefined && viewportHeight !== undefined) {
-      gl.viewport(0, 0, viewportWidth, viewportHeight);
-    }
+    if (viewportWidthOrSize instanceof Vec2)
+      gl.viewport(0, 0, viewportWidthOrSize.x, viewportWidthOrSize.y);
+    else if (viewportWidthOrSize !== undefined && viewportHeight !== undefined)
+      gl.viewport(0, 0, viewportWidthOrSize, viewportHeight);
   }
 
-  public setSize(width: number, height: number): void {
-    if (this.width === width && this.height === height) return;
-    this.width = width;
-    this.height = height;
+  public getSize(target: Vec2 = new Vec2()): Vec2 {
+    return target.setScalar(this.width, this.height);
+  }
+
+  public setSize(sizeOrWidth: Vec2 | number, height?: number): void {
+    const w = sizeOrWidth instanceof Vec2 ? sizeOrWidth.x : sizeOrWidth;
+    const h = sizeOrWidth instanceof Vec2 ? sizeOrWidth.y : (height ?? 0);
+    if (this.width === w && this.height === h) return;
+    this.width = w;
+    this.height = h;
 
     const gl = this.context;
     if (this.texture) {

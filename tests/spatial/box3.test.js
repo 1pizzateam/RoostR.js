@@ -1,4 +1,4 @@
-import { BoundingBox, Vec3, Mat4x3 } from '../../dist/roostr.js';
+import { BoundingBox, Vec3, Mat4x3, Mat4 } from '../../dist/roostr.js';
 
 describe('BoundingBox', () => {
   test('creates empty box by default', () => {
@@ -55,5 +55,15 @@ describe('BoundingBox', () => {
     expect(box.max.x).toBe(11);
     expect(box.min.y).toBe(-1);
     expect(box.max.y).toBe(1);
+  });
+
+  test('applyMatrix4 works with Mat4', () => {
+    const box = new BoundingBox(new Vec3(-1, -1, -1), new Vec3(1, 1, 1));
+    const mat = new Mat4();
+    mat.translate(new Vec3(0, 5, 0));
+    box.applyMatrix4(mat);
+
+    expect(box.min.y).toBe(4);
+    expect(box.max.y).toBe(6);
   });
 });

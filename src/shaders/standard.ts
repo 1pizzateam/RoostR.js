@@ -93,7 +93,11 @@ void main(void) {
 }
 `,
   fragment: `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
 precision mediump float;
+#endif
 
 varying vec3 vWorldPosition;
 varying vec3 vNormal;
@@ -109,14 +113,12 @@ uniform vec3 uAmbientColor;
 
 const int MAX_LIGHTS = 8;
 uniform int uNbLights;
-uniform vec3 uLightPosition[MAX_LIGHTS];
-uniform vec3 uLightDiffuse[MAX_LIGHTS];
-uniform vec3 uLightSpecular[MAX_LIGHTS];
+// Packed: (position.xyz, type), (diffuse.rgb, cutoff), (specular.rgb, exponent)
+uniform vec4 uLightPositionType[MAX_LIGHTS];
+uniform vec4 uLightDiffuseCutoff[MAX_LIGHTS];
+uniform vec4 uLightSpecularExponent[MAX_LIGHTS];
 uniform vec3 uLightDirection[MAX_LIGHTS];
 uniform vec3 uLightAttenuation[MAX_LIGHTS];
-uniform float uLightCutoff[MAX_LIGHTS];
-uniform float uLightExponent[MAX_LIGHTS];
-uniform float uLightType[MAX_LIGHTS];
 
 uniform sampler2D uSampler;
 uniform int uHasTexture;
@@ -139,15 +141,19 @@ void main(void) {
   for (int i = 0; i < MAX_LIGHTS; i++) {
     if (i >= uNbLights) break;
 
+    vec4 positionType = uLightPositionType[i];
+    vec4 diffuseCutoff = uLightDiffuseCutoff[i];
+    vec4 specularExponent = uLightSpecularExponent[i];
+
     vec3 lightDir;
     float attenuation = 1.0;
 
-    if (uLightType[i] < 0.5) {
+    if (positionType.w < 0.5) {
       // Directional
       lightDir = normalize(-uLightDirection[i]);
     } else {
       // Point or Spot
-      vec3 lightVec = uLightPosition[i] - vWorldPosition;
+      vec3 lightVec = positionType.xyz - vWorldPosition;
       float d = length(lightVec);
       lightDir = normalize(lightVec);
 
@@ -156,12 +162,12 @@ void main(void) {
       float q = uLightAttenuation[i].z;
       attenuation = 1.0 / max(c + l * d + q * d * d, 1.0);
 
-      if (uLightType[i] > 1.5) {
+      if (positionType.w > 1.5) {
         // Spot
         float spotEffect = dot(normalize(uLightDirection[i]), -lightDir);
-        float cutoffCos = cos(radians(uLightCutoff[i]));
+        float cutoffCos = cos(radians(diffuseCutoff.w));
         if (spotEffect > cutoffCos) {
-          attenuation *= pow(spotEffect, max(uLightExponent[i], 1.0));
+          attenuation *= pow(spotEffect, max(specularExponent.w, 1.0));
         } else {
           attenuation = 0.0;
         }
@@ -169,13 +175,13 @@ void main(void) {
     }
 
     float NdotL = max(dot(normal, lightDir), 0.0);
-    totalDiffuse += uLightDiffuse[i] * uMaterialDiffuse * NdotL * attenuation;
+    totalDiffuse += diffuseCutoff.rgb * uMaterialDiffuse * NdotL * attenuation;
 
     if (NdotL > 0.0) {
       vec3 halfDir = normalize(lightDir + viewDir);
       float NdotH = max(dot(normal, halfDir), 0.0);
       float spec = pow(NdotH, max(uMaterialShininess, 1.0));
-      totalSpecular += uLightSpecular[i] * uMaterialSpecular * spec * attenuation;
+      totalSpecular += specularExponent.rgb * uMaterialSpecular * spec * attenuation;
     }
   }
 

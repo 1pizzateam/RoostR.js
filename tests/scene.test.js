@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals';
-import { Scene, Mesh, Quad, DirectionalLight, PointLight, SpotLight, OrthographicCamera, PerspectiveCamera, Material, Vec3 } from "../dist/roostr";
+import { Scene, Mesh, Quad, DirectionalLight, PointLight, SpotLight, OrthographicCamera, PerspectiveCamera, Material, Vec3, Vec2 } from "../dist/roostr";
 import { createMockContext } from "./helpers/webgl-mock";
 
 function createScene() {
@@ -71,7 +71,7 @@ test("render draws every active mesh using the camera's matrices", () => {
   const { scene, context } = createScene();
   const mesh = new Mesh(new Quad(2, 2), context);
   mesh.addProgram("vertex-src", "fragment-src", new Material());
-  const renderSpy = jest.spyOn(mesh, "render");
+  const renderSpy = jest.spyOn(mesh, "renderSelf");
   scene.addMesh(mesh);
 
   const camera = new OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
@@ -188,11 +188,11 @@ test("renderBlended sorts meshes by depth back-to-front", () => {
   expect(rendered).toBe(2);
 });
 
-test("render passes camera.position and scene.fog to mesh.render", () => {
+test("render passes camera.position and scene.fog to mesh.renderSelf", () => {
   const { scene, context } = createScene();
   const mesh = new Mesh(new Quad(2, 2), context);
   mesh.addProgram("vert", "frag", new Material());
-  const renderSpy = jest.spyOn(mesh, "render");
+  const renderSpy = jest.spyOn(mesh, "renderSelf");
   scene.addMesh(mesh);
 
   scene.setFog(new Vec3(0.1, 0.2, 0.3), 5, 50);
@@ -246,5 +246,38 @@ test("flattening mixed light types keeps properties aligned and provides typed a
   expect(flat.constantAttenuation.length).toBe(3);
   expect(flat.floatAttenuation).toBeInstanceOf(Float32Array);
   expect(flat.floatPosition).toBeInstanceOf(Float32Array);
+});
+
+test("setSize updates canvas size and viewport", () => {
+  const { scene, context } = createScene();
+  scene.setSize(800, 600);
+  expect(context.viewport).toHaveBeenCalledWith(0, 0, 800, 600);
+  expect(context.canvas.width).toBe(800);
+  expect(context.canvas.height).toBe(600);
+
+  scene.setSize(new Vec2(1024, 768));
+  expect(context.viewport).toHaveBeenCalledWith(0, 0, 1024, 768);
+  expect(context.canvas.width).toBe(1024);
+  expect(context.canvas.height).toBe(768);
+});
+
+test("destroy cleans up meshes, lights, and fog", () => {
+  const { scene, context } = createScene();
+  const mesh = new Mesh(new Quad(2, 2), context);
+  const destroySpy = jest.spyOn(mesh, "destroy");
+  scene.addMesh(mesh);
+  scene.addLight(new DirectionalLight());
+  scene.setFog(new Vec3(1, 1, 1), 10, 100);
+
+  expect(scene.nbMeshes).toBe(1);
+  expect(scene.fog).not.toBeNull();
+
+  scene.destroy(true);
+
+  expect(destroySpy).toHaveBeenCalledTimes(1);
+  expect(scene.nbMeshes).toBe(0);
+  expect(scene.meshes).toHaveLength(0);
+  expect(scene.lights.nbDirectionals).toBe(0);
+  expect(scene.fog).toBeNull();
 });
 

@@ -8,7 +8,7 @@ import { CustomMesh, Mesh, PhongShader } from '@1pizzateam/roostr';
 const customGeom = new CustomMesh();
 
 // 1. Supply vertices (x, y, z triplets)
-customGeom.vertices = new Float32Array([
+customGeom.setVertices([
   -1, 0,  1,
    1, 0,  1,
    0, 1.5, 0,
@@ -16,7 +16,7 @@ customGeom.vertices = new Float32Array([
 ]);
 
 // 2. Supply triangle indices
-customGeom.indices = new Uint16Array([
+customGeom.setIndices([
   0, 1, 2, // Front face
   1, 3, 2, // Right face
   3, 0, 2, // Left face
@@ -26,7 +26,7 @@ customGeom.indices = new Uint16Array([
 // 3. Compute smooth vertex normals automatically
 customGeom.computeVertexNormals();
 
-const mesh = new Mesh(gl, customGeom);
+const mesh = new Mesh(customGeom, gl);
 mesh.addProgram(PhongShader.create(gl));
 scene.addMesh(mesh);
 ```
@@ -37,19 +37,49 @@ scene.addMesh(mesh);
 
 | Property | Type | Description |
 | :--- | :--- | :--- |
-| `vertices` | `Float32Array \| number[]` | Flat array of 3D vertex positions $[x, y, z]$. |
-| `indices` | `Uint16Array \| Uint32Array \| number[]` | Flat array of triangle index triplets. |
-| `normals` | `Float32Array \| number[]` | Flat array of normal vectors $[n_x, n_y, n_z]$. |
-| `uvs` | `Float32Array \| number[]` | Flat array of texture mapping coordinates $[u, v]$. |
-| `subMeshes` | `SubMesh[]` | Optional array of distinct submesh index slices. |
+| `vertices` | `Float32Array \| null` | Flat array of 3D vertex positions $[x, y, z]$. |
+| `indices` | `Int32Array \| null` | Flat array of triangle index triplets. |
+| `normals` | `Float32Array \| null` | Flat array of normal vectors $[n_x, n_y, n_z]$. |
+| `uvs` | `Float32Array \| null` | Flat array of texture mapping coordinates $[u, v]$. |
+| `subMeshes` | `SubMesh[]` | Array of distinct submesh index slices. |
+| `itemSize` | `number` | Coordinate dimensions per vertex (default `3`). |
+| `primitive` | `string` | WebGL primitive name (`'TRIANGLES'`, `'LINE_STRIP'`, etc.). |
 
 ---
 
-## Methods
+## `CustomMesh` Methods
 
-### `computeVertexNormals(): void`
+### `setVertices(array: Vec3[] | Float32Array | number[]): void`
 
-Iterates over every triangle face, calculates the normalized geometric face normal via the cross product:
+Assigns vertex coordinates buffer. Accepts an array of Spock `Vec3` objects, a flat `Float32Array`, or a flat number array.
+
+### `setIndices(array: Int32Array | number[]): void`
+
+Assigns index buffer.
+
+### `setNormals(array: Vec3[] | Float32Array | number[]): void`
+
+Assigns normal vectors buffer. Accepts an array of Spock `Vec3` normal vectors, a flat `Float32Array`, or a flat number array.
+
+### `setUvs(array: Float32Array | number[]): void`
+
+Assigns UV texture mapping coordinates buffer.
+
+### `addSubMesh(start: number, count: number): void`
+
+Appends a new submesh slice spanning `count` indices starting from index offset `start`.
+
+### `addSubMeshes(array: Float32Array | Int32Array | number[]): void`
+
+Appends multiple submeshes from a flat `[start0, count0, start1, count1, ...]` array.
+
+### `setPrimitive(primitive: string): boolean`
+
+Sets drawing primitive mode. Supported values: `'POINTS'`, `'LINE_STRIP'`, `'LINE_LOOP'`, `'LINES'`, `'TRIANGLE_STRIP'`, `'TRIANGLE_FAN'`, `'TRIANGLES'`.
+
+### `computeVertexNormals(): Float32Array | null`
+
+Iterates over every triangle face, calculates the normalized geometric face normal via cross product:
 
 $$\vec{N}_{\text{face}} = \frac{(\vec{v}_1 - \vec{v}_0) \times (\vec{v}_2 - \vec{v}_0)}{\|(\vec{v}_1 - \vec{v}_0) \times (\vec{v}_2 - \vec{v}_0)\|}$$
 
@@ -59,8 +89,13 @@ Accumulates face normals into each participating vertex and renormalizes the res
 
 ## `SubMesh`
 
-Represents a specific segment of indices within a larger mesh buffer, enabling distinct materials or textures per section.
+Represents a specific segment of indices within a larger mesh buffer:
 
 ```typescript
-new SubMesh(offset: number, count: number, materialIndex: number = 0)
+new SubMesh(start: number, count: number)
 ```
+
+| Property | Type | Description |
+| :--- | :--- | :--- |
+| `start` | `number` | Starting offset in the index buffer. |
+| `count` | `number` | Number of indices to draw. |

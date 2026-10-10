@@ -1,6 +1,7 @@
 import { Vec3 } from '@1pizzateam/spock';
 
 import { PointLight } from './point';
+import { assignVec3, Vec3Like } from '../vector';
 
 export class SpotLight extends PointLight {
 
@@ -17,7 +18,7 @@ export class SpotLight extends PointLight {
     this.type = 'spot';
 
     if (positionOrOptions && typeof positionOrOptions === 'object' && !(positionOrOptions instanceof Vec3) && !Array.isArray(positionOrOptions)) {
-      if (positionOrOptions.direction) this.setDirection(positionOrOptions.direction as any);
+      if (positionOrOptions.direction) this.setDirection(positionOrOptions.direction);
       if (positionOrOptions.cutoff !== undefined) this.setCutoff(positionOrOptions.cutoff);
       if (positionOrOptions.exponent !== undefined) this.setExponent(positionOrOptions.exponent);
     }
@@ -31,12 +32,8 @@ export class SpotLight extends PointLight {
     this.exponent = value;
   }
 
-  public setDirection(xOrVec: Vec3 | number, y?: number, z?: number): void {
-    if (xOrVec instanceof Vec3) {
-      this.direction.copy(xOrVec);
-    } else {
-      this.direction.setScalar(xOrVec, y, z);
-    }
+  public setDirection(xOrVec: Vec3Like | number, y?: number, z?: number): void {
+    assignVec3(this.direction, xOrVec, y, z);
   }
 
 }

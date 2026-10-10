@@ -1,5 +1,7 @@
 # Ray & Intersections
 
+> Implemented by Spock's `Ray3` and re-exported from RoostR as `Ray`.
+
 Represents an infinite half-line starting from an `origin` and traveling indefinitely along a normalized `direction` vector. Powers mouse picking, collision queries, and line-of-sight checks.
 
 ```javascript

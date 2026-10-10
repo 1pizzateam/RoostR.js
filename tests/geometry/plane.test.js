@@ -1,4 +1,4 @@
-import { Plane } from '../../dist/roostr.js';
+import { Plane, Vec2 } from '../../dist/roostr.js';
 
 describe('Plane Geometry', () => {
   test('creates a default XZ Plane', () => {
@@ -15,6 +15,13 @@ describe('Plane Geometry', () => {
     // 2 x 2 quads = 4 quads * 2 triangles * 3 indices = 24 indices
     expect(plane.indices.length).toBe(24);
     // Upward normals (0, 1, 0)
+    expect(plane.normals[1]).toBe(1);
+  });
+
+  test('creates Plane using Vec2 dimensions', () => {
+    const plane = new Plane(new Vec2(10, 20), 2, 2, 'xz');
+    expect(plane.vertices.length).toBe(27);
+    expect(plane.indices.length).toBe(24);
     expect(plane.normals[1]).toBe(1);
   });
 

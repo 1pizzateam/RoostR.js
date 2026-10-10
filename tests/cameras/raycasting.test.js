@@ -1,4 +1,4 @@
-import { PerspectiveCamera, Scene, Mesh, Cube, Vec3 } from '../../dist/roostr.js';
+import { PerspectiveCamera, Scene, Mesh, Cube, Vec3, Vec2 } from '../../dist/roostr.js';
 import { createMockContext } from '../helpers/webgl-mock.js';
 
 describe('Camera and Scene Raycasting', () => {
@@ -15,6 +15,13 @@ describe('Camera and Scene Raycasting', () => {
     const ray = camera.getRay(0, 0);
     expect(ray.origin.z).toBeCloseTo(10, 0);
     expect(ray.direction.z).toBeLessThan(0); // pointing towards negative Z (into the scene)
+
+    // Vector-first overload with Vec2
+    const rayVec = camera.getRay(new Vec2(0, 0));
+    expect(rayVec.origin.z).toBeCloseTo(10, 0);
+    expect(rayVec.direction.z).toBeLessThan(0);
+    expect(rayVec.direction.x).toBeCloseTo(ray.direction.x);
+    expect(rayVec.direction.y).toBeCloseTo(ray.direction.y);
   });
 
   test('scene.raycast finds intersecting meshes sorted by distance', () => {

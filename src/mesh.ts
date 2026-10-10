@@ -2,12 +2,13 @@ import { Mat4x3, Mat3, Vec3, Quat } from '@1pizzateam/spock';
 import { SceneGraph } from './scene/sceneGraph';
 import { Program } from './program';
 import { Texture, TextureSource, ITextureOptions } from './texture';
-import { Uniform }       from './uniform';
+import { Uniform, uploadUniform, UniformValue } from './uniform';
+import { assignVec3, Vec3Like } from './vector';
 import { MeshRenderer }  from './renderer/mesh';
 import { SubMesh }  from './geometry/submesh';
 import { Material }  from './material';
-import { IProgram, ICustomUniforms, IFlatLights, IMesh } from './interfaces';
-import { BoundingBox, BoundingSphere, Ray } from './spatial/index';
+import { IProgram, ICustomUniforms, IFlatLights, IMesh, IFrameInfo, IBlendOptions } from './interfaces';
+import { Box as BoundingBox, Sphere as BoundingSphere, Ray3 as Ray } from '@1pizzateam/spock';
 import { BasicShader, PhongShader, NormalShader } from './shaders/standard';
 
 export enum eDrawMethod { drawElements = 'drawElements', drawArrays = 'drawArrays' };
@@ -41,17 +42,30 @@ export class Mesh implements IMesh {
   texCoordBuffer : WebGLBuffer | null;
 
   position       : Vec3;
-  rotation       : Vec3;
   scale          : Vec3;
   quaternion     : Quat;
   modelMatrix    : Mat4x3;
-  rotationMatrix : Mat4x3;
   worldMatrix    : Mat4x3;
   normalMatrix   : Mat3;
-  private isLookingAt : boolean;
+  parent         : Mesh | null = null;
+  // Scratch values owned by Scene: root detection and transparent sorting.
+  public traversalStamp : number = 0;
+  public sortKey : number = 0;
+  // The quaternion is the single source of truth; Euler angles are derived on demand.
+  private _rotation : Vec3;
+  private isRotationStale : boolean;
   private isTransformDirty : boolean;
-  public isBoundsDirty : boolean;
-  public isNormalMatrixDirty : boolean;
+  private isWorldDirty : boolean = true;
+  private ownsTexture : boolean = false;
+  private indexType : number;
+
+  private static readonly UP = new Vec3(0, 1, 0);
+  private static readonly scratchQuat = new Quat();
+  private static readonly scratchView = new Mat4x3();
+  private static readonly scratchVec = new Vec3();
+  private static readonly scratchCamera = new Vec3();
+  public isBoundsDirty : boolean = true;
+  public isNormalMatrixDirty : boolean = true;
   public localBoundingBox : BoundingBox;
   public localBoundingSphere : BoundingSphere;
 
@@ -67,6 +81,8 @@ export class Mesh implements IMesh {
   children : Mesh[];
 
   blendMode : boolean;
+  blendOptions : IBlendOptions = { equation: 'FUNC_ADD', source: 'SRC_ALPHA', destination: 'ONE' };
+  depthWrite : boolean = true;
 
   zOrder : number;
 
@@ -88,6 +104,8 @@ export class Mesh implements IMesh {
     this.uvs         = mesh && mesh.uvs ? mesh.uvs : null;
     this.itemSize    = mesh && mesh.itemSize ? mesh.itemSize : null;
     this.subMeshes   = mesh && mesh.subMeshes ? mesh.subMeshes : [];
+    if (this.subMeshes.length === 0 && this.vertices && this.vertices.length > 0)
+      this.subMeshes = [ new SubMesh(0, this.indices ? this.indices.length : this.vertices.length / (this.itemSize || 3)) ];
     this.nbSubMeshes = this.subMeshes.length;
 
     this.primitive   = mesh && mesh.primitive ? mesh.primitive : null;
@@ -102,42 +120,41 @@ export class Mesh implements IMesh {
 
     this.vertexBuffer   = this.vertices 
                             ? this.renderer.createBuffer( 'ARRAY_BUFFER', 
-                                                          new Float32Array(this.vertices), 
+                                                          this.vertices instanceof Float32Array ? this.vertices : new Float32Array(this.vertices), 
                                                           'STATIC_DRAW'
                                                         ) 
                             : null;
+    this.indexType = this.context.UNSIGNED_SHORT;
     this.indexBuffer    = this.indices 
                             ? this.renderer.createBuffer( 'ELEMENT_ARRAY_BUFFER', 
-                                                          new Uint16Array(this.indices), 
+                                                          this.createIndexData(this.indices), 
                                                           'STATIC_DRAW'
                                                         ) 
                             : null;
     this.normalBuffer   = this.normals 
                             ? this.renderer.createBuffer('ARRAY_BUFFER', 
-                                                         new Float32Array(this.normals), 
+                                                         this.normals instanceof Float32Array ? this.normals : new Float32Array(this.normals), 
                                                          'STATIC_DRAW'
                                                         )
                             : null;
     this.texCoordBuffer = this.uvs 
                             ? this.renderer.createBuffer( 'ARRAY_BUFFER', 
-                                                          new Float32Array(this.uvs), 
+                                                          this.uvs instanceof Float32Array ? this.uvs : new Float32Array(this.uvs), 
                                                           'STATIC_DRAW'
                                                         ) 
                             : null;
 
     this.position       = new Vec3();
-    this.rotation       = new Vec3();
+    this._rotation      = new Vec3();
     this.scale          = new Vec3(1.0, 1.0, 1.0);
     this.quaternion     = new Quat();
     this.modelMatrix    = new Mat4x3();
-    this.rotationMatrix = new Mat4x3();
     this.worldMatrix    = new Mat4x3();
     this.normalMatrix   = new Mat3();
-    this.isLookingAt    = false;
+    this.isRotationStale = false;
     this.isTransformDirty = false;
 
     this.modelMatrix.identity();
-    this.rotationMatrix.identity();
     this.worldMatrix.identity();
     this.normalMatrix.identity();
 
@@ -150,7 +167,7 @@ export class Mesh implements IMesh {
 
     if (this.vertices && this.vertices.length > 0) {
       this.localBoundingBox.setFromPoints(this.vertices, this.itemSize || 3);
-      this.localBoundingSphere.setFromPoints(this.vertices);
+      this.localBoundingSphere.setFromPoints(this.vertices, undefined, this.itemSize || 3);
     }
 
     this.active = true;
@@ -188,7 +205,11 @@ export class Mesh implements IMesh {
 
   public addChild(mesh: Mesh): void {
     if (this.children.indexOf(mesh) === -1) {
+      if (mesh.parent && mesh.parent !== this)
+        mesh.parent.removeChild(mesh);
       this.children.push(mesh);
+      mesh.parent = this;
+      mesh.isWorldDirty = true;
     }
   }
 
@@ -196,6 +217,8 @@ export class Mesh implements IMesh {
     const index = this.children.indexOf(mesh);
     if (index !== -1) {
       this.children.splice(index, 1);
+      mesh.parent = null;
+      mesh.isWorldDirty = true;
       return true;
     }
     return false;
@@ -210,13 +233,11 @@ export class Mesh implements IMesh {
         program = vertexShaderOrProgram as IProgram;
         mat = (fragmentShaderOrMaterial instanceof Material) ? fragmentShaderOrMaterial : new Material();
       } else {
-        program = Program.create( this.context, vertexShaderOrProgram, fragmentShaderOrMaterial as string ) as IProgram | null;
+        program = Program.acquire( this.context, vertexShaderOrProgram, fragmentShaderOrMaterial as string ) as IProgram | null;
         mat = (material instanceof Material) ? material : (fragmentShaderOrMaterial instanceof Material ? fragmentShaderOrMaterial : new Material());
       }
 
-      if (!program) {
-        return false;
-      }
+      if (!program) return false;
 
       this.programs.push(program);
 
@@ -229,9 +250,8 @@ export class Mesh implements IMesh {
   }
 
   public clearPrograms(): void {
-    for (let program of this.programs) {
-      this.context.deleteProgram(program);
-    }
+    for (let program of this.programs)
+      Program.release(this.context, program);
     this.programs = [];
     this.nbPrograms = 0;
     this.materials = [];
@@ -242,15 +262,11 @@ export class Mesh implements IMesh {
     if(material && this.materials.length < this.nbSubMeshes){
       this.materials.push(material);
       let materialUniforms = material.uniforms;
-      for(let property in materialUniforms){
-        if (materialUniforms.hasOwnProperty(property)) {
-          for (let program of this.programs) {
-            if (program[property] === undefined) {
+      for(let property in materialUniforms)
+        if (materialUniforms.hasOwnProperty(property))
+          for (let program of this.programs)
+            if (program[property] === undefined)
               program[property] = this.context.getUniformLocation(program, 'u' + this.ucfirst(property));
-            }
-          }
-        }
-      }
       return true;
     }
     return false;
@@ -262,226 +278,163 @@ export class Mesh implements IMesh {
     this.isNormalMatrixDirty = true;
   }
 
-  public setPosition(xOrVec: Vec3 | number, y?: number, z?: number): this {
-    if (xOrVec instanceof Vec3) {
-      this.position.copy(xOrVec);
-    } else {
-      this.position.setScalar(xOrVec, y, z);
+  // Euler angles (radians) derived from the quaternion.
+  public get rotation(): Vec3 {
+    if (this.isRotationStale) {
+      this.quaternion.getEuler(this._rotation);
+      this.isRotationStale = false;
     }
+    return this._rotation;
+  }
+
+  public set rotation(euler: Vec3) {
+    this.setRotation(euler);
+  }
+
+  private rotationChanged(): void {
+    this.isRotationStale = true;
+    this.markDirty();
+  }
+
+  public setPosition(xOrVec: Vec3Like | number, y?: number, z?: number): this {
+    assignVec3(this.position, xOrVec, y, z);
     this.markDirty();
     return this;
   }
 
-  public setRotation(xOrVec: Vec3 | number, y?: number, z?: number): this {
-    if (xOrVec instanceof Vec3) {
-      this.rotation.copy(xOrVec);
-    } else {
-      this.rotation.setScalar(xOrVec, y, z);
-    }
-    this.quaternion.setFromEuler(this.rotation);
-    this.isLookingAt = false;
+  public setRotation(xOrVec: Vec3Like | number, y?: number, z?: number): this {
+    assignVec3(this._rotation, xOrVec, y, z);
+    this.quaternion.setFromEuler(this._rotation);
+    this.isRotationStale = false;
     this.markDirty();
     return this;
   }
 
-  public setScale(xOrVec: Vec3 | number, y?: number, z?: number): this {
-    if (xOrVec instanceof Vec3) {
-      this.scale.copy(xOrVec);
-    } else if (y === undefined && z === undefined) {
+  public setScale(xOrVec: Vec3Like | number, y?: number, z?: number): this {
+    if (typeof xOrVec === 'number' && y === undefined && z === undefined)
       this.scale.setScalar(xOrVec, xOrVec, xOrVec);
-    } else {
-      this.scale.setScalar(xOrVec, y, z);
-    }
+    else
+      assignVec3(this.scale, xOrVec, y, z);
     this.markDirty();
     return this;
   }
 
   public scaleBy(factorOrVec: Vec3 | number): this {
-    if (factorOrVec instanceof Vec3) {
+    if (factorOrVec instanceof Vec3)
       this.scale.multiply(factorOrVec);
-    } else {
+    else
       this.scale.scale(factorOrVec);
-    }
     this.markDirty();
     return this;
   }
 
   public setQuaternion(q: Quat): this {
     this.quaternion.copy(q);
-    this.isLookingAt = false;
-    this.markDirty();
+    this.rotationChanged();
     return this;
   }
 
   public slerp(targetQuat: Quat, t: number): this {
     this.quaternion.slerp(targetQuat, t);
-    this.isLookingAt = false;
-    this.markDirty();
+    this.rotationChanged();
     return this;
   }
 
   public rotateX(angle: number): this {
-    this.rotation.x += angle;
     this.quaternion.rotateX(angle);
-    this.isLookingAt = false;
-    this.markDirty();
+    this.rotationChanged();
     return this;
   }
 
   public rotateY(angle: number): this {
-    this.rotation.y += angle;
     this.quaternion.rotateY(angle);
-    this.isLookingAt = false;
-    this.markDirty();
+    this.rotationChanged();
     return this;
   }
 
   public rotateZ(angle: number): this {
-    this.rotation.z += angle;
     this.quaternion.rotateZ(angle);
-    this.isLookingAt = false;
-    this.markDirty();
+    this.rotationChanged();
     return this;
   }
 
   public rotateOnAxis(axis: Vec3, angle: number): this {
-    const q = new Quat().setAxisAngle(axis, angle);
-    this.quaternion.multiply(q);
-    this.isLookingAt = false;
+    this.quaternion.multiply(Mesh.scratchQuat.setAxisAngle(axis, angle));
+    this.rotationChanged();
+    return this;
+  }
+
+  public translate(xOrVec: Vec3Like | number, y?: number, z?: number): this {
+    if (typeof xOrVec === 'number')
+      this.position.add(Mesh.scratchVec.setScalar(xOrVec, y ?? 0, z ?? 0));
+    else
+      this.position.add(xOrVec instanceof Vec3 ? xOrVec : Mesh.scratchVec.setArray(xOrVec));
     this.markDirty();
     return this;
   }
 
-  public translate(xOrVec: Vec3 | number, y?: number, z?: number): this {
-    if (xOrVec instanceof Vec3) {
-      this.position.add(xOrVec);
-    } else {
-      this.position.x += xOrVec;
-      this.position.y += y ?? 0;
-      this.position.z += z ?? 0;
-    }
-    this.markDirty();
+  // Orients the mesh so its -Z axis faces target.
+  public lookAt(target: Vec3, up: Vec3 = Mesh.UP): this {
+    if (this.position.equals(target)) return this;
+    this.quaternion.lookAt(this.position, target, up);
+    this.rotationChanged();
     return this;
   }
 
-  public lookAt(target: Vec3, up: Vec3 = new Vec3(0, 1, 0)): this {
-    if (this.position.equals(target)) {
-      return this;
-    }
-    this.rotationMatrix.lookAtRH(this.position, target, up);
-    this.rotationMatrix.transposeLinear();
-    const arr = this.rotationMatrix.toArray();
-    arr[12] = 0; arr[13] = 0; arr[14] = 0;
-    this.quaternion.identity();
-    this.rotation.setScalar(0, 0, 0);
-    this.isLookingAt = true;
-    this.markDirty();
-    return this;
-  }
-
-  public updateModelMatrix(): void {
-    if (!this.isTransformDirty) {
-      return;
-    }
-    this.modelMatrix.identity();
-    this.modelMatrix.translate(this.position);
-    if (!this.quaternion.isIdentity()) {
-      this.quaternion.toMat4x3(this.rotationMatrix);
-      this.modelMatrix.multiply(this.rotationMatrix);
-    } else if (!this.rotation.isOrigin()) {
-      this.rotationMatrix.identity()
-        .rotateX(this.rotation.x)
-        .rotateY(this.rotation.y)
-        .rotateZ(this.rotation.z);
-      this.modelMatrix.multiply(this.rotationMatrix);
-    } else if (this.isLookingAt) {
-      this.modelMatrix.multiply(this.rotationMatrix);
-    }
-    this.modelMatrix.scale(this.scale);
+  // Rebuilds the local matrix from position, quaternion and scale. Returns true if it changed.
+  public updateModelMatrix(): boolean {
+    if (!this.isTransformDirty) return false;
+    this.modelMatrix.compose(this.position, this.quaternion, this.scale);
     this.isTransformDirty = false;
     this.isBoundsDirty = true;
     this.isNormalMatrixDirty = true;
+    return true;
   }
 
   public computeNormalMatrix(): Mat3 {
-    if (!this.isNormalMatrixDirty) {
-      return this.normalMatrix;
-    }
-    const m = this.worldMatrix.toArray();
-    const m0 = m[0], m1 = m[1], m2 = m[2];
-    const m4 = m[4], m5 = m[5], m6 = m[6];
-    const m8 = m[8], m9 = m[9], m10 = m[10];
-
-    const c00 = m5 * m10 - m6 * m9;
-    const c10 = m6 * m8 - m4 * m10;
-    const c20 = m4 * m9 - m5 * m8;
-    const det = m0 * c00 + m1 * c10 + m2 * c20;
-    const invDet = det !== 0 ? 1 / det : 1;
-
-    const out = this.normalMatrix.toArray();
-    // Normal matrix = (M^-1)^T = cofactor(M) / det in column-major order
-    // Column 0: C00, C10, C20
-    out[0] = c00 * invDet;
-    out[1] = c10 * invDet;
-    out[2] = c20 * invDet;
-
-    // Column 1: C01, C11, C21
-    out[3] = (m9 * m2 - m1 * m10) * invDet;
-    out[4] = (m0 * m10 - m2 * m8) * invDet;
-    out[5] = (m1 * m8 - m0 * m9) * invDet;
-
-    // Column 2: C02, C12, C22
-    out[6] = (m1 * m6 - m2 * m5) * invDet;
-    out[7] = (m2 * m4 - m0 * m6) * invDet;
-    out[8] = (m0 * m5 - m1 * m4) * invDet;
-
+    if (!this.isNormalMatrixDirty) return this.normalMatrix;
+    this.worldMatrix.toNormalMatrix(this.normalMatrix.toArray());
     this.isNormalMatrixDirty = false;
     return this.normalMatrix;
   }
 
   public getWorldPosition(target: Vec3 = new Vec3()): Vec3 {
-    const m = this.worldMatrix.toArray();
-    target.setScalar(m[12], m[13], m[14]);
-    return target;
+    return this.worldMatrix.getTranslation(target);
   }
 
   public getWorldDirection(target: Vec3 = new Vec3()): Vec3 {
-    const m = this.worldMatrix.toArray();
-    target.setScalar(-m[8], -m[9], -m[10]);
-    return target.normalize();
+    return this.worldMatrix.getColumn(2, target).opposite().normalize();
   }
 
   public distanceTo(target: Mesh | Vec3): number {
     const targetPos = target instanceof Vec3 ? target : target.getWorldPosition();
-    return this.getWorldPosition().getDistance(targetPos);
+    return this.getWorldPosition(Mesh.scratchVec).getDistance(targetPos);
   }
 
   public isInsideBounds(min: Vec3, max: Vec3): boolean {
-    return this.getWorldPosition().isInBounds(min, max);
+    return this.getWorldPosition(Mesh.scratchVec).isInBounds(min, max);
+  }
+
+  public computeBounds(): void {
+    if (!this.isBoundsDirty) return;
+    if (this.vertices && this.vertices.length > 0) {
+      this.boundingBox.copy(this.localBoundingBox).applyMatrix4(this.worldMatrix);
+      this.boundingSphere.copy(this.localBoundingSphere).applyMatrix4(this.worldMatrix);
+    } else {
+      const pos = this.getWorldPosition(Mesh.scratchVec);
+      this.boundingBox.set(pos, pos);
+      this.boundingSphere.set(pos, 0);
+    }
+    this.isBoundsDirty = false;
   }
 
   public computeBoundingBox(): BoundingBox {
-    if (this.isBoundsDirty || this.boundingBox.isEmpty()) {
-      if (this.vertices && this.vertices.length > 0) {
-        this.boundingBox.copy(this.localBoundingBox).applyMatrix4(this.worldMatrix);
-      } else {
-        const pos = this.getWorldPosition();
-        this.boundingBox.set(pos, pos);
-      }
-      this.isBoundsDirty = false;
-    }
+    this.computeBounds();
     return this.boundingBox;
   }
 
   public computeBoundingSphere(): BoundingSphere {
-    if (this.isBoundsDirty || this.boundingSphere.radius === 0) {
-      if (this.vertices && this.vertices.length > 0) {
-        this.boundingSphere.copy(this.localBoundingSphere).applyMatrix4(this.worldMatrix);
-      } else {
-        this.boundingSphere.set(this.getWorldPosition(), 0);
-      }
-      this.isBoundsDirty = false;
-    }
+    this.computeBounds();
     return this.boundingSphere;
   }
 
@@ -494,36 +447,23 @@ export class Mesh implements IMesh {
     return { distance, point: hitPoint };
   }
 
-  public useBasicMaterial(options?: { color?: Vec3; texture?: HTMLImageElement | HTMLCanvasElement | WebGLTexture }): this {
+  public useBasicMaterial(options?: IMaterialShortcutOptions): this {
     const mat = new Material();
-    if (options?.color) {
+    if (options?.color)
       mat.setDiffuse(options.color);
-    }
     this.addProgram(BasicShader.vertex, BasicShader.fragment, mat);
-    if (options?.texture) {
-      if (options.texture instanceof WebGLTexture) {
-        this.WebGLTexture = options.texture;
-      } else {
-        this.setTexture(<HTMLImageElement>options.texture);
-      }
-    }
+    this.applyTextureOption(options?.texture);
     return this;
   }
 
-  public usePhongMaterial(options?: { ambient?: Vec3; diffuse?: Vec3; specular?: Vec3; shininess?: number; texture?: HTMLImageElement | HTMLCanvasElement | WebGLTexture }): this {
+  public usePhongMaterial(options?: IPhongShortcutOptions): this {
     const mat = new Material();
     if (options?.ambient) mat.setAmbient(options.ambient);
     if (options?.diffuse) mat.setDiffuse(options.diffuse);
     if (options?.specular) mat.setSpecular(options.specular);
     if (options?.shininess !== undefined) mat.setShininess(options.shininess);
     this.addProgram(PhongShader.vertex, PhongShader.fragment, mat);
-    if (options?.texture) {
-      if (options.texture instanceof WebGLTexture) {
-        this.WebGLTexture = options.texture;
-      } else {
-        this.setTexture(<HTMLImageElement>options.texture);
-      }
-    }
+    this.applyTextureOption(options?.texture);
     return this;
   }
 
@@ -532,129 +472,155 @@ export class Mesh implements IMesh {
     return this;
   }
 
+  private applyTextureOption(texture?: HTMLImageElement | HTMLCanvasElement | WebGLTexture): void {
+    if (!texture) return;
+    if (typeof WebGLTexture !== 'undefined' && texture instanceof WebGLTexture) {
+      this.releaseTexture();
+      this.WebGLTexture = texture;
+      this.ownsTexture = false;
+    } else
+      this.setTexture(<HTMLImageElement>texture);
+  }
+
+  private releaseTexture(): void {
+    if (this.WebGLTexture && this.ownsTexture)
+      this.context.deleteTexture(this.WebGLTexture);
+    this.WebGLTexture = null;
+    this.ownsTexture = false;
+  }
+
+  // Combines the parent world matrix with the local matrix.
   public setWorldMatrix(worldMatrix: Mat4x3): void {
     this.worldMatrix.copy(worldMatrix).multiply(this.modelMatrix);
     this.isBoundsDirty = true;
     this.isNormalMatrixDirty = true;
+    this.isWorldDirty = false;
   }
 
   public setTexture(img: TextureSource, options?: ITextureOptions): void {
-    if (this.WebGLTexture) {
-      this.context.deleteTexture(this.WebGLTexture);
-    }
-    this.WebGLTexture = Texture.create(img, this.context, options);
-    for (let program of this.programs) {
-      if (program.sampler === undefined) {
+    const texture = Texture.create(img, this.context, options);
+    if (!texture) return;
+    this.releaseTexture();
+    this.WebGLTexture = texture;
+    this.ownsTexture = true;
+    for (let program of this.programs)
+      if (program.sampler === undefined)
         program.sampler = this.context.getUniformLocation(program, 'uSampler');
-      }
-    }
   }
 
-  public addCustomUniform(name:string, type:string, value:number|Array<number>|Float32Array|Int32Array): void {
+  public addCustomUniform(name:string, type:string, value:UniformValue): void {
     if (!this.customUniforms.hasOwnProperty(name)){
       this.customUniforms[name] = new Uniform(type, value);
-      for (let program of this.programs) {
-        if (program[name] === undefined) {
+      for (let program of this.programs)
+        if (program[name] === undefined)
           program[name] = this.context.getUniformLocation(program, 'u' + this.ucfirst(name));
-        }
-      }
     }
   }
 
-  public setCustomUniform(name: string, value: number|number[]|Float32Array|Int32Array): void {
-    if (this.customUniforms.hasOwnProperty(name)){
+  public setCustomUniform(name: string, value: UniformValue): void {
+    if (this.customUniforms.hasOwnProperty(name))
       this.customUniforms[name].value = value;
-    }
   }
+
+  // Uses 16-bit indices when possible; 32-bit needs OES_element_index_uint.
+  private createIndexData(indices: number[] | Int32Array | Uint16Array): Uint16Array | Uint32Array {
+    let max = 0;
+    for (let i = 0; i < indices.length; i++)
+      if (indices[i] > max)
+        max = indices[i];
+    if (max > 65535) {
+      if (this.context.getExtension && this.context.getExtension('OES_element_index_uint')) {
+        this.indexType = this.context.UNSIGNED_INT;
+        return new Uint32Array(indices);
+      }
+      console.warn('Mesh: indices exceed 65535 but OES_element_index_uint is unavailable; geometry will be corrupted.');
+    }
+    return indices instanceof Uint16Array ? indices : new Uint16Array(indices);
+  }
+
+  private static initializedPrograms = new WeakSet<object>();
 
   private createProgram(): void {
     let program = this.programs[this.nbPrograms];
-    this.addProgramAttribute('vertexPosition');
-    if (this.normals) {
+
+    // Locations belong to the program, so a program shared between meshes is queried once.
+    if (!Mesh.initializedPrograms.has(program)) {
+      Mesh.initializedPrograms.add(program);
+
+      this.addProgramAttribute('vertexPosition');
       this.addProgramAttribute('vertexNormal');
-    }
-    if (this.uvs) {
       this.addProgramAttribute('textureCoord');
+      // matrix uniforms
+      this.addProgramUniform('modelMatrix');
+      this.addProgramUniform('normalMatrix');
+      this.addProgramUniform('viewMatrix');
+      this.addProgramUniform('projectionMatrix');
+      // default uniforms
+      this.addProgramUniform('time');
+      this.addProgramUniform('screenResolution');
+
+      // texture
+      this.addProgramUniform('sampler');
+      this.addProgramUniform('hasTexture');
+
+      // lights
+      this.addProgramUniform('nbLights');
+      this.addProgramUniform('lightPosition');
+      this.addProgramUniform('lightDiffuse');
+      this.addProgramUniform('lightSpecular');
+      this.addProgramUniform('lightDirection');
+      this.addProgramUniform('lightAttenuation');
+      this.addProgramUniform('lightCutoff');
+      this.addProgramUniform('lightExponent');
+      this.addProgramUniform('lightType');
+      this.addProgramUniform('lightPositionType');
+      this.addProgramUniform('lightDiffuseCutoff');
+      this.addProgramUniform('lightSpecularExponent');
+      this.addProgramUniform('ambientLight');
+      this.addProgramUniform('ambientColor');
+      this.addProgramUniform('cameraPosition');
+
+      // fog
+      this.addProgramUniform('hasFog');
+      this.addProgramUniform('fogColor');
+      this.addProgramUniform('fogNear');
+      this.addProgramUniform('fogFar');
+
+      // Fallback resolution; Scene.render uploads the current one every frame.
+      if (program.screenResolution) {
+        this.renderer.useProgram(program);
+        let viewport = this.context.getParameter(this.context.VIEWPORT);
+        if (viewport && viewport.length >= 4)
+          this.context.uniform2f(program.screenResolution, viewport[2], viewport[3]);
+      }
     }
-    // matrix uniforms
-    this.addProgramUniform('modelMatrix');
-    this.addProgramUniform('normalMatrix');
-    this.addProgramUniform('viewMatrix');
-    this.addProgramUniform('projectionMatrix');
-    // default uniforms
-    this.addProgramUniform('time');
-    this.addProgramUniform('screenResolution');
 
     // custom customUniforms
-    for (let property in this.customUniforms) {
-      if (this.customUniforms.hasOwnProperty(property)) {
+    for (let property in this.customUniforms)
+      if (this.customUniforms.hasOwnProperty(property) && program[property] === undefined)
         this.addProgramUniform(property);
-      }
-    }
 
     // material uniforms
-    for (let mat of this.materials) {
-      for (let property in mat.uniforms) {
-        if (mat.uniforms.hasOwnProperty(property) && program[property] === undefined) {
+    for (let mat of this.materials)
+      for (let property in mat.uniforms)
+        if (mat.uniforms.hasOwnProperty(property) && program[property] === undefined)
           this.addProgramUniform(property);
-        }
-      }
-    }
-
-    // texture
-    this.addProgramUniform('sampler');
-    this.addProgramUniform('hasTexture');
-
-    // lights
-    this.addProgramUniform('nbLights');
-    this.addProgramUniform('lightPosition');
-    this.addProgramUniform('lightDiffuse');
-    this.addProgramUniform('lightSpecular');
-    this.addProgramUniform('lightDirection');
-    this.addProgramUniform('lightAttenuation');
-    this.addProgramUniform('lightCutoff');
-    this.addProgramUniform('lightExponent');
-    this.addProgramUniform('lightType');
-    this.addProgramUniform('ambientLight');
-    this.addProgramUniform('ambientColor');
-    this.addProgramUniform('cameraPosition');
-
-    // fog
-    this.addProgramUniform('hasFog');
-    this.addProgramUniform('fogColor');
-    this.addProgramUniform('fogNear');
-    this.addProgramUniform('fogFar');
-
-    this.renderer.useProgram(program);//use program before adding static uniforms
-
-    // send static uniforms
-    if (program.screenResolution) {
-      let viewport = this.context.getParameter(this.context.VIEWPORT);
-      if (viewport && viewport.length >= 4) {
-        this.context.uniform2f(program.screenResolution, viewport[2], viewport[3]);
-      }
-    }
 
     this.nbPrograms ++;
 
   }
 
   private addProgramAttribute(name:string): void {
-    const loc = this.context.getAttribLocation(this.programs[this.nbPrograms], 
-                                               'a' + this.ucfirst(name)
-                                              );
-    this.programs[this.nbPrograms][name] = loc;
-    if (loc !== -1) {
-      this.context.enableVertexAttribArray(loc);
-    }
+    this.programs[this.nbPrograms][name] = this.context.getAttribLocation(this.programs[this.nbPrograms], 
+                                                                           'a' + this.ucfirst(name)
+                                                                          );
   }
 
   private addProgramUniform(name:string): void {
     const ucName = 'u' + this.ucfirst(name);
     let loc = this.context.getUniformLocation(this.programs[this.nbPrograms], ucName);
-    if (loc === null) {
+    if (loc === null)
       loc = this.context.getUniformLocation(this.programs[this.nbPrograms], ucName + '[0]');
-    }
     this.programs[this.nbPrograms][name] = loc;
   }
 
@@ -666,254 +632,304 @@ export class Mesh implements IMesh {
     this.blendMode = false;
   }
 
+  // Activates blending with the given GL factors (default: additive). Blended meshes are drawn after
+  // opaque ones, farthest first.
+  public setBlend(source: string = 'SRC_ALPHA', destination: string = 'ONE', equation: string = 'FUNC_ADD'): this {
+    this.blendOptions.equation = equation;
+    this.blendOptions.source = source;
+    this.blendOptions.destination = destination;
+    this.blendMode = true;
+    return this;
+  }
+
+  // Controls whether this mesh writes to the depth buffer. Typically disabled for alpha-blended meshes.
+  public setDepthWrite(enabled: boolean): this {
+    this.depthWrite = enabled;
+    return this;
+  }
+
+  // Recomputes world matrices below this mesh; only changed branches are recomputed.
   public computeWorldMatrix(graph:SceneGraph): void {
-    this.updateModelMatrix();
-    this.setWorldMatrix(graph.getWorldMatrix());
+    const modelChanged = this.updateModelMatrix();
+    const changed = this.isWorldDirty || modelChanged;
+    if (changed)
+      this.setWorldMatrix(graph.getWorldMatrix());
     graph.pushModelMatrix(this.worldMatrix);
 
     for ( let child of this.children ) {
+      if (changed)
+        child.isWorldDirty = true;
       child.computeWorldMatrix(graph);
     }
 
     graph.popModelMatrix();
   }
 
+  // Draws this mesh and its children.
   public render(  projectionMatrix: Float32Array,
                   viewMatrix: Float32Array,
                   lights: IFlatLights,
                   time: number,
                   blendMode: boolean,
                   cameraPosition?: Vec3,
-                  fog?: { color: Vec3; near: number; far: number } | null
+                  fog?: { color: Vec3; near: number; far: number } | null,
+                  frame?: IFrameInfo
                 ): void {
-    if(this.isActive()) {
+    if (!this.isActive()) return;
 
-      if(this.nbPrograms > 0) {
-        let program = this.programs[0];
-        // let material = null;
-        for(let i = 0 ; i < this.nbSubMeshes ; i++) {
-          if(this.blendMode === blendMode) {
-            program = this.programs[i] || this.programs[this.nbPrograms - 1] ;
+    this.renderSelf(projectionMatrix, viewMatrix, lights, time, blendMode, cameraPosition, fog, frame);
 
-            this.renderer.useProgram(program);
-            // materials
-            const material = this.materials[i] || this.materials[this.materials.length - 1];
-            if (material) {
-              material.updateUniforms();
-              let materialUniforms = material.uniforms;
-              for(let property in materialUniforms){
-                if (materialUniforms.hasOwnProperty(property) && program[property]) {
-                  let uniform = materialUniforms[property];
-                  this.context[uniform.type](program[property], uniform.value);
-                }
-              }
-            }
-            // positions
-            if(this.indices) {
-              this.renderer.bindBuffer('ELEMENT_ARRAY_BUFFER', <WebGLBuffer>this.indexBuffer);
-            }
-            this.renderer.bindBuffer('ARRAY_BUFFER', <WebGLBuffer>this.vertexBuffer);
-            if (program.vertexPosition !== -1 && program.vertexPosition !== undefined) {
-              this.renderer.vertexAttribPointer(  program.vertexPosition, 
-                                                  <number>this.itemSize, 
-                                                  'FLOAT', 
-                                                  false, 
-                                                  0, 
-                                                  0
-                                               );
-            }
+    for (let child of this.children)
+      child.render( projectionMatrix,
+                    viewMatrix,
+                    lights,
+                    time,
+                    blendMode,
+                    cameraPosition,
+                    fog,
+                    frame
+                  );
+  }
 
-            // normals
-            if (this.normals && program.vertexNormal !== -1 && program.vertexNormal !== undefined) {
-              this.renderer.bindBuffer('ARRAY_BUFFER', <WebGLBuffer>this.normalBuffer);
-              this.renderer.vertexAttribPointer(  program.vertexNormal, 
-                                                  3, 
-                                                  'FLOAT', 
-                                                  false, 
-                                                  0, 
-                                                  0
-                                                );
-            }
+  // Draws only this mesh. When frame is given, per-frame uniforms (camera, lights, fog, time)
+  // are uploaded once per program for that frame instead of once per draw.
+  public renderSelf(  projectionMatrix: Float32Array,
+                      viewMatrix: Float32Array,
+                      lights: IFlatLights,
+                      time: number,
+                      blendMode: boolean,
+                      cameraPosition?: Vec3,
+                      fog?: { color: Vec3; near: number; far: number } | null,
+                      frame?: IFrameInfo
+                    ): void {
+    if (!this.isActive() || this.nbPrograms === 0 || this.blendMode !== blendMode) return;
 
-            // uvs
-            if (this.uvs && program.textureCoord !== -1 && program.textureCoord !== undefined) {
-              this.renderer.bindBuffer('ARRAY_BUFFER', <WebGLBuffer>this.texCoordBuffer );
-              this.renderer.vertexAttribPointer(program.textureCoord, 2, 'FLOAT', false, 0, 0);
-            }
+    const context = this.context;
+    const renderer = this.renderer;
+    const state = renderer.state;
 
-            // texture
-            if(this.WebGLTexture){
-              this.context.activeTexture(this.context.TEXTURE0);
-              this.context.bindTexture(this.context.TEXTURE_2D, this.WebGLTexture);
-              if (program.sampler) {
-                this.context.uniform1i(program.sampler, 0);
-              }
-              if (program.hasTexture) {
-                this.context.uniform1i(program.hasTexture, 1);
-              }
-            } else if (program.hasTexture) {
-              this.context.uniform1i(program.hasTexture, 0);
-            }
+    for (let i = 0 ; i < this.nbSubMeshes ; i++) {
+      const program = this.programs[i] || this.programs[this.nbPrograms - 1];
+      renderer.useProgram(program);
 
-            // lights
-            if (lights) {
-              if (program.nbLights && lights.type) {
-                this.context.uniform1i(program.nbLights, lights.type.length);
-              }
-              if (program.lightPosition && lights.position && lights.position.length > 0) {
-                this.context.uniform3fv(program.lightPosition, lights.floatPosition || new Float32Array(<number[]>lights.position));
-              }
-              if (program.lightDiffuse && lights.diffuse && lights.diffuse.length > 0) {
-                this.context.uniform3fv(program.lightDiffuse, lights.floatDiffuse || new Float32Array(<number[]>lights.diffuse));
-              }
-              if (program.lightSpecular && lights.specular && lights.specular.length > 0) {
-                this.context.uniform3fv(program.lightSpecular, lights.floatSpecular || new Float32Array(<number[]>lights.specular));
-              }
-              if (program.lightDirection && lights.direction && lights.direction.length > 0) {
-                this.context.uniform3fv(program.lightDirection, lights.floatDirection || new Float32Array(<number[]>lights.direction));
-              }
-              if (program.lightAttenuation && (lights.floatAttenuation || lights.constantAttenuation?.length)) {
-                let attArr = lights.floatAttenuation;
-                if (!attArr) {
-                  const att: number[] = [];
-                  for (let k = 0; k < lights.constantAttenuation.length; k++) {
-                    att.push(
-                      <number>lights.constantAttenuation[k] || 0,
-                      <number>lights.linearAttenuation[k] || 0,
-                      <number>lights.quadraticAttenuation[k] || 0
-                    );
-                  }
-                  attArr = new Float32Array(att);
-                }
-                this.context.uniform3fv(program.lightAttenuation, attArr);
-              }
-              if (program.lightCutoff && lights.cutoff && lights.cutoff.length > 0) {
-                this.context.uniform1fv(program.lightCutoff, lights.floatCutoff || new Float32Array(<number[]>lights.cutoff));
-              }
-              if (program.lightExponent && lights.exponent && lights.exponent.length > 0) {
-                this.context.uniform1fv(program.lightExponent, lights.floatExponent || new Float32Array(<number[]>lights.exponent));
-              }
-              if (program.lightType && (lights.floatType || lights.type?.length)) {
-                let typeArr = lights.floatType;
-                if (!typeArr) {
-                  typeArr = new Float32Array(lights.type.map(t => t === 'directional' ? 0 : t === 'point' ? 1 : 2));
-                }
-                this.context.uniform1fv(program.lightType, typeArr);
-              }
-              if (program.ambientLight && lights.ambient) {
-                this.context.uniform3fv(program.ambientLight, lights.floatAmbient || new Float32Array(lights.ambient));
-              }
-            }
+      if (!frame || state.frameOfProgram.get(program) !== frame.id) {
+        if (frame)
+          state.frameOfProgram.set(program, frame.id);
+        this.uploadFrameUniforms(program, projectionMatrix, viewMatrix, lights, time, cameraPosition, fog, frame);
+      }
 
-            // camera position
-            if (program.cameraPosition) {
-              if (cameraPosition) {
-                this.context.uniform3f(program.cameraPosition, cameraPosition.x, cameraPosition.y, cameraPosition.z);
-              } else if (viewMatrix) {
-                const cx = -(viewMatrix[0] * viewMatrix[12] + viewMatrix[1] * viewMatrix[13] + viewMatrix[2] * viewMatrix[14]);
-                const cy = -(viewMatrix[4] * viewMatrix[12] + viewMatrix[5] * viewMatrix[13] + viewMatrix[6] * viewMatrix[14]);
-                const cz = -(viewMatrix[8] * viewMatrix[12] + viewMatrix[9] * viewMatrix[13] + viewMatrix[10] * viewMatrix[14]);
-                this.context.uniform3f(program.cameraPosition, cx, cy, cz);
-              }
-            }
-
-            // fog
-            if (program.hasFog) {
-              if (fog) {
-                this.context.uniform1i(program.hasFog, 1);
-                if (program.fogColor) {
-                  this.context.uniform3f(program.fogColor, fog.color.x, fog.color.y, fog.color.z);
-                }
-                if (program.fogNear) {
-                  this.context.uniform1f(program.fogNear, fog.near);
-                }
-                if (program.fogFar) {
-                  this.context.uniform1f(program.fogFar, fog.far);
-                }
-              } else {
-                this.context.uniform1i(program.hasFog, 0);
-              }
-            }
-
-            // matrices
-            if (program.modelMatrix) {
-              this.context.uniformMatrix4fv(program.modelMatrix,      false, this.worldMatrix.toArray());
-            }
-            if (program.normalMatrix) {
-              this.computeNormalMatrix();
-              this.context.uniformMatrix3fv(program.normalMatrix,     false, this.normalMatrix.toArray());
-            }
-            if (program.projectionMatrix) {
-              this.context.uniformMatrix4fv(program.projectionMatrix, false, projectionMatrix);
-            }
-            if (program.viewMatrix) {
-              this.context.uniformMatrix4fv(program.viewMatrix,       false, viewMatrix);
-            }
-
-            // default (time)
-            if (program.time) {
-              this.context.uniform1f(program.time, time);
-            }
-
-            // custom
-            for (let property in this.customUniforms) {
-              if (this.customUniforms.hasOwnProperty(property)) {
-                let uniform = this.customUniforms[property];
-                if (program[property]) {
-                  if (uniform.type.indexOf('Matrix') !== -1) {
-                    this.context[uniform.type](program[property], false, uniform.value);
-                  } else {
-                    this.context[uniform.type](program[property], uniform.value);
-                  }
-                }
-              }
-            }
-
-            this.renderer[this.drawMethod](<string>this.primitive, this.subMeshes[i]);
-          }
+      // materials
+      const material = this.materials[i] || this.materials[this.materials.length - 1];
+      if (material) {
+        material.updateUniforms();
+        if (state.materialOfProgram.get(program) !== material || state.materialVersionOfProgram.get(program) !== material.version) {
+          state.materialOfProgram.set(program, material);
+          state.materialVersionOfProgram.set(program, material.version);
+          const materialUniforms = material.uniforms;
+          for (let property in materialUniforms)
+            if (materialUniforms.hasOwnProperty(property) && program[property])
+              uploadUniform(context, program[property], (materialUniforms as any)[property]);
         }
       }
 
-      for (let child of this.children) {
-        child.render( projectionMatrix,
-                      viewMatrix,
-                      lights,
-                      time,
-                      blendMode,
-                      cameraPosition,
-                      fog
-                    );
+      // vertex attributes: enable exactly what this program and mesh use
+      let attributeMask = 0;
+      if (this.indices)
+        renderer.bindBuffer('ELEMENT_ARRAY_BUFFER', <WebGLBuffer>this.indexBuffer);
+
+      // positions
+      if (program.vertexPosition !== -1 && program.vertexPosition !== undefined && this.vertexBuffer) {
+        renderer.bindBuffer('ARRAY_BUFFER', <WebGLBuffer>this.vertexBuffer);
+        renderer.vertexAttribPointer(program.vertexPosition, <number>this.itemSize, 'FLOAT', false, 0, 0);
+        attributeMask |= 1 << program.vertexPosition;
       }
 
+      // normals
+      if (this.normals && program.vertexNormal !== -1 && program.vertexNormal !== undefined) {
+        renderer.bindBuffer('ARRAY_BUFFER', <WebGLBuffer>this.normalBuffer);
+        renderer.vertexAttribPointer(program.vertexNormal, 3, 'FLOAT', false, 0, 0);
+        attributeMask |= 1 << program.vertexNormal;
+      }
+
+      // uvs
+      if (this.uvs && program.textureCoord !== -1 && program.textureCoord !== undefined) {
+        renderer.bindBuffer('ARRAY_BUFFER', <WebGLBuffer>this.texCoordBuffer );
+        renderer.vertexAttribPointer(program.textureCoord, 2, 'FLOAT', false, 0, 0);
+        attributeMask |= 1 << program.textureCoord;
+      }
+
+      renderer.setAttributeMask(attributeMask);
+
+      // texture
+      if(this.WebGLTexture){
+        context.activeTexture(context.TEXTURE0);
+        context.bindTexture(context.TEXTURE_2D, this.WebGLTexture);
+        if (program.sampler)
+          context.uniform1i(program.sampler, 0);
+        if (program.hasTexture)
+          context.uniform1i(program.hasTexture, 1);
+      } else if (program.hasTexture)
+        context.uniform1i(program.hasTexture, 0);
+
+      // matrices
+      if (program.modelMatrix)
+        context.uniformMatrix4fv(program.modelMatrix,      false, this.worldMatrix.toArray());
+      if (program.normalMatrix) {
+        this.computeNormalMatrix();
+        context.uniformMatrix3fv(program.normalMatrix,     false, this.normalMatrix.toArray());
+      }
+
+      // custom
+      for (let property in this.customUniforms)
+        if (this.customUniforms.hasOwnProperty(property) && program[property])
+          uploadUniform(context, program[property], this.customUniforms[property]);
+
+      renderer[this.drawMethod](<string>this.primitive, this.subMeshes[i], this.indexType);
     }
+  }
+
+  private static lightTypeValue(type: string | number): number {
+    return type === 'directional' ? 0 : type === 'point' ? 1 : 2;
+  }
+
+  // Interleaves 3-component vectors with one extra value each into vec4s (fallback for lights without packed arrays).
+  private static packVec4(xyz: ArrayLike<number | string>, w: ArrayLike<number | string>): Float32Array {
+    const count = Math.floor(xyz.length / 3);
+    const packed = new Float32Array(count * 4);
+    for (let i = 0; i < count; i++) {
+      packed[i * 4] = <number>xyz[i * 3];
+      packed[i * 4 + 1] = <number>xyz[i * 3 + 1];
+      packed[i * 4 + 2] = <number>xyz[i * 3 + 2];
+      packed[i * 4 + 3] = <number>w[i] || 0;
+    }
+    return packed;
+  }
+
+  private uploadFrameUniforms( program: IProgram,
+                               projectionMatrix: Float32Array,
+                               viewMatrix: Float32Array,
+                               lights: IFlatLights,
+                               time: number,
+                               cameraPosition?: Vec3,
+                               fog?: { color: Vec3; near: number; far: number } | null,
+                               frame?: IFrameInfo
+                             ): void {
+    const context = this.context;
+
+    if (program.projectionMatrix)
+      context.uniformMatrix4fv(program.projectionMatrix, false, projectionMatrix);
+    if (program.viewMatrix)
+      context.uniformMatrix4fv(program.viewMatrix,       false, viewMatrix);
+    if (program.time)
+      context.uniform1f(program.time, time);
+    if (frame && frame.resolution && program.screenResolution)
+      context.uniform2f(program.screenResolution, frame.resolution.x, frame.resolution.y);
+
+    // lights
+    if (lights) {
+      if (program.nbLights && lights.type)
+        context.uniform1i(program.nbLights, lights.type.length);
+      if (program.lightPosition && lights.position && lights.position.length > 0)
+        context.uniform3fv(program.lightPosition, lights.floatPosition || new Float32Array(<number[]>lights.position));
+      if (program.lightDiffuse && lights.diffuse && lights.diffuse.length > 0)
+        context.uniform3fv(program.lightDiffuse, lights.floatDiffuse || new Float32Array(<number[]>lights.diffuse));
+      if (program.lightSpecular && lights.specular && lights.specular.length > 0)
+        context.uniform3fv(program.lightSpecular, lights.floatSpecular || new Float32Array(<number[]>lights.specular));
+      if (program.lightDirection && lights.direction && lights.direction.length > 0)
+        context.uniform3fv(program.lightDirection, lights.floatDirection || new Float32Array(<number[]>lights.direction));
+      if (program.lightAttenuation && (lights.floatAttenuation || lights.constantAttenuation?.length)) {
+        let attArr = lights.floatAttenuation;
+        if (!attArr) {
+          const att: number[] = [];
+          for (let k = 0; k < lights.constantAttenuation.length; k++)
+            att.push(
+              <number>lights.constantAttenuation[k] || 0,
+              <number>lights.linearAttenuation[k] || 0,
+              <number>lights.quadraticAttenuation[k] || 0
+            );
+          attArr = new Float32Array(att);
+        }
+        context.uniform3fv(program.lightAttenuation, attArr);
+      }
+      if (program.lightCutoff && lights.cutoff && lights.cutoff.length > 0)
+        context.uniform1fv(program.lightCutoff, lights.floatCutoff || new Float32Array(<number[]>lights.cutoff));
+      if (program.lightExponent && lights.exponent && lights.exponent.length > 0)
+        context.uniform1fv(program.lightExponent, lights.floatExponent || new Float32Array(<number[]>lights.exponent));
+      if (program.lightType && (lights.floatType || lights.type?.length)) {
+        let typeArr = lights.floatType;
+        if (!typeArr)
+          typeArr = new Float32Array(lights.type.map(t => t === 'directional' ? 0 : t === 'point' ? 1 : 2));
+        context.uniform1fv(program.lightType, typeArr);
+      }
+      if (program.lightPositionType && lights.position && lights.position.length > 0)
+        context.uniform4fv(program.lightPositionType, lights.packedPosition || Mesh.packVec4(lights.position, (lights.type || []).map(Mesh.lightTypeValue)));
+      if (program.lightDiffuseCutoff && lights.diffuse && lights.diffuse.length > 0)
+        context.uniform4fv(program.lightDiffuseCutoff, lights.packedDiffuse || Mesh.packVec4(lights.diffuse, lights.cutoff || []));
+      if (program.lightSpecularExponent && lights.specular && lights.specular.length > 0)
+        context.uniform4fv(program.lightSpecularExponent, lights.packedSpecular || Mesh.packVec4(lights.specular, lights.exponent || []));
+      if (program.ambientLight && lights.ambient)
+        context.uniform3fv(program.ambientLight, lights.floatAmbient || new Float32Array(lights.ambient));
+    }
+
+    // camera position
+    if (program.cameraPosition) {
+      let camera = cameraPosition;
+      if (!camera && viewMatrix) {
+        // The camera position is the translation of the inverted view matrix.
+        Mesh.scratchView.toArray().set(viewMatrix);
+        camera = Mesh.scratchView.invertAffine().getTranslation(Mesh.scratchCamera);
+      }
+      if (camera)
+        context.uniform3f(program.cameraPosition, camera.x, camera.y, camera.z);
+    }
+
+    // fog
+    if (program.hasFog)
+      if (fog) {
+        context.uniform1i(program.hasFog, 1);
+        if (program.fogColor)
+          context.uniform3f(program.fogColor, fog.color.x, fog.color.y, fog.color.z);
+        if (program.fogNear)
+          context.uniform1f(program.fogNear, fog.near);
+        if (program.fogFar)
+          context.uniform1f(program.fogFar, fog.far);
+      } else
+        context.uniform1i(program.hasFog, 0);
   }
 
   public destroy(): void {
     this.clearPrograms();
-    if (this.vertexBuffer) {
-      this.context.deleteBuffer(this.vertexBuffer);
-      this.vertexBuffer = null;
+    if (this.vertexBuffer)
+      this.renderer.deleteBuffer(this.vertexBuffer), this.vertexBuffer = null;
+    if (this.indexBuffer)
+      this.renderer.deleteBuffer(this.indexBuffer), this.indexBuffer = null;
+    if (this.normalBuffer)
+      this.renderer.deleteBuffer(this.normalBuffer), this.normalBuffer = null;
+    if (this.texCoordBuffer)
+      this.renderer.deleteBuffer(this.texCoordBuffer), this.texCoordBuffer = null;
+    this.releaseTexture();
+    for (let child of this.children) {
+      child.parent = null;
+      child.destroy();
     }
-    if (this.indexBuffer) {
-      this.context.deleteBuffer(this.indexBuffer);
-      this.indexBuffer = null;
-    }
-    if (this.normalBuffer) {
-      this.context.deleteBuffer(this.normalBuffer);
-      this.normalBuffer = null;
-    }
-    if (this.texCoordBuffer) {
-      this.context.deleteBuffer(this.texCoordBuffer);
-      this.texCoordBuffer = null;
-    }
-    if (this.WebGLTexture) {
-      this.context.deleteTexture(this.WebGLTexture);
-      this.WebGLTexture = null;
-    }
+    this.children = [];
   }
 
   private ucfirst(string: string): string {
     return string.charAt(0).toUpperCase() + string.slice(1);
   }
 
+}
+
+export interface IMaterialShortcutOptions {
+  color?: Vec3Like;
+  texture?: HTMLImageElement | HTMLCanvasElement | WebGLTexture;
+}
+
+export interface IPhongShortcutOptions {
+  ambient?: Vec3Like;
+  diffuse?: Vec3Like;
+  specular?: Vec3Like;
+  shininess?: number;
+  texture?: HTMLImageElement | HTMLCanvasElement | WebGLTexture;
 }

@@ -11,17 +11,24 @@ export interface ITextureOptions {
   height?: number;
 }
 
-export class Texture {
+const isPowerOfTwo = (n: number): boolean => (n & (n - 1)) === 0;
 
-  static create(
+// WebGL1 can only mipmap power-of-two textures; WebGL2 has no such limit.
+function canGenerateMipmaps(context: WebGLRenderingContext, width: number, height: number): boolean {
+  if (typeof WebGL2RenderingContext !== 'undefined' && context instanceof WebGL2RenderingContext)
+    return true;
+  return isPowerOfTwo(width) && isPowerOfTwo(height);
+}
+
+export const Texture = {
+
+  create(
     source: TextureSource,
     context: WebGLRenderingContext,
     options?: ITextureOptions
   ): WebGLTexture | null {
     let webGLTexture = context.createTexture();
-    if (!webGLTexture) {
-      return null;
-    }
+    if (!webGLTexture) return null;
 
     const flipY = options?.flipY !== undefined ? options.flipY : true;
     const magFilter = options?.magFilter !== undefined ? options.magFilter : context.LINEAR;
@@ -37,21 +44,19 @@ export class Texture {
     context.texParameteri(context.TEXTURE_2D, context.TEXTURE_WRAP_S, wrapS);
     context.texParameteri(context.TEXTURE_2D, context.TEXTURE_WRAP_T, wrapT);
 
-    if (source instanceof Uint8Array) {
-      const width = options?.width || 1;
-      const height = options?.height || 1;
+    if (source instanceof Uint8Array)
       context.texImage2D(
         context.TEXTURE_2D,
         0,
         context.RGBA,
-        width,
-        height,
+        options?.width || 1,
+        options?.height || 1,
         0,
         context.RGBA,
         context.UNSIGNED_BYTE,
         source
       );
-    } else {
+    else
       context.texImage2D(
         context.TEXTURE_2D,
         0,
@@ -60,17 +65,21 @@ export class Texture {
         context.UNSIGNED_BYTE,
         <TexImageSource>source
       );
-    }
 
     if (options?.generateMipmaps) {
-      context.generateMipmap(context.TEXTURE_2D);
+      const width = source instanceof Uint8Array ? options.width || 1 : (<{ width: number }>source).width;
+      const height = source instanceof Uint8Array ? options.height || 1 : (<{ height: number }>source).height;
+      if (canGenerateMipmaps(context, width, height))
+        context.generateMipmap(context.TEXTURE_2D);
+      else
+        console.warn('Texture: mipmaps skipped, WebGL1 requires power-of-two dimensions.');
     }
 
     context.bindTexture(context.TEXTURE_2D, null);
     return webGLTexture;
-  }
+  },
 
-  static load(
+  load(
     url: string,
     context: WebGLRenderingContext,
     options?: ITextureOptions
@@ -78,27 +87,25 @@ export class Texture {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
-      img.onload = () => {
-        resolve(Texture.create(img, context, options));
-      };
-      img.onerror = (err) => {
-        reject(err);
-      };
+      img.onload = () => resolve(Texture.create(img, context, options));
+      img.onerror = (err) => reject(err);
       img.src = url;
     });
-  }
+  },
 
-  static update(
+  update(
     texture: WebGLTexture,
     source: TextureSource,
     context: WebGLRenderingContext,
     xOffset: number = 0,
     yOffset: number = 0,
     width?: number,
-    height?: number
+    height?: number,
+    flipY: boolean = true
   ): void {
     context.bindTexture(context.TEXTURE_2D, texture);
-    if (source instanceof Uint8Array) {
+    context.pixelStorei(context.UNPACK_FLIP_Y_WEBGL, flipY ? 1 : 0);
+    if (source instanceof Uint8Array)
       context.texSubImage2D(
         context.TEXTURE_2D,
         0,
@@ -110,7 +117,7 @@ export class Texture {
         context.UNSIGNED_BYTE,
         source
       );
-    } else {
+    else
       context.texSubImage2D(
         context.TEXTURE_2D,
         0,
@@ -120,8 +127,7 @@ export class Texture {
         context.UNSIGNED_BYTE,
         <TexImageSource>source
       );
-    }
     context.bindTexture(context.TEXTURE_2D, null);
   }
 
-}
+};

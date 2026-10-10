@@ -1,3 +1,97 @@
+Version 0.7.0 (October 10th 2026)
+-----------------------------
+ * Uses `@1pizzateam/spock` ^4.3.0 and its new 3D helpers instead of hand-rolled matrix math:
+   - `Mat4x3.compose`, `getTranslation`, `getColumn`, `getScale`, `transformPoint`, `toNormalMatrix`, `Mat4.multiplyAffine`/`transformPoint`, `Quat.lookAt`/`getEuler`, `Vec3.setFromSpherical`/`getSpherical`/`maxComponent`, and typed-array `setArray`/`toArray(target, offset)`.
+   - Bounds (`BoundingBox`/`BoundingSphere.applyMatrix4`), `Ray`, `CustomMesh.computeVertexNormals`, `OrbitControls` and `Camera.getRay` are now written with Vec3/Quat/Mat operations.
+   - Added `Uniform` support for Spock values: custom uniforms accept `Vec2`, `Vec3`, `Quat`, `Mat3`, `Mat4` and `Mat4x3` directly.
+   - Setters, constructors of lights/materials and `Mesh` transforms accept `Vec3`, number arrays or scalars (`Vec3Like`); array arguments were previously turned into `NaN` in light and material constructors.
+ * Spatial types now live in Spock (`Box`, `Sphere`, `Ray3`, `Plane`, `Frustum`). RoostR re-exports them under the existing names `BoundingBox`, `BoundingSphere`, `Ray`, `SpatialPlane` and `Frustum`, so imports do not change.
+ * Lighting and blending:
+   - `PhongShader` uses packed vec4 light uniforms (`uLightPositionType`, `uLightDiffuseCutoff`, `uLightSpecularExponent`), about 40% fewer uniform vectors, so it fits mobile GPUs limited to 64 fragment uniform vectors. The classic `uLightPosition`/`uLightType`/... uniforms are still uploaded to custom shaders that declare them.
+   - Added per-mesh blending: `Mesh.setBlend(source, destination, equation)` (default stays additive `SRC_ALPHA`, `ONE`) and `Mesh.setDepthWrite(enabled)`. The scene only changes blend/depth state between meshes that differ.
+ * Scene graph and rendering model:
+   - The `quaternion` is the single rotation source; `Mesh.rotation` is derived (`Quat.getEuler`) and `lookAt` orients the quaternion.
+   - Programs (and their uniform locations) are shared between meshes that use the same shader sources (`Program.acquire` / `Program.release`).
+   - `Scene` throws if it has neither `context` nor a resolvable `canvasId`.
+   - `Scene.render` draws through `Mesh.renderSelf` (one call per scene-graph node); `Mesh.render` still draws a mesh plus its children.
+ * Fixes:
+   - Scene ambient color (`Scene.ambientColor`) was ignored by shaders; it is now part of `Lights.flatten(extraAmbient)`.
+   - Vertex attribute arrays enabled by one mesh no longer leak into the next draw (per-draw attribute mask).
+   - Blend mode and frustum culling are evaluated per scene-graph node; children of blended or culled parents render correctly and meshes that are both child and scene member are drawn once.
+   - `uScreenResolution` is updated every frame from `Scene.resolution` (`setSize` / `setViewport`).
+   - Indices above 65535 use `UNSIGNED_INT` with `OES_element_index_uint` (warning otherwise) instead of being truncated.
+   - Bounding sphere ignored `itemSize`; `setFromPoints` and `BoundingBox.setFromPoints` honor strides of 2.
+   - `Scene.setFog` numeric overload used the wrong arguments; `Scene.raycast` now includes child meshes.
+   - Shaders are detached and deleted after linking; compile and link errors use `console.error`.
+   - Textures: `Texture.update` honors `flipY`, mipmaps are skipped for non power-of-two textures on WebGL1, user-supplied textures are no longer deleted by `Mesh.destroy`, and `setTexture` keeps the old texture if creation fails.
+   - Meshes without explicit submeshes get one covering the whole geometry so material shortcuts work.
+   - Phong shader uses `highp` where available. More than `MAX_LIGHTS` (8) lights logs a warning.
+   - `OrbitControls`: ignores secondary pointers, sets `touch-action: none`, takes the shortest azimuth path, supports `update(deltaTime)` for frame-rate independent damping, and skips the view-matrix rebuild when idle.
+   - `Renderer` accepts `IRendererOptions` (size, context attributes, context lost/restored callbacks).
+ * Performance:
+   - Programs are cached per context by shader source and reference counted.
+   - Camera, lights, fog and time uniforms are uploaded once per program per frame; material uniforms only when the material changed; `useProgram` and buffer binds are skipped when already bound.
+   - World matrices, bounds and normal matrices are only recomputed for changed branches of the scene graph.
+   - `Camera` caches projection-view and its inverse (used for culling and ray casting).
+   - `Lights.flatten` reuses typed arrays; the transparent sort uses precomputed squared distances without allocations.
+ * Rebranded and modernized as `@1pizzateam/roostr`:
+   - Published as native ES module (`dist/roostr.js`) with TypeScript declarations (`dist/roostr.d.ts`).
+   - Replaced legacy Grunt, Babel, and Uglify build pipeline with npm scripts, Rollup, and Jest.
+   - Updated engine requirement to Node.js >= 22.
+ * Migrated from `@lcluber/type6js` to `@1pizzateam/spock` v4.3.0:
+   - Updated all math representations across cameras, meshes, lights, materials, and geometries to use Spock `Vec3`, `Vec2`, `Mat4`, `Mat4x3`, `Mat3`, and `Quat`.
+   - Re-exported full Spock math and utility suite (`Vec3`, `Vec2`, `Mat4x3`, `Mat4`, `Mat3`, `Quat`, `Trigo`, `Utils`, `Time`, `Accumulator`, `Rand`, `Bezier`, `Circ`, `Rect`, `Grid`, `NumArray`, `RollingAverage`) directly from `@1pizzateam/roostr`.
+   - Simplified `Camera.setViewMatrix()` using Spock `lookAtRH()`.
+   - Added vector-based camera helpers: `getViewDirection()`, `getDistance()`, and `dolly()`.
+   - Added vector-first overloads across public APIs: `Camera.getRay(ndc: Vec2)`, `Scene.setSize(size: Vec2)`, `Renderer.setSize(size: Vec2)`, `RenderTarget(size: Vec2)`, `RenderTarget.setSize(size: Vec2)`, and vector dimension constructors (`Quad` and `MultiQuad` with `Vec2` / `Rect`, `Plane` with `Vec2`, and `Cube` with `Vec3`).
+ * Cameras & Interactive Controls:
+   - Added `OrbitControls` providing smooth 3D orbital camera rotation (azimuthal and polar angles), panning, zooming/dollying, damping/inertia, touch gesture support, and configurable distance and angle constraints.
+   - Added `setFov()` and `setNearFar()` helpers to `PerspectiveCamera`.
+   - Added `setBounds()` helper to `OrthographicCamera`.
+   - Added guard against null/empty context viewport in `PerspectiveCamera`.
+   - Fixed camera view matrix degeneracy when camera position equals target.
+ * Spatial Math, Frustum Culling & Raycasting:
+   - Added 3D spatial query structures:
+     - `BoundingBox` (Spock `Box`): Axis-aligned bounding box with containment, matrix transformation, union, and intersection tests.
+     - `BoundingSphere`: Bounding sphere with containment, matrix transformation, and intersection tests.
+     - `Ray`: 3D ray with point-at-distance, ray-sphere, ray-box, and Möller-Trumbore ray-triangle intersection testing.
+     - `Frustum` & `SpatialPlane`: 6-plane viewing frustum extraction from projection-view matrix with sphere and box intersection testing for frustum culling.
+   - Added screen-space ray unprojection via `Camera.getRay(ndc: Vec2)`.
+   - Added `Scene.raycast(ray: Ray)` to cast rays into the scene and retrieve sorted mesh intersection hits.
+ * Shaders & Offscreen Rendering:
+   - Added built-in GLSL shaders: `PhongShader` (Blinn-Phong specular/diffuse/ambient), `BasicShader` (unlit diffuse/color), and `NormalShader` (world/surface normal visualization).
+   - Added fluent material helper methods to `Mesh`: `usePhongMaterial()`, `useBasicMaterial()`, and `useNormalMaterial()`.
+   - Added `RenderTarget` for offscreen rendering to framebuffer textures and post-processing passes.
+ * Lighting Pipeline:
+   - Added `AmbientLight` for omnidirectional ambient illumination.
+   - Enhanced dynamic multi-light management supporting Directional, Point (with attenuation), Spot (with cutoff and exponent), and Ambient lights.
+ * Procedural Geometries:
+   - Added procedural `Cylinder` (and cone) geometry with configurable radius, height, radial/height segment subdivisions, and open-ended options.
+   - Added procedural `Plane` geometry (XY and XZ orientations) with grid subdivisions.
+   - Added flat-shaded option to `Cube` with 24 distinct vertices and face normals.
+   - Added automatic vertex normal calculation (`computeVertexNormals()`) in `CustomMesh` for indexed and non-indexed meshes.
+ * Mesh & Scene Graph Enhancements:
+   - Added fluent / chainable transform API to `Mesh` (`setPosition`, `setRotation`, `setScale`, `rotateX`, `rotateY`, `rotateZ`, `translate`, `scaleBy`, `lookAt`).
+   - Added spatial utility methods to `Mesh`: `slerp()`, `getWorldDirection()`, `distanceTo()`, and `isInsideBounds()`.
+   - Fixed child mesh rendering in Scene Graph group nodes.
+   - Fixed `Mesh.addMaterial()` crash when adding material after program creation.
+   - Added `removeMesh()`, `removeLight()`, and `removeChild()` methods to `Scene` and `Mesh`.
+   - Added `getCanvas()`, `setSize()`, and `destroy()` methods to `Scene` and `Renderer` for lifecycle and canvas management.
+   - Fixed mutual starvation in `Mesh` bounding volume caching by synchronizing box and sphere in `computeBounds()`.
+   - Added `NaN` division guard to `Ray.intersectBox()` for axis-parallel rays intersecting boundaries.
+   - Extended `BoundingBox.applyMatrix4()` and `BoundingSphere.applyMatrix4()` to accept both `Mat4x3` and `Mat4`.
+   - Re-exported core TypeScript interfaces (`IMesh`, `IGeometry`, `IFlatLights`, `IProgram`, `ICustomUniforms`, `IMaterialUniforms`) from the library root.
+   - Defaulted `Scene.render()` timestamp parameter to `Time.now()`.
+ * WebGL State & Resource Management:
+   - Passed `transpose: false` for WebGL uniform matrix calls.
+   - Supported `Float32Array` and `Int32Array` in `Uniform` and custom uniforms.
+   - Enabled UV attribute binding independent of texture presence.
+   - Enhanced `Texture` class supporting HTMLImageElement, HTMLCanvasElement, ImageData, mipmaps, NPOT textures, wrap, filter, and flipY options.
+   - Prevented GPU memory leaks by deleting shaders on compilation/link failure, deleting WebGL programs on `clearPrograms()`, deleting textures on reassignment, and adding recursive `Mesh.destroy()`.
+ * Documentation & Tests:
+   - Added comprehensive VitePress documentation site with interactive 3D WebGL demo components (`SceneDemo`, `LightingDemo`, `GeometryDemo`), installation guide, overview, and complete API references.
+   - Expanded unit test suite to 331 passing tests with high branch and statement coverage.
+
 Version 0.6.0 (July 22th 2026)
 -----------------------------
  * Updated build configuration and dependencies (Rollup, Jest, TypeScript, UglifyJS).

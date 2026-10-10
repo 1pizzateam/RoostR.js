@@ -4,10 +4,16 @@ import { PointLight } from '../lights/point';
 import { SpotLight } from '../lights/spot';
 import { AmbientLight } from '../lights/ambient';
 import { IFlatLights } from '../interfaces';
+import { Vec3 } from '@1pizzateam/spock';
 
 export type AnyLight = DirectionalLight | PointLight | SpotLight | AmbientLight;
 
+export const MAX_LIGHTS = 8;
+
 export class Lights {
+
+  private static _ambient = new Vec3();
+  private warnedOverflow = false;
 
   directionals : DirectionalLight[];
   points : PointLight[];
@@ -65,43 +71,40 @@ export class Lights {
   }
 
   public removeLight(light: AnyLight): boolean {
+    let idx: number;
     switch (light.type) {
-      case 'directional': {
-        const idx = this.directionals.indexOf(light as DirectionalLight);
+      case 'directional':
+        idx = this.directionals.indexOf(light as DirectionalLight);
         if (idx !== -1) {
           this.directionals.splice(idx, 1);
           this.nbDirectionals--;
           return true;
         }
         return false;
-      }
-      case 'point': {
-        const idx = this.points.indexOf(light as PointLight);
+      case 'point':
+        idx = this.points.indexOf(light as PointLight);
         if (idx !== -1) {
           this.points.splice(idx, 1);
           this.nbPoints--;
           return true;
         }
         return false;
-      }
-      case 'spot': {
-        const idx = this.spots.indexOf(light as SpotLight);
+      case 'spot':
+        idx = this.spots.indexOf(light as SpotLight);
         if (idx !== -1) {
           this.spots.splice(idx, 1);
           this.nbSpots--;
           return true;
         }
         return false;
-      }
-      case 'ambient': {
-        const idx = this.ambients.indexOf(light as AmbientLight);
+      case 'ambient':
+        idx = this.ambients.indexOf(light as AmbientLight);
         if (idx !== -1) {
           this.ambients.splice(idx, 1);
           this.nbAmbients--;
           return true;
         }
         return false;
-      }
       default:
         return false;
     }
@@ -120,80 +123,111 @@ export class Lights {
     this.flatArrays.type.length = 0;
   }
 
-  public flatten(): IFlatLights {
+  // Float32Arrays are reused while the light count stays the same.
+  private ensureBuffers(count: number): void {
+    const f = this.flatArrays;
+    if (f.floatPosition && f.floatPosition.length === count * 3)
+      return;
+    f.floatPosition = new Float32Array(count * 3);
+    f.floatDiffuse = new Float32Array(count * 3);
+    f.floatSpecular = new Float32Array(count * 3);
+    f.floatDirection = new Float32Array(count * 3);
+    f.floatAttenuation = new Float32Array(count * 3);
+    f.floatCutoff = new Float32Array(count);
+    f.floatExponent = new Float32Array(count);
+    f.floatType = new Float32Array(count);
+    // vec4 layouts for the built-in Phong shader: (position, type), (diffuse, cutoff), (specular, exponent)
+    f.packedPosition = new Float32Array(count * 4);
+    f.packedDiffuse = new Float32Array(count * 4);
+    f.packedSpecular = new Float32Array(count * 4);
+  }
+
+  private push(
+    index: number,
+    kind: 'spot' | 'point' | 'directional',
+    light: DirectionalLight | PointLight | SpotLight
+  ): void {
+    const f = this.flatArrays;
+    const o = index * 3;
+    const isSpot = kind === 'spot';
+    const isDirectional = kind === 'directional';
+    const att = isDirectional ? null : light as PointLight;
+
+    light.position.toArray(f.floatPosition!, o);
+    light.diffuse.toArray(f.floatDiffuse!, o);
+    light.specular.toArray(f.floatSpecular!, o);
+    if (isDirectional)
+      light.direction.toArray(f.floatDirection!, o);
+    else if (isSpot)
+      (light as SpotLight).direction.toArray(f.floatDirection!, o);
+    else
+      f.floatDirection!.fill(0, o, o + 3);
+
+    const constant = att ? att.constantAttenuation : 1;
+    const linear = att ? att.linearAttenuation : 0;
+    const quadratic = att ? att.quadraticAttenuation : 0;
+    f.floatAttenuation![o] = constant;
+    f.floatAttenuation![o + 1] = linear;
+    f.floatAttenuation![o + 2] = quadratic;
+    f.floatCutoff![index] = isSpot ? (light as SpotLight).cutoff : 0;
+    f.floatExponent![index] = isSpot ? (light as SpotLight).exponent : 0;
+    f.floatType![index] = isDirectional ? 0 : isSpot ? 2 : 1;
+
+    const q = index * 4;
+    light.position.toArray(f.packedPosition!, q);
+    f.packedPosition![q + 3] = f.floatType![index];
+    light.diffuse.toArray(f.packedDiffuse!, q);
+    f.packedDiffuse![q + 3] = f.floatCutoff![index];
+    light.specular.toArray(f.packedSpecular!, q);
+    f.packedSpecular![q + 3] = f.floatExponent![index];
+
+    const dir = isDirectional || isSpot ? (light as SpotLight).direction : null;
+    f.position.push(light.position.x, light.position.y, light.position.z);
+    f.diffuse.push(light.diffuse.x, light.diffuse.y, light.diffuse.z);
+    f.specular.push(light.specular.x, light.specular.y, light.specular.z);
+    if (dir)
+      f.direction.push(dir.x, dir.y, dir.z);
+    else
+      f.direction.push(0, 0, 0);
+    f.constantAttenuation.push(constant);
+    f.linearAttenuation.push(linear);
+    f.quadraticAttenuation.push(quadratic);
+    f.cutoff.push(isSpot ? (light as SpotLight).cutoff : 0);
+    f.exponent.push(isSpot ? (light as SpotLight).exponent : 0);
+    f.type.push(kind);
+  }
+
+  // Flattens every light into the shared arrays. extraAmbient (e.g. the scene ambient color)
+  // is added to the summed ambient lights before the uniform buffer is built.
+  public flatten(extraAmbient?: Vec3): IFlatLights {
     this.ClearFlatArrays();
 
-    // 1. Spots
-    for (let i = 0; i < this.nbSpots; i++) {
-      const s = this.spots[i];
-      this.flatArrays.position.push(s.position.x, s.position.y, s.position.z);
-      this.flatArrays.diffuse.push(s.diffuse.x, s.diffuse.y, s.diffuse.z);
-      this.flatArrays.specular.push(s.specular.x, s.specular.y, s.specular.z);
-      this.flatArrays.constantAttenuation.push(s.constantAttenuation);
-      this.flatArrays.linearAttenuation.push(s.linearAttenuation);
-      this.flatArrays.quadraticAttenuation.push(s.quadraticAttenuation);
-      this.flatArrays.cutoff.push(s.cutoff);
-      this.flatArrays.exponent.push(s.exponent);
-      this.flatArrays.direction.push(s.direction.x, s.direction.y, s.direction.z);
-      this.flatArrays.type.push('spot');
+    const total = this.nbSpots + this.nbPoints + this.nbDirectionals;
+    const count = Math.min(total, MAX_LIGHTS);
+    if (total > MAX_LIGHTS && !this.warnedOverflow) {
+      this.warnedOverflow = true;
+      console.warn(`Lights: ${total} lights added, only the first ${MAX_LIGHTS} (spots, points, then directionals) are used.`);
     }
+    this.ensureBuffers(count);
 
-    // 2. Points
-    for (let i = 0; i < this.nbPoints; i++) {
-      const p = this.points[i];
-      this.flatArrays.position.push(p.position.x, p.position.y, p.position.z);
-      this.flatArrays.diffuse.push(p.diffuse.x, p.diffuse.y, p.diffuse.z);
-      this.flatArrays.specular.push(p.specular.x, p.specular.y, p.specular.z);
-      this.flatArrays.constantAttenuation.push(p.constantAttenuation);
-      this.flatArrays.linearAttenuation.push(p.linearAttenuation);
-      this.flatArrays.quadraticAttenuation.push(p.quadraticAttenuation);
-      this.flatArrays.cutoff.push(0);
-      this.flatArrays.exponent.push(0);
-      this.flatArrays.direction.push(0, 0, 0);
-      this.flatArrays.type.push('point');
-    }
+    let index = 0;
+    for (let i = 0; i < this.nbSpots && index < count; i++)
+      this.push(index++, 'spot', this.spots[i]);
+    for (let i = 0; i < this.nbPoints && index < count; i++)
+      this.push(index++, 'point', this.points[i]);
+    for (let i = 0; i < this.nbDirectionals && index < count; i++)
+      this.push(index++, 'directional', this.directionals[i]);
 
-    // 3. Directionals
-    for (let i = 0; i < this.nbDirectionals; i++) {
-      const d = this.directionals[i];
-      this.flatArrays.position.push(d.position.x, d.position.y, d.position.z);
-      this.flatArrays.diffuse.push(d.diffuse.x, d.diffuse.y, d.diffuse.z);
-      this.flatArrays.specular.push(d.specular.x, d.specular.y, d.specular.z);
-      this.flatArrays.constantAttenuation.push(1);
-      this.flatArrays.linearAttenuation.push(0);
-      this.flatArrays.quadraticAttenuation.push(0);
-      this.flatArrays.cutoff.push(0);
-      this.flatArrays.exponent.push(0);
-      this.flatArrays.direction.push(d.direction.x, d.direction.y, d.direction.z);
-      this.flatArrays.type.push('directional');
-    }
+    const ambient = Lights._ambient.setScalar(0, 0, 0);
+    if (extraAmbient)
+      ambient.add(extraAmbient);
+    for (let i = 0; i < this.nbAmbients; i++)
+      ambient.addScaledVector(this.ambients[i].diffuse, this.ambients[i].intensity);
 
-    // Compute total ambient light
-    let ambR = 0, ambG = 0, ambB = 0;
-    for (let ambient of this.ambients) {
-      ambR += ambient.diffuse.x * ambient.intensity;
-      ambG += ambient.diffuse.y * ambient.intensity;
-      ambB += ambient.diffuse.z * ambient.intensity;
-    }
-    this.flatArrays.ambient = [ambR, ambG, ambB];
-
-    // Build cached Float32Arrays for zero-allocation rendering per mesh
-    this.flatArrays.floatPosition = new Float32Array(this.flatArrays.position);
-    this.flatArrays.floatDiffuse = new Float32Array(this.flatArrays.diffuse);
-    this.flatArrays.floatSpecular = new Float32Array(this.flatArrays.specular);
-    this.flatArrays.floatDirection = new Float32Array(this.flatArrays.direction);
-    this.flatArrays.floatCutoff = new Float32Array(this.flatArrays.cutoff);
-    this.flatArrays.floatExponent = new Float32Array(this.flatArrays.exponent);
-    this.flatArrays.floatType = new Float32Array(this.flatArrays.type.map(t => t === 'directional' ? 0 : t === 'point' ? 1 : 2));
-
-    const att = new Float32Array(this.flatArrays.constantAttenuation.length * 3);
-    for (let k = 0; k < this.flatArrays.constantAttenuation.length; k++) {
-      att[k * 3] = this.flatArrays.constantAttenuation[k];
-      att[k * 3 + 1] = this.flatArrays.linearAttenuation[k];
-      att[k * 3 + 2] = this.flatArrays.quadraticAttenuation[k];
-    }
-    this.flatArrays.floatAttenuation = att;
-    this.flatArrays.floatAmbient = new Float32Array(this.flatArrays.ambient);
+    if (!this.flatArrays.floatAmbient)
+      this.flatArrays.floatAmbient = new Float32Array(3);
+    ambient.toArray(this.flatArrays.floatAmbient);
+    this.flatArrays.ambient = [ambient.x, ambient.y, ambient.z];
 
     return this.flatArrays;
   }
@@ -211,9 +245,8 @@ export class Lights {
   }
 
   public getFlatArray(property: string): (number | string)[] | undefined {
-    if(this.flatArrays.hasOwnProperty(property)){
+    if (this.flatArrays.hasOwnProperty(property))
       return this.flatArrays[property];
-    }
     return undefined;
   }
 

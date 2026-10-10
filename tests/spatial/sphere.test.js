@@ -1,4 +1,4 @@
-import { BoundingSphere, BoundingBox, Vec3, Mat4x3 } from '../../dist/roostr.js';
+import { BoundingSphere, BoundingBox, Vec3, Mat4x3, Mat4 } from '../../dist/roostr.js';
 
 describe('BoundingSphere', () => {
   test('creates default sphere at origin', () => {
@@ -45,5 +45,15 @@ describe('BoundingSphere', () => {
 
     expect(sphere.center.x).toBe(7);
     expect(sphere.radius).toBe(4);
+  });
+
+  test('applyMatrix4 works with Mat4', () => {
+    const sphere = new BoundingSphere(new Vec3(0, 1, 0), 2);
+    const mat = new Mat4();
+    mat.translate(new Vec3(0, 3, 0));
+    sphere.applyMatrix4(mat);
+
+    expect(sphere.center.y).toBe(4);
+    expect(sphere.radius).toBe(2);
   });
 });

@@ -1,12 +1,14 @@
 # RenderTarget
 
-Encapsulates an offscreen WebGL framebuffer (`WebGLFramebuffer`) with an attached color `Texture` and depth buffer, enabling multi-pass post-processing, screen capture, and dynamic reflection maps.
+Encapsulates an offscreen WebGL framebuffer (`WebGLFramebuffer`) with an attached color `WebGLTexture` and depth buffer, enabling multi-pass post-processing, screen capture, and dynamic reflection maps.
 
 ```javascript
-import { RenderTarget, FullscreenQuad, Mesh } from '@1pizzateam/roostr';
+import { RenderTarget, Vec2 } from '@1pizzateam/roostr';
 
-// 1. Create target matching screen resolution
-const renderTarget = new RenderTarget(gl, 800, 600);
+// 1. Create target matching screen resolution (vector or scalar width/height)
+const renderTarget = new RenderTarget(new Vec2(800, 600), gl);
+// Or with scalar dimensions:
+// const renderTarget = new RenderTarget(800, 600, gl);
 
 // 2. Direct render calls into the target
 renderTarget.bind();
@@ -23,14 +25,18 @@ postQuadMesh.setTexture(renderTarget.texture);
 
 ```typescript
 new RenderTarget(
-  context: WebGLRenderingContext,
-  width: number,
-  height: number,
-  options?: IRenderTargetOptions
+  sizeOrWidth: Vec2 | number,
+  heightOrContext: number | WebGLRenderingContext,
+  context?: WebGLRenderingContext
 )
 ```
 
-Automatically allocates a `WebGLFramebuffer`, attaches an RGBA `Texture` to `gl.COLOR_ATTACHMENT0`, and creates a `WebGLRenderbuffer` for 16-bit depth testing (`gl.DEPTH_ATTACHMENT`).
+Automatically allocates a `WebGLFramebuffer`, attaches an RGBA `WebGLTexture` to `gl.COLOR_ATTACHMENT0`, and creates a `WebGLRenderbuffer` for 16-bit depth testing (`gl.DEPTH_ATTACHMENT`).
+
+### Signatures
+
+- `new RenderTarget(size: Vec2, context: WebGLRenderingContext)`
+- `new RenderTarget(width: number, height: number, context: WebGLRenderingContext)`
 
 ---
 
@@ -38,7 +44,7 @@ Automatically allocates a `WebGLFramebuffer`, attaches an RGBA `Texture` to `gl.
 
 | Property | Type | Description |
 | :--- | :--- | :--- |
-| `texture` | `Texture` | Color texture holding the rendered output. |
+| `texture` | `WebGLTexture` | Hardware texture holding the rendered color output. |
 | `framebuffer` | `WebGLFramebuffer` | WebGL framebuffer object. |
 | `depthBuffer` | `WebGLRenderbuffer`| Depth renderbuffer object. |
 | `width` | `number` | Framebuffer width in pixels. |
@@ -50,16 +56,26 @@ Automatically allocates a `WebGLFramebuffer`, attaches an RGBA `Texture` to `gl.
 
 ### `bind(): void`
 
-Direct subsequent draw calls and clears into this offscreen framebuffer. Updates the WebGL viewport to match the render target dimensions.
+Directs subsequent draw calls and clears into this offscreen framebuffer. Automatically updates the WebGL viewport to match the render target dimensions.
 
-### `unbind(): void`
+### `unbind(viewportWidthOrSize?: Vec2 | number, viewportHeight?: number): void`
 
-Restores rendering back to the default display canvas framebuffer (`null`).
+Restores rendering back to the default display canvas framebuffer (`null`). Optionally resets the viewport using a Spock `Vec2` or scalar `(width, height)`.
 
-### `setSize(width: number, height: number): void`
+### `getSize(target: Vec2 = new Vec2()): Vec2`
 
-Reallocates the color texture and depth renderbuffer to match new dimensions upon window resize.
+Returns the dimensions of the render target as a Spock `Vec2`.
 
-### `destroy(): void`
+### `setSize(sizeOrWidth: Vec2 | number, height?: number): void`
+
+Reallocates the color texture and depth renderbuffer to match new dimensions upon window resize. Accepts a `Vec2` or scalar width and height:
+
+```javascript
+renderTarget.setSize(new Vec2(window.innerWidth, window.innerHeight));
+// Or:
+renderTarget.setSize(1024, 768);
+```
+
+### `dispose(): void`
 
 Deletes the WebGL framebuffer, depth renderbuffer, and texture objects to prevent GPU memory leaks.

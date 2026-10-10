@@ -1,11 +1,24 @@
-
+import { getGLState } from './state';
 export class SceneRenderer {
 
   context: WebGLRenderingContext;
 
+  // Cached GL state; null means unknown.
+  private blendKey: string = '';
+  private blendEnabled: boolean | null = null;
+  private depthWrite: boolean | null = null;
+
   constructor(context:WebGLRenderingContext) {
     this.context = context;
     this.defaultSettings();
+  }
+
+  // Forget cached GL bindings after other code may have changed them.
+  public invalidateState(): void {
+    getGLState(this.context).invalidate();
+    this.blendKey = '';
+    this.blendEnabled = null;
+    this.depthWrite = null;
   }
 
   public defaultSettings(): void {
@@ -28,10 +41,14 @@ export class SceneRenderer {
   // Transparency is best implemented using blend function (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA) with primitives sorted from farthest to nearest. Note that this transparency calculation does not require the presence of alpha bitplanes in the frame buffer.
   // Blend function (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA) is also useful for rendering antialiased points and lines in arbitrary order.
   public enable( capability: string): void {
+    if (capability === 'BLEND')
+      this.blendEnabled = true;
     this.context.enable(this.context[capability]);
   }
 
   public disable( capability: string): void {
+    if (capability === 'BLEND')
+      this.blendEnabled = false;
     this.context.disable(this.context[capability]);
   }
 
@@ -78,6 +95,7 @@ export class SceneRenderer {
 
   public enableDepthTest(): void {
     this.enable('DEPTH_TEST');
+    this.depthWrite = true;
     this.context.depthMask(true);
     //this.gl.depthFunc(this.gl.LESS);
     //this.setDepthFunc('LEQUAL');
@@ -85,17 +103,32 @@ export class SceneRenderer {
 
   public disableDepthTest(): void {
     this.disable('DEPTH_TEST');
+    this.depthWrite = false;
     this.context.depthMask(false);
   }
 
   public enableBlendMode(equation: string, source: string, destination: string): void {
-    this.setBlendEquation(equation);
-    this.setBlendFunction(source, destination);
-    this.enable('BLEND');
+    const key = equation + '|' + source + '|' + destination;
+    if (key !== this.blendKey) {
+      this.setBlendEquation(equation);
+      this.setBlendFunction(source, destination);
+      this.blendKey = key;
+    }
+    if (this.blendEnabled !== true)
+      this.enable('BLEND');
   }
 
   public disableBlendMode() {
-    this.disable('BLEND');
+    if (this.blendEnabled !== false)
+      this.disable('BLEND');
+  }
+
+  // Enables or disables writing to the depth buffer (the depth test itself is unchanged).
+  public setDepthWrite(enabled: boolean): void {
+    if (this.depthWrite === enabled)
+      return;
+    this.depthWrite = enabled;
+    this.context.depthMask(enabled);
   }
 
   // gl.ACTIVE_TEXTURE	GLenum

@@ -1,3 +1,4 @@
+import { Trigo, Utils } from '@1pizzateam/spock';
 import { BasicMesh } from './basic';
 import { SubMesh } from './submesh';
 
@@ -16,8 +17,8 @@ export class Cylinder extends BasicMesh {
     const rTop = radiusTop !== undefined ? radiusTop : 1.0;
     const rBottom = radiusBottom !== undefined ? radiusBottom : 1.0;
     const h = height || 1.0;
-    const radSeg = Math.max(3, Math.floor(radialSegments || 16));
-    const hSeg = Math.max(1, Math.floor(heightSegments || 1));
+    const radSeg = Utils.clamp(Utils.floor(radialSegments || 16, 0), 3, Infinity);
+    const hSeg = Utils.clamp(Utils.floor(heightSegments || 1, 0), 1, Infinity);
 
     const vertices: number[] = [];
     const normals: number[] = [];
@@ -40,10 +41,10 @@ export class Cylinder extends BasicMesh {
 
       for (let x = 0; x <= radSeg; x++) {
         const u = x / radSeg;
-        const theta = u * Math.PI * 2.0;
+        const theta = u * Trigo.twopi;
 
-        const sinTheta = Math.sin(theta);
-        const cosTheta = Math.cos(theta);
+        const sinTheta = Trigo.sine(theta);
+        const cosTheta = Trigo.cosine(theta);
 
         const px = radius * sinTheta;
         const pz = radius * cosTheta;
@@ -64,7 +65,7 @@ export class Cylinder extends BasicMesh {
     }
 
     // Body indices
-    for (let x = 0; x < radSeg; x++) {
+    for (let x = 0; x < radSeg; x++)
       for (let y = 0; y < hSeg; y++) {
         const a = indexGrid[y][x];
         const b = indexGrid[y + 1][x];
@@ -74,7 +75,6 @@ export class Cylinder extends BasicMesh {
         indices.push(a, b, d);
         indices.push(b, c, d);
       }
-    }
 
     // Caps
     if (!openEnded) {
@@ -88,21 +88,18 @@ export class Cylinder extends BasicMesh {
         const topCapStartIndex = index;
         for (let x = 0; x <= radSeg; x++) {
           const u = x / radSeg;
-          const theta = u * Math.PI * 2.0;
-          const px = rTop * Math.sin(theta);
-          const pz = rTop * Math.cos(theta);
+          const theta = u * Trigo.twopi;
+          const px = rTop * Trigo.sine(theta);
+          const pz = rTop * Trigo.cosine(theta);
 
           vertices.push(px, halfH, pz);
           normals.push(0, 1, 0);
-          uvs.push(Math.sin(theta) * 0.5 + 0.5, Math.cos(theta) * 0.5 + 0.5);
+          uvs.push(Trigo.sine(theta) * 0.5 + 0.5, Trigo.cosine(theta) * 0.5 + 0.5);
           index++;
         }
 
-        for (let x = 0; x < radSeg; x++) {
-          const i1 = topCapStartIndex + x;
-          const i2 = topCapStartIndex + x + 1;
-          indices.push(centerIndexTop, i1, i2);
-        }
+        for (let x = 0; x < radSeg; x++)
+          indices.push(centerIndexTop, topCapStartIndex + x, topCapStartIndex + x + 1);
       }
 
       // Bottom cap
@@ -115,21 +112,18 @@ export class Cylinder extends BasicMesh {
         const bottomCapStartIndex = index;
         for (let x = 0; x <= radSeg; x++) {
           const u = x / radSeg;
-          const theta = u * Math.PI * 2.0;
-          const px = rBottom * Math.sin(theta);
-          const pz = rBottom * Math.cos(theta);
+          const theta = u * Trigo.twopi;
+          const px = rBottom * Trigo.sine(theta);
+          const pz = rBottom * Trigo.cosine(theta);
 
           vertices.push(px, -halfH, pz);
           normals.push(0, -1, 0);
-          uvs.push(Math.sin(theta) * 0.5 + 0.5, Math.cos(theta) * 0.5 + 0.5);
+          uvs.push(Trigo.sine(theta) * 0.5 + 0.5, Trigo.cosine(theta) * 0.5 + 0.5);
           index++;
         }
 
-        for (let x = 0; x < radSeg; x++) {
-          const i1 = bottomCapStartIndex + x;
-          const i2 = bottomCapStartIndex + x + 1;
-          indices.push(centerIndexBottom, i2, i1);
-        }
+        for (let x = 0; x < radSeg; x++)
+          indices.push(centerIndexBottom, bottomCapStartIndex + x + 1, bottomCapStartIndex + x);
       }
     }
 

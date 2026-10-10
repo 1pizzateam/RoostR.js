@@ -269,7 +269,7 @@ test("setTexture after addProgram updates sampler uniform on existing programs",
   expect(context.getUniformLocation).toHaveBeenCalledWith(expect.anything(), "uSampler");
 });
 
-test("initializes modelMatrix and rotationMatrix to identity", () => {
+test("initializes modelMatrix to identity", () => {
   const { mesh } = createMesh();
   const identity = new Float32Array([
     1, 0, 0, 0,
@@ -278,7 +278,6 @@ test("initializes modelMatrix and rotationMatrix to identity", () => {
     0, 0, 0, 1
   ]);
   expect(mesh.modelMatrix.toArray()).toEqual(identity);
-  expect(mesh.rotationMatrix.toArray()).toEqual(identity);
 });
 
 test("computeWorldMatrix preserves identity when local modelMatrix and parent are identity", () => {
@@ -458,6 +457,19 @@ test("destroy cleans up buffers, textures, and programs", () => {
   expect(mesh.texCoordBuffer).toBeNull();
   expect(mesh.WebGLTexture).toBeNull();
   expect(mesh.nbPrograms).toBe(0);
+});
+
+test("destroy recursively cleans up children", () => {
+  const { mesh } = createMesh();
+  const { mesh: childMesh } = createMesh();
+  const childSpy = jest.spyOn(childMesh, "destroy");
+  mesh.addChild(childMesh);
+
+  expect(mesh.children).toHaveLength(1);
+  mesh.destroy();
+
+  expect(childSpy).toHaveBeenCalledTimes(1);
+  expect(mesh.children).toHaveLength(0);
 });
 
 test("setPosition, setRotation, setScale and translate update transforms and modelMatrix", () => {
@@ -718,6 +730,27 @@ test("render binds fog uniforms and camera position", () => {
   expect(context.uniform1f).toHaveBeenCalledWith({ name: "uFogNear" }, 10);
   expect(context.uniform1f).toHaveBeenCalledWith({ name: "uFogFar" }, 50);
   expect(context.uniform3f).toHaveBeenCalledWith({ name: "uCameraPosition" }, 1, 2, 3);
+});
+
+test("computeBoundingBox and computeBoundingSphere stay synchronized without mutual starvation", () => {
+  const context = createMockContext();
+  const mesh = new Mesh(new Cube(2.0), context);
+  mesh.setPosition(10, 0, 0);
+  mesh.updateModelMatrix();
+  mesh.setWorldMatrix(new Mat4x3().identity());
+
+  expect(mesh.isBoundsDirty).toBe(true);
+
+  // Calling computeBoundingSphere recomputes bounds
+  const sphere = mesh.computeBoundingSphere();
+  expect(mesh.isBoundsDirty).toBe(false);
+  expect(sphere.center.x).toBeCloseTo(10);
+
+  // Calling computeBoundingBox returns the synchronized box without returning stale values
+  const box = mesh.computeBoundingBox();
+  expect(box.min.x).toBeCloseTo(9);
+  expect(box.max.x).toBeCloseTo(11);
+  expect(mesh.isBoundsDirty).toBe(false);
 });
 
 

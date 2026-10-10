@@ -17,7 +17,16 @@ scene.addLight(lamp);
 ## Constructor
 
 ```typescript
-new PointLight(position?: Vec3)
+new PointLight(
+  positionOrOptions?: Vec3 | number[] | {
+    position?: Vec3 | number[];
+    diffuse?: Vec3 | number[];
+    specular?: Vec3 | number[];
+    constantAttenuation?: number;
+    linearAttenuation?: number;
+    quadraticAttenuation?: number;
+  }
+)
 ```
 
 ---
@@ -45,22 +54,26 @@ $$\text{attenuation}(d) = \frac{1.0}{k_c + k_l \cdot d + k_q \cdot d^2}$$
 
 ## Methods
 
-### `setPosition(x: number | Vec3, y?: number, z?: number): void`
+### `setPosition(xOrVec: Vec3 | number, y?: number, z?: number): void`
 
 Set the world position of the point light.
 
-### `setDiffuse(r: number | Vec3 | number[], g?: number, b?: number): void`
+### `setDiffuse(xOrVec: Vec3 | number, y?: number, z?: number): void`
 
 Set the diffuse RGB color.
 
-### `setSpecular(r: number | Vec3 | number[], g?: number, b?: number): void`
+### `setSpecular(xOrVec: Vec3 | number, y?: number, z?: number): void`
 
 Set the specular RGB color.
 
+### `setConstantAttenuation(factor: number): void`
+
+Configure the constant decay coefficient $k_c$ (default `1.0`).
+
 ### `setLinearAttenuation(factor: number): void`
 
-Configure the linear distance decay coefficient.
+Configure the linear distance decay coefficient $k_l$.
 
 ### `setQuadraticAttenuation(factor: number): void`
 
-Configure the quadratic distance decay coefficient.
+Configure the quadratic distance decay coefficient $k_q$.

@@ -5,12 +5,12 @@ RoostR provides built-in procedural geometry generators that output ready-to-ren
 <GeometryDemo />
 
 ```javascript
-import { Cube, Sphere, Cylinder, Plane, Mesh } from '@1pizzateam/roostr';
+import { Cube, Sphere, Cylinder, Plane, Quad, MultiQuad, Mesh, Vec3, Vec2 } from '@1pizzateam/roostr';
 
-const cubeMesh     = new Mesh(gl, new Cube(2.0));
-const sphereMesh   = new Mesh(gl, new Sphere(1.5, 32, 24));
-const cylinderMesh = new Mesh(gl, new Cylinder(1.0, 1.0, 3.0, 24));
-const floorMesh    = new Mesh(gl, new Plane(10.0, 10.0, 4, 4));
+const cubeMesh     = new Mesh(new Cube(new Vec3(2, 3, 2)), gl);
+const sphereMesh   = new Mesh(new Sphere(1.5, 32, 24), gl);
+const cylinderMesh = new Mesh(new Cylinder(1.0, 1.0, 3.0, 24), gl);
+const floorMesh    = new Mesh(new Plane(new Vec2(10, 10), 4, 4, 'xz'), gl);
 ```
 
 ---
@@ -19,11 +19,15 @@ const floorMesh    = new Mesh(gl, new Plane(10.0, 10.0, 4, 4));
 
 ### `Cube`
 
-Generates an axis-aligned 6-sided cuboid with sharp face normals and per-face UV maps.
+Generates an axis-aligned 6-sided box with face normals and per-face UV maps. Supports scalar uniform size or non-uniform `Vec3` dimensions.
 
 ```typescript
-new Cube(size: number = 1.0)
+new Cube(sizeOrDimensions: Vec3 | number = 1.0, flat: boolean = false)
 ```
+
+- Uniform cube: `new Cube(2.0)`
+- Non-uniform box: `new Cube(new Vec3(2.0, 4.0, 1.0))`
+- Unshared vertices with flat face normals: `new Cube(1.0, true)`
 
 ---
 
@@ -64,25 +68,50 @@ new Cylinder(
 
 ### `Plane`
 
-Generates a flat horizontal 2D grid subdivided into tiles.
+Generates a flat 2D grid subdivided into tiles along the `'xz'` (horizontal ground) or `'xy'` (vertical billboard) plane.
 
 ```typescript
 new Plane(
-  width: number = 1.0,
-  height: number = 1.0,
+  sizeOrWidth: Vec2 | number = 1.0,
+  height?: number,
   segmentsW: number = 1,
-  segmentsH: number = 1
+  segmentsH: number = 1,
+  orientation: 'xy' | 'xz' = 'xz'
 )
+```
+
+```javascript
+// Vector-first dimensions
+const ground = new Plane(new Vec2(20, 20), 8, 8, 'xz');
 ```
 
 ---
 
 ### `Quad`
 
-Generates a simple 2-triangle rectangular quad with vertex positions and UVs.
+Generates a single 2-triangle rectangular quad with vertex positions and UVs.
 
 ```typescript
-new Quad(width: number = 1.0, height: number = 1.0)
+new Quad(sizeOrWidth?: Vec2 | Rect | number, height?: number)
+```
+
+```javascript
+const quad = new Quad(new Vec2(4, 3));
+```
+
+---
+
+### `MultiQuad`
+
+Procedurally constructs multiple quad surfaces into a single batched mesh buffer.
+
+```typescript
+new MultiQuad(sizeOrWidth?: Vec2 | Rect | number, height?: number)
+```
+
+```javascript
+const batch = new MultiQuad(new Vec2(1, 1));
+batch.createQuads(100); // Batches 100 quads
 ```
 
 ---
@@ -99,8 +128,8 @@ new FullscreenQuad()
 
 ### `Line`
 
-Generates a 3D line segment between two coordinates.
+Renders connected 3D line segments from a series of vertex coordinates using `gl.LINE_STRIP`.
 
 ```typescript
-new Line(start: Vec3, end: Vec3)
+new Line(vertices: Vec3[] | number[], thickness: number = 1.0)
 ```

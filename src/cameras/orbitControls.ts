@@ -1,5 +1,5 @@
-import { Vec3 } from '@1pizzateam/spock';
-import { Camera } from './camera';
+import { Vec3, Trigo, Utils } from '@1pizzateam/spock';
+import type { Camera } from './camera';
 
 export class OrbitControls {
 
@@ -30,6 +30,10 @@ export class OrbitControls {
   private previousMouseX: number;
   private previousMouseY: number;
   private touchStartDistance: number;
+  private activePointerId: number | null = null;
+  // Last camera pose written by update(); lets idle frames skip the view matrix rebuild.
+  private appliedPose: Vec3 = new Vec3(NaN, NaN, NaN);
+  private appliedTarget: Vec3 = new Vec3(NaN, NaN, NaN);
 
   private onPointerDownBound: (e: PointerEvent) => void;
   private onPointerMoveBound: (e: PointerEvent) => void;
@@ -38,6 +42,7 @@ export class OrbitControls {
   private onContextMenuBound: (e: MouseEvent) => void;
   private onTouchStartBound: (e: TouchEvent) => void;
   private onTouchMoveBound: (e: TouchEvent) => void;
+  private onTouchEndBound: (e: TouchEvent) => void;
 
   constructor(camera: Camera, domElement: HTMLElement) {
     this.camera = camera;
@@ -45,8 +50,8 @@ export class OrbitControls {
 
     this.minDistance = 0.1;
     this.maxDistance = 10000;
-    this.minElevation = -Math.PI * 0.5 + 0.01;
-    this.maxElevation = Math.PI * 0.5 - 0.01;
+    this.minElevation = -Trigo.halfpi + 0.01;
+    this.maxElevation = Trigo.halfpi - 0.01;
 
     this.rotateSpeed = 1.0;
     this.zoomSpeed = 1.0;
@@ -62,14 +67,12 @@ export class OrbitControls {
     this.touchStartDistance = 0;
 
     // Calculate initial distance, azimuth, elevation from camera position and target
-    const offset = new Vec3().subVectors(this.camera.position, this.camera.target);
-    this.distance = offset.getMagnitude() || 10;
+    const spherical = OrbitControls._scratchSpherical.subVectors(this.camera.position, this.camera.target).getSpherical(OrbitControls._scratchSpherical);
+    this.distance = spherical.x || 10;
     this.targetDistance = this.distance;
-
-    this.azimuth = Math.atan2(offset.x, offset.z);
+    this.azimuth = spherical.y;
     this.targetAzimuth = this.azimuth;
-
-    this.elevation = Math.asin(Math.max(-1, Math.min(1, offset.y / (this.distance || 1))));
+    this.elevation = spherical.z;
     this.targetElevation = this.elevation;
 
     this.onPointerDownBound = this.onPointerDown.bind(this);
@@ -79,6 +82,7 @@ export class OrbitControls {
     this.onContextMenuBound = (e: MouseEvent) => e.preventDefault();
     this.onTouchStartBound = this.onTouchStart.bind(this);
     this.onTouchMoveBound = this.onTouchMove.bind(this);
+    this.onTouchEndBound = this.onTouchEnd.bind(this);
 
     this.attach();
     this.update();
@@ -86,6 +90,8 @@ export class OrbitControls {
 
   private attach(): void {
     if (!this.domElement || typeof this.domElement.addEventListener !== 'function') return;
+    if (this.domElement.style)
+      this.domElement.style.touchAction = 'none';
     this.domElement.addEventListener('pointerdown', this.onPointerDownBound);
     if (typeof window !== 'undefined') {
       window.addEventListener('pointermove', this.onPointerMoveBound);
@@ -95,6 +101,8 @@ export class OrbitControls {
     this.domElement.addEventListener('contextmenu', this.onContextMenuBound);
     this.domElement.addEventListener('touchstart', this.onTouchStartBound, { passive: false });
     this.domElement.addEventListener('touchmove', this.onTouchMoveBound, { passive: false });
+    this.domElement.addEventListener('touchend', this.onTouchEndBound);
+    this.domElement.addEventListener('touchcancel', this.onTouchEndBound);
   }
 
   public dispose(): void {
@@ -108,21 +116,25 @@ export class OrbitControls {
     this.domElement.removeEventListener('contextmenu', this.onContextMenuBound);
     this.domElement.removeEventListener('touchstart', this.onTouchStartBound);
     this.domElement.removeEventListener('touchmove', this.onTouchMoveBound);
+    this.domElement.removeEventListener('touchend', this.onTouchEndBound);
+    this.domElement.removeEventListener('touchcancel', this.onTouchEndBound);
   }
 
   private onPointerDown(e: PointerEvent): void {
+    if (e.isPrimary === false) return;
+    this.activePointerId = e.pointerId ?? null;
     this.isDragging = true;
     this.previousMouseX = e.clientX;
     this.previousMouseY = e.clientY;
-    if (e.button === 2 || e.shiftKey) {
+    if (e.button === 2 || e.shiftKey)
       this.dragMode = 'pan';
-    } else {
+    else
       this.dragMode = 'rotate';
-    }
   }
 
   private onPointerMove(e: PointerEvent): void {
     if (!this.isDragging) return;
+    if (this.activePointerId !== null && e.pointerId !== undefined && e.pointerId !== this.activePointerId) return;
 
     const deltaX = e.clientX - this.previousMouseX;
     const deltaY = e.clientY - this.previousMouseY;
@@ -131,12 +143,11 @@ export class OrbitControls {
 
     if (this.dragMode === 'rotate') {
       const elementHeight = this.domElement.clientHeight || 500;
-      this.targetAzimuth -= (deltaX / elementHeight) * Math.PI * this.rotateSpeed;
-      this.targetElevation += (deltaY / elementHeight) * Math.PI * this.rotateSpeed;
-      this.targetElevation = Math.max(this.minElevation, Math.min(this.maxElevation, this.targetElevation));
-    } else if (this.dragMode === 'pan') {
+      this.targetAzimuth -= (deltaX / elementHeight) * Trigo.pi * this.rotateSpeed;
+      this.targetElevation += (deltaY / elementHeight) * Trigo.pi * this.rotateSpeed;
+      this.targetElevation = Utils.clamp(this.targetElevation, this.minElevation, this.maxElevation);
+    } else if (this.dragMode === 'pan')
       this.pan(deltaX, deltaY);
-    }
 
     if (!this.enableDamping) {
       this.azimuth = this.targetAzimuth;
@@ -147,6 +158,7 @@ export class OrbitControls {
 
   private onPointerUp(): void {
     this.isDragging = false;
+    this.activePointerId = null;
     this.dragMode = null;
   }
 
@@ -154,7 +166,7 @@ export class OrbitControls {
     e.preventDefault();
     const factor = e.deltaY > 0 ? 1.1 : (1 / 1.1);
     this.targetDistance *= Math.pow(factor, this.zoomSpeed);
-    this.targetDistance = Math.max(this.minDistance, Math.min(this.maxDistance, this.targetDistance));
+    this.targetDistance = Utils.clamp(this.targetDistance, this.minDistance, this.maxDistance);
     if (!this.enableDamping) {
       this.distance = this.targetDistance;
       this.update();
@@ -179,7 +191,7 @@ export class OrbitControls {
       const factor = this.touchStartDistance / (currentDistance || 1);
       this.touchStartDistance = currentDistance;
       this.targetDistance *= factor;
-      this.targetDistance = Math.max(this.minDistance, Math.min(this.maxDistance, this.targetDistance));
+      this.targetDistance = Utils.clamp(this.targetDistance, this.minDistance, this.maxDistance);
       if (!this.enableDamping) {
         this.distance = this.targetDistance;
         this.update();
@@ -187,10 +199,16 @@ export class OrbitControls {
     }
   }
 
+  private onTouchEnd(e: TouchEvent): void {
+    if (e.touches.length < 2)
+      this.touchStartDistance = 0;
+  }
+
   private static _scratchForward = new Vec3();
   private static _scratchRight = new Vec3();
   private static _scratchUp = new Vec3();
   private static _scratchPan = new Vec3();
+  private static _scratchSpherical = new Vec3();
 
   private pan(deltaX: number, deltaY: number): void {
     const factor = (this.distance / 1000) * this.panSpeed;
@@ -206,23 +224,28 @@ export class OrbitControls {
     this.camera.position.add(OrbitControls._scratchPan);
   }
 
-  public update(): void {
+  // deltaTime (seconds) makes damping independent of the frame rate; without it each call
+  // moves dampingFactor of the remaining distance.
+  public update(deltaTime?: number): void {
     if (this.enableDamping) {
-      this.azimuth += (this.targetAzimuth - this.azimuth) * this.dampingFactor;
-      this.elevation += (this.targetElevation - this.elevation) * this.dampingFactor;
-      this.distance += (this.targetDistance - this.distance) * this.dampingFactor;
+      const t = deltaTime === undefined
+        ? this.dampingFactor
+        : 1 - Math.pow(1 - this.dampingFactor, deltaTime * 60);
+      // Take the shortest way around when the azimuth wraps.
+      const turn = Math.atan2(Math.sin(this.targetAzimuth - this.azimuth), Math.cos(this.targetAzimuth - this.azimuth));
+      this.azimuth = Utils.lerp(this.azimuth, this.azimuth + turn, t);
+      this.elevation = Utils.lerp(this.elevation, this.targetElevation, t);
+      this.distance = Utils.lerp(this.distance, this.targetDistance, t);
     }
 
-    const cosElev = Math.cos(this.elevation);
-    const x = this.distance * cosElev * Math.sin(this.azimuth);
-    const y = this.distance * Math.sin(this.elevation);
-    const z = this.distance * cosElev * Math.cos(this.azimuth);
+    const target = this.camera.target;
+    const pose = OrbitControls._scratchSpherical.setScalar(this.distance, this.azimuth, this.elevation);
+    if (pose.equals(this.appliedPose) && target.equals(this.appliedTarget))
+      return;
+    this.appliedPose.copy(pose);
+    this.appliedTarget.copy(target);
 
-    this.camera.position.setScalar(
-      this.camera.target.x + x,
-      this.camera.target.y + y,
-      this.camera.target.z + z
-    );
+    this.camera.position.setFromSpherical(this.distance, this.azimuth, this.elevation).add(target);
     this.camera.setViewMatrix();
   }
 

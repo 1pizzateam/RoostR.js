@@ -1,4 +1,4 @@
-import { Vec3 } from '@1pizzateam/spock';
+import { Vec3, Vec2 } from '@1pizzateam/spock';
 import { Camera } from './camera';
 
 export class PerspectiveCamera extends Camera {
@@ -32,9 +32,8 @@ export class PerspectiveCamera extends Camera {
     } else {
       zNear = typeof zNearOrContext === 'number' ? zNearOrContext : 0.1;
       zFar = typeof zFarOrNear === 'number' ? zFarOrNear : 1000;
-      if (contextOrFar && typeof contextOrFar !== 'number') {
+      if (contextOrFar && typeof contextOrFar !== 'number')
         context = contextOrFar as WebGLRenderingContext;
-      }
     }
 
     this.fov   = fov;
@@ -47,12 +46,13 @@ export class PerspectiveCamera extends Camera {
     super.setViewMatrix();
   }
 
-  public setProjectionMatrix(viewport?: Int32Array | number[] | null): void {
-    if (viewport && viewport.length >= 4) {
+  public setProjectionMatrix(viewport?: Vec2 | Int32Array | number[] | null): void {
+    if (viewport instanceof Vec2)
+      this.ratio = viewport.x / Math.max(1, viewport.y);
+    else if (viewport && viewport.length >= 4)
       this.ratio = viewport[2] / Math.max(1, viewport[3]);
-    } else {
+    else
       this.ratio = this.ratio || 1;
-    }
     this.projectionMatrix.perspective(this.fov, this.ratio, this.zNear, this.zFar);
     super.setProjectionMatrix();
   }

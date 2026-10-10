@@ -1,3 +1,4 @@
+import { Vec3 } from '@1pizzateam/spock';
 import { BasicMesh } from './basic';
 import { SubMesh } from './submesh';
 
@@ -10,14 +11,20 @@ export class Line extends BasicMesh {
   // nbSubMeshes : number;
   declare primitive   : string;
 
-  constructor(vertices: number[], thickness?: number) {
+  constructor(vertices: Vec3[] | number[], thickness?: number) {
     super();
     this.thickness = thickness ? thickness * 0.5 : 1.0;
 
-    this.vertices = vertices;
+    if (vertices && vertices.length > 0 && vertices[0] instanceof Vec3) {
+      const flat: number[] = [];
+      for (const v of vertices as Vec3[])
+        flat.push(v.x, v.y, v.z);
+      this.vertices = flat;
+    } else
+      this.vertices = (vertices as number[]) || [];
     this.itemSize = 3;
     this.subMeshes = [
-      new SubMesh( 0, vertices ? vertices.length / this.itemSize : 0)
+      new SubMesh(0, this.vertices.length / this.itemSize)
     ];
 
     this.primitive = 'LINE_STRIP';

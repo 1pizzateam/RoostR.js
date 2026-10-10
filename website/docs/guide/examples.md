@@ -60,6 +60,7 @@ import {
   DirectionalLight,
   PointLight,
   SpotLight,
+  AmbientLight,
   Vec3
 } from '@1pizzateam/roostr';
 
@@ -68,9 +69,9 @@ const camera = new PerspectiveCamera(45, gl, 0.1, 100);
 camera.setPosition(0, 3, 7);
 camera.lookAt(0, 1, 0);
 
-// 1. Directional Sun
-const sun = new DirectionalLight(new Vec3(0.5, 1.0, 0.3));
-sun.setDiffuse(0.8, 0.8, 0.85);
+// 1. Directional Sun (pointing downward toward scene)
+const sun = new DirectionalLight(new Vec3(-0.5, -1.0, -0.3));
+sun.setDiffuse(0.85, 0.85, 0.9);
 sun.setSpecular(0.6, 0.6, 0.6);
 scene.addLight(sun);
 
@@ -84,10 +85,14 @@ scene.addLight(candle);
 // 3. Overhead Conical Spotlight
 const spot = new SpotLight(new Vec3(0, 5, 0));
 spot.setDirection(0, -1, 0);
-spot.setCutoff(0.88); // ~28 degree beam cone
-spot.setExponent(24.0); // Focus intensity
+spot.setCutoff(35.0); // 35 degree beam cone
+spot.setExponent(16.0); // Focus intensity
 spot.setDiffuse(0.2, 0.6, 1.0); // Cyan beam
 scene.addLight(spot);
+
+// 4. Soft Ambient Illumination
+const ambient = new AmbientLight(new Vec3(0.4, 0.42, 0.5));
+scene.addLight(ambient);
 
 // Add receiving meshes
 const sphere = new Mesh(gl, new Sphere(1.2, 32, 24));
@@ -106,18 +111,18 @@ scene.addMesh(sphere);
 
 ## 3. Screen-Space Raycasting & Object Selection
 
-Convert canvas click/mouse coordinates into a 3D ray and test for mesh intersections.
+Convert canvas click/mouse coordinates into Normalized Device Coordinates (NDC $[-1, 1]$), cast a 3D ray through the camera, and test for mesh intersections.
 
 ```javascript
-import { Ray, BoundingBox } from '@1pizzateam/roostr';
+import { Ray, Vec2 } from '@1pizzateam/roostr';
 
 canvas.addEventListener('click', (event) => {
   const rect = canvas.getBoundingClientRect();
-  const mouseX = event.clientX - rect.left;
-  const mouseY = event.clientY - rect.top;
+  const ndcX = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  const ndcY = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
 
-  // 1. Cast a ray through camera viewport
-  const ray = camera.getRay(mouseX, mouseY, rect.width, rect.height);
+  // 1. Cast a ray through camera viewport using Vec2 NDC
+  const ray = camera.getRay(new Vec2(ndcX, ndcY));
 
   // 2. Perform scene raycast
   const hits = scene.raycast(ray);
@@ -138,13 +143,11 @@ canvas.addEventListener('click', (event) => {
 RoostR's `PhongShader` includes built-in linear distance fog support.
 
 ```javascript
-// Enable atmospheric fog in the scene
-scene.fog = {
-  enabled: true,
-  color: [0.1, 0.12, 0.18], // Match background clear color
-  near: 5.0,                 // Distance where fog begins
-  far: 25.0                  // Distance where objects are completely obscured
-};
+// Enable atmospheric distance fog in the scene
+scene.setFog(new Vec3(0.04, 0.06, 0.10), 3.0, 16.0);
+
+// Disable or clear distance fog
+scene.clearFog();
 ```
 
 ---
@@ -154,10 +157,10 @@ scene.fog = {
 Render your 3D scene into an offscreen framebuffer texture, then draw it as a full-screen quad with a custom post-processing shader (e.g. grayscale, vignette, or scanlines).
 
 ```javascript
-import { RenderTarget, Mesh, FullscreenQuad, Program, Shader } from '@1pizzateam/roostr';
+import { RenderTarget, Mesh, FullscreenQuad, Program, Shader, Vec2 } from '@1pizzateam/roostr';
 
 // 1. Create RenderTarget matching canvas resolution
-const renderTarget = new RenderTarget(gl, canvas.width, canvas.height);
+const renderTarget = new RenderTarget(new Vec2(canvas.width, canvas.height), gl);
 
 // 2. In your render loop:
 function renderFrame() {

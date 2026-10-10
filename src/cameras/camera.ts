@@ -1,5 +1,5 @@
-import { Vec3, Mat4x3, Mat4 } from '@1pizzateam/spock';
-import { Ray } from '../spatial/ray';
+import { Vec3, Vec2, Mat4x3, Mat4 } from '@1pizzateam/spock';
+import { Ray3 as Ray } from '@1pizzateam/spock';
 
 export class Camera {
 
@@ -13,9 +13,15 @@ export class Camera {
   protected cachedViewMatrix: Float32Array;
   protected cachedProjectionMatrix: Float32Array;
 
+  private projectionViewMatrix: Mat4 = new Mat4();
+  private inverseProjectionViewMatrix: Mat4 = new Mat4();
+  private isProjectionViewDirty: boolean = true;
+  private isInverseDirty: boolean = true;
+
   private static _scratchNear = new Vec3();
   private static _scratchFar = new Vec3();
   private static _scratchDir = new Vec3();
+  private static _scratchNdc = new Vec3();
 
   constructor(position: Vec3, target: Vec3, up: Vec3) {
 
@@ -43,36 +49,58 @@ export class Camera {
       this.up
     );
     this.viewMatrix.toArray(this.cachedViewMatrix);
+    this.invalidateProjectionView();
   }
 
   public setProjectionMatrix(): void {
     this.projectionMatrix.toArray(this.cachedProjectionMatrix);
+    this.invalidateProjectionView();
+  }
+
+  private invalidateProjectionView(): void {
+    this.isProjectionViewDirty = true;
+    this.isInverseDirty = true;
+  }
+
+  // projection * view, recomputed only after the view or projection changed.
+  public getProjectionViewMatrix(): Float32Array {
+    if (this.isProjectionViewDirty) {
+      this.projectionViewMatrix.copy(this.projectionMatrix).multiplyAffine(this.viewMatrix);
+      this.isProjectionViewDirty = false;
+    }
+    return this.projectionViewMatrix.toArray();
+  }
+
+  public getInverseProjectionViewMatrix(): Mat4 {
+    if (this.isInverseDirty) {
+      this.getProjectionViewMatrix();
+      this.inverseProjectionViewMatrix.copy(this.projectionViewMatrix).invert();
+      this.isInverseDirty = false;
+    }
+    return this.inverseProjectionViewMatrix;
   }
 
   public setPosition(xOrVec: Vec3 | number, y?: number, z?: number): void {
-    if (xOrVec instanceof Vec3) {
+    if (xOrVec instanceof Vec3)
       this.position.copy(xOrVec);
-    } else {
+    else
       this.position.setScalar(xOrVec, y, z);
-    }
     this.setViewMatrix();
   }
 
   public setTarget(xOrVec: Vec3 | number, y?: number, z?: number): void {
-    if (xOrVec instanceof Vec3) {
+    if (xOrVec instanceof Vec3)
       this.target.copy(xOrVec);
-    } else {
+    else
       this.target.setScalar(xOrVec, y, z);
-    }
     this.setViewMatrix();
   }
 
   public setUp(xOrVec: Vec3 | number, y?: number, z?: number): void {
-    if (xOrVec instanceof Vec3) {
+    if (xOrVec instanceof Vec3)
       this.up.copy(xOrVec);
-    } else {
+    else
       this.up.setScalar(xOrVec, y, z);
-    }
     this.setViewMatrix();
   }
 
@@ -109,32 +137,28 @@ export class Camera {
     return this.projectionMatrix;
   }
 
-  public getRay(ndcX: number, ndcY: number, targetRay: Ray = new Ray()): Ray {
-    const vm = this.viewMatrix.toArray();
-    const v4 = new Mat4(
-      vm[0], vm[1], vm[2], vm[3],
-      vm[4], vm[5], vm[6], vm[7],
-      vm[8], vm[9], vm[10], vm[11],
-      vm[12], vm[13], vm[14], vm[15]
-    );
-    const invPV = new Mat4().copy(this.projectionMatrix).multiply(v4).invert();
-    const m = invPV.toArray();
+  public getRay(ndcOrX: Vec2 | number, ndcYOrTarget?: number | Ray, targetRay: Ray = new Ray()): Ray {
+    let ndcX: number;
+    let ndcY: number;
+    let outRay = targetRay;
 
-    const unproject = (x: number, y: number, z: number, target: Vec3): Vec3 => {
-      const w = m[3] * x + m[7] * y + m[11] * z + m[15];
-      const invW = w !== 0 ? 1.0 / w : 1.0;
-      target.x = (m[0] * x + m[4] * y + m[8] * z + m[12]) * invW;
-      target.y = (m[1] * x + m[5] * y + m[9] * z + m[13]) * invW;
-      target.z = (m[2] * x + m[6] * y + m[10] * z + m[14]) * invW;
-      return target;
-    };
+    if (ndcOrX instanceof Vec2) {
+      ndcX = ndcOrX.x;
+      ndcY = ndcOrX.y;
+      if (ndcYOrTarget instanceof Ray)
+        outRay = ndcYOrTarget;
+    } else {
+      ndcX = ndcOrX;
+      ndcY = typeof ndcYOrTarget === 'number' ? ndcYOrTarget : 0;
+    }
 
-    const near = unproject(ndcX, ndcY, -1.0, Camera._scratchNear);
-    const far = unproject(ndcX, ndcY, 1.0, Camera._scratchFar);
+    const inverse = this.getInverseProjectionViewMatrix();
+    const near = inverse.transformPoint(Camera._scratchNdc.setScalar(ndcX, ndcY, -1.0), Camera._scratchNear);
+    const far = inverse.transformPoint(Camera._scratchNdc.setScalar(ndcX, ndcY, 1.0), Camera._scratchFar);
     const dir = Camera._scratchDir.subVectors(far, near).normalize();
 
-    targetRay.set(near, dir);
-    return targetRay;
+    outRay.set(near, dir);
+    return outRay;
   }
 
 }

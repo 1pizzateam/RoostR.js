@@ -1,4 +1,4 @@
-import { CustomMesh } from '../../dist/roostr.js';
+import { CustomMesh, Vec3 } from '../../dist/roostr.js';
 
 describe('CustomMesh computeVertexNormals', () => {
   test('returns null when vertices are not set', () => {
@@ -36,5 +36,22 @@ describe('CustomMesh computeVertexNormals', () => {
     const normals = mesh.computeVertexNormals();
     expect(normals).not.toBeNull();
     expect(normals[2]).toBeCloseTo(1);
+  });
+
+  test('accepts Vec3 array for setVertices and setNormals', () => {
+    const mesh = new CustomMesh();
+    mesh.setVertices([
+      new Vec3(0, 0, 0),
+      new Vec3(1, 0, 0),
+      new Vec3(0, 1, 0)
+    ]);
+    expect(Array.from(mesh.vertices)).toEqual([0, 0, 0, 1, 0, 0, 0, 1, 0]);
+
+    mesh.setNormals([
+      new Vec3(0, 0, 1),
+      new Vec3(0, 0, 1),
+      new Vec3(0, 0, 1)
+    ]);
+    expect(Array.from(mesh.normals)).toEqual([0, 0, 1, 0, 0, 1, 0, 0, 1]);
   });
 });

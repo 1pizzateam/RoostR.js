@@ -3,7 +3,7 @@
 Low-level WebGL context manager controlling driver state, viewport dimensions, color clearing, polygon culling, and alpha blending.
 
 ```javascript
-import { Renderer } from '@1pizzateam/roostr';
+import { Renderer, Vec2 } from '@1pizzateam/roostr';
 
 const renderer = new Renderer(gl, {
   viewport: { x: 0, y: 0, width: 800, height: 600 },
@@ -25,6 +25,16 @@ new Renderer(context: WebGLRenderingContext, options?: IRendererOptions)
 ---
 
 ## Methods
+
+### `setSize(sizeOrWidth: Vec2 | number, height?: number): void`
+
+Resizes the rendering viewport and canvas buffer dimensions:
+
+```javascript
+renderer.setSize(new Vec2(1024, 768));
+// Or:
+renderer.setSize(1024, 768);
+```
 
 ### `setViewport(x: number, y: number, width: number, height: number): void`
 
@@ -57,3 +67,11 @@ Enable alpha blending with standard transparency weights (`gl.SRC_ALPHA`, `gl.ON
 ### `disableBlendMode(): void`
 
 Disable WebGL blending.
+
+### `getCanvas(): HTMLCanvasElement | null`
+
+Returns the canvas element associated with the WebGL rendering context.
+
+### `destroy(): void`
+
+Cleans up renderer state and releases references.
