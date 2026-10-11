@@ -16,6 +16,10 @@ The main purpose of this library is to provide a simple, modular way to develop 
 $ npm install @1pizzateam/roostr
 ```
 
+## Documentation
+
+The documentation website is at **[https://1pizzateam.github.io/RoostR.js/](https://1pizzateam.github.io/RoostR.js/)**.
+
 ## Contributors
 
 There is still a lot of work to do on this project and I would be glad to get all the help you can provide.

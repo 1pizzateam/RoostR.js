@@ -197,7 +197,7 @@ export class Scene {
 
   public destroy(destroyMeshes: boolean = true): void {
     if (destroyMeshes)
-      for (let mesh of this.meshes)
+      for (const mesh of this.meshes)
         mesh.destroy();
     this.clearMeshes();
     this.clearLights();
