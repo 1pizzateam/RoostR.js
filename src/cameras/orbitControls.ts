@@ -1,4 +1,4 @@
-import { Vec3, Trigo, Utils } from '@1pizzateam/spock';
+import { Vec3, Vec2, Trigo, Utils } from '@1pizzateam/spock';
 import type { Camera } from './camera';
 
 export class OrbitControls {
@@ -176,18 +176,14 @@ export class OrbitControls {
   private onTouchStart(e: TouchEvent): void {
     if (e.touches.length === 2) {
       e.preventDefault();
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
-      this.touchStartDistance = Math.hypot(dx, dy);
+      this.touchStartDistance = OrbitControls.touchDistance(e.touches);
     }
   }
 
   private onTouchMove(e: TouchEvent): void {
     if (e.touches.length === 2) {
       e.preventDefault();
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
-      const currentDistance = Math.hypot(dx, dy);
+      const currentDistance = OrbitControls.touchDistance(e.touches);
       const factor = this.touchStartDistance / (currentDistance || 1);
       this.touchStartDistance = currentDistance;
       this.targetDistance *= factor;
@@ -202,6 +198,14 @@ export class OrbitControls {
   private onTouchEnd(e: TouchEvent): void {
     if (e.touches.length < 2)
       this.touchStartDistance = 0;
+  }
+
+  private static _touchA = new Vec2();
+  private static _touchB = new Vec2();
+
+  private static touchDistance(touches: TouchList): number {
+    return OrbitControls._touchA.setScalar(touches[0].clientX, touches[0].clientY)
+      .getDistance(OrbitControls._touchB.setScalar(touches[1].clientX, touches[1].clientY));
   }
 
   private static _scratchForward = new Vec3();
@@ -232,7 +236,7 @@ export class OrbitControls {
         ? this.dampingFactor
         : 1 - Math.pow(1 - this.dampingFactor, deltaTime * 60);
       // Take the shortest way around when the azimuth wraps.
-      const turn = Math.atan2(Math.sin(this.targetAzimuth - this.azimuth), Math.cos(this.targetAzimuth - this.azimuth));
+      const turn = Trigo.normalizeRadian(this.targetAzimuth - this.azimuth);
       this.azimuth = Utils.lerp(this.azimuth, this.azimuth + turn, t);
       this.elevation = Utils.lerp(this.elevation, this.targetElevation, t);
       this.distance = Utils.lerp(this.distance, this.targetDistance, t);

@@ -490,10 +490,11 @@ var _Vec2 = class _Vec2 {
   isOrigin() {
     return this.x === 0 && this.y === 0;
   }
-  toArray(target = []) {
-    target[0] = this.x;
-    target[1] = this.y;
-    target.length = 2;
+  toArray(target = [], offset = 0) {
+    target[offset] = this.x;
+    target[offset + 1] = this.y;
+    if (offset === 0 && Array.isArray(target))
+      target.length = 2;
     return target;
   }
   toString() {
@@ -1577,11 +1578,12 @@ var _Vec3 = class _Vec3 {
   isOrigin() {
     return this.x === 0 && this.y === 0 && this.z === 0;
   }
-  toArray(target = []) {
-    target[0] = this.x;
-    target[1] = this.y;
-    target[2] = this.z;
-    target.length = 3;
+  toArray(target = [], offset = 0) {
+    target[offset] = this.x;
+    target[offset + 1] = this.y;
+    target[offset + 2] = this.z;
+    if (offset === 0 && Array.isArray(target))
+      target.length = 3;
     return target;
   }
   toString() {
@@ -2033,6 +2035,27 @@ var _Vec3 = class _Vec3 {
     this.z = Utils.lerp(min.z, max.z, amount);
     return this;
   }
+  maxComponent() {
+    return Math.max(this.x, this.y, this.z);
+  }
+  minComponent() {
+    return Math.min(this.x, this.y, this.z);
+  }
+  setFromSpherical(radius, azimuth, elevation) {
+    const horizontal = radius * Math.cos(elevation);
+    this.x = horizontal * Math.sin(azimuth);
+    this.y = radius * Math.sin(elevation);
+    this.z = horizontal * Math.cos(azimuth);
+    return this;
+  }
+  getSpherical(target = new _Vec3()) {
+    const x = this.x, y = this.y, z = this.z;
+    const radius = this.getMagnitude();
+    target.x = radius;
+    target.y = Math.atan2(x, z);
+    target.z = radius ? Math.asin(Utils.clamp(y / radius, -1, 1)) : 0;
+    return target;
+  }
 };
 __publicField(_Vec3, "scratchSplit1", new _Vec3());
 var Vec3 = _Vec3;
@@ -2087,7 +2110,7 @@ function invertLinear3(m, stride) {
   const b00 = a11 * a22 - a12 * a21;
   const b10 = a12 * a20 - a10 * a22;
   const b20 = a10 * a21 - a11 * a20;
-  const det = a00 * b00 + a10 * b10 + a20 * b20;
+  const det = a00 * b00 + a01 * b10 + a02 * b20;
   if (!det)
     return false;
   const inv = 1 / det;
@@ -2160,104 +2183,6 @@ function invert4(m) {
   m[15] = (a20 * b03 - a21 * b01 + a22 * b00) * det;
   return true;
 }
-var Mat3 = class {
-  constructor(x1, x2, x3, y1, y2, y3, t1, t2, t3) {
-    __publicField(this, "m");
-    this.m = new Float32Array(9);
-    if (arguments.length === 0)
-      this.identity();
-    else
-      this.make(x1, x2, x3, y1, y2, y3, t1, t2, t3);
-  }
-  make(x1, x2, x3, y1, y2, y3, t1, t2, t3) {
-    this.m[0] = x1 ?? 0;
-    this.m[1] = x2 ?? 0;
-    this.m[2] = x3 ?? 0;
-    this.m[3] = y1 ?? 0;
-    this.m[4] = y2 ?? 0;
-    this.m[5] = y3 ?? 0;
-    this.m[6] = t1 ?? 0;
-    this.m[7] = t2 ?? 0;
-    this.m[8] = t3 ?? 0;
-  }
-  copy(matrix3x3) {
-    matrixToArray(matrix3x3.m, this.m);
-    return this;
-  }
-  toArray(target) {
-    return matrixToArray(this.m, target);
-  }
-  toString() {
-    return "(" + this.m[0] + "," + this.m[1] + "," + this.m[2] + ";" + this.m[3] + "," + this.m[4] + "," + this.m[5] + ";" + this.m[6] + "," + this.m[7] + "," + this.m[8] + ")";
-  }
-  identity() {
-    this.make(1, 0, 0, 0, 1, 0, 0, 0, 1);
-    return this;
-  }
-  scale(vector2) {
-    const m = this.m;
-    const sx = vector2.x;
-    const sy = vector2.y;
-    m[0] *= sx;
-    m[1] *= sx;
-    m[2] *= sx;
-    m[3] *= sy;
-    m[4] *= sy;
-    m[5] *= sy;
-    return this;
-  }
-  rotate(angle) {
-    const m = this.m;
-    const c = Math.cos(angle);
-    const s = Math.sin(angle);
-    const x0 = m[0], x1 = m[1], x2 = m[2];
-    const y0 = m[3], y1 = m[4], y2 = m[5];
-    m[0] = c * x0 + s * y0;
-    m[1] = c * x1 + s * y1;
-    m[2] = c * x2 + s * y2;
-    m[3] = -s * x0 + c * y0;
-    m[4] = -s * x1 + c * y1;
-    m[5] = -s * x2 + c * y2;
-    return this;
-  }
-  translate(vector2) {
-    const m = this.m;
-    const tx = vector2.x;
-    const ty = vector2.y;
-    m[6] += m[0] * tx + m[3] * ty;
-    m[7] += m[1] * tx + m[4] * ty;
-    m[8] += m[2] * tx + m[5] * ty;
-    return this;
-  }
-  multiply(matrix3x3) {
-    const a = this.m;
-    const b = matrix3x3.m;
-    const a0 = a[0], a1 = a[1], a2 = a[2];
-    const a3 = a[3], a4 = a[4], a5 = a[5];
-    const a6 = a[6], a7 = a[7], a8 = a[8];
-    a[0] = a0 * b[0] + a3 * b[1] + a6 * b[2];
-    a[1] = a1 * b[0] + a4 * b[1] + a7 * b[2];
-    a[2] = a2 * b[0] + a5 * b[1] + a8 * b[2];
-    a[3] = a0 * b[3] + a3 * b[4] + a6 * b[5];
-    a[4] = a1 * b[3] + a4 * b[4] + a7 * b[5];
-    a[5] = a2 * b[3] + a5 * b[4] + a8 * b[5];
-    a[6] = a0 * b[6] + a3 * b[7] + a6 * b[8];
-    a[7] = a1 * b[6] + a4 * b[7] + a7 * b[8];
-    a[8] = a2 * b[6] + a5 * b[7] + a8 * b[8];
-    return this;
-  }
-  transpose() {
-    transposeLinear3(this.m, 3);
-    return this;
-  }
-  determinant() {
-    return determinantLinear3(this.m, 3);
-  }
-  invert() {
-    invertLinear3(this.m, 3);
-    return this;
-  }
-};
 var PARALLEL = 1e-16;
 function setLookAtAxes(eye, target, up, xAxis, yAxis, zAxis) {
   zAxis.subVectors(eye, target);
@@ -2423,6 +2348,87 @@ var Mat4x3 = class {
     this.make(xAxis.x, yAxis.x, zAxis.x, xAxis.y, yAxis.y, zAxis.y, xAxis.z, yAxis.z, zAxis.z, -xAxis.dotProduct(eye), -yAxis.dotProduct(eye), -zAxis.dotProduct(eye));
     return this;
   }
+  compose(position, rotation, scale) {
+    const m = this.m;
+    const x = rotation.vector.x, y = rotation.vector.y, z = rotation.vector.z, w = rotation.w;
+    const x2 = x + x, y2 = y + y, z2 = z + z;
+    const xx = x * x2, xy = x * y2, xz = x * z2;
+    const yy = y * y2, yz = y * z2, zz = z * z2;
+    const wx = w * x2, wy = w * y2, wz = w * z2;
+    const sx = scale.x, sy = scale.y, sz = scale.z;
+    m[0] = (1 - (yy + zz)) * sx;
+    m[1] = (xy + wz) * sx;
+    m[2] = (xz - wy) * sx;
+    m[3] = 0;
+    m[4] = (xy - wz) * sy;
+    m[5] = (1 - (xx + zz)) * sy;
+    m[6] = (yz + wx) * sy;
+    m[7] = 0;
+    m[8] = (xz + wy) * sz;
+    m[9] = (yz - wx) * sz;
+    m[10] = (1 - (xx + yy)) * sz;
+    m[11] = 0;
+    m[12] = position.x;
+    m[13] = position.y;
+    m[14] = position.z;
+    m[15] = 1;
+    return this;
+  }
+  getTranslation(target = new Vec3()) {
+    const m = this.m;
+    return target.setScalar(m[12], m[13], m[14]);
+  }
+  setTranslation(position) {
+    const m = this.m;
+    m[12] = position.x;
+    m[13] = position.y;
+    m[14] = position.z;
+    return this;
+  }
+  getColumn(index, target = new Vec3()) {
+    const o = index * 4;
+    const m = this.m;
+    return target.setScalar(m[o], m[o + 1], m[o + 2]);
+  }
+  getScale(target = new Vec3()) {
+    const m = this.m;
+    return target.setScalar(Math.hypot(m[0], m[1], m[2]), Math.hypot(m[4], m[5], m[6]), Math.hypot(m[8], m[9], m[10]));
+  }
+  transformPoint(vector, target = new Vec3()) {
+    const m = this.m;
+    const x = vector.x, y = vector.y, z = vector.z;
+    target.x = m[0] * x + m[4] * y + m[8] * z + m[12];
+    target.y = m[1] * x + m[5] * y + m[9] * z + m[13];
+    target.z = m[2] * x + m[6] * y + m[10] * z + m[14];
+    return target;
+  }
+  transformDirection(vector, target = new Vec3()) {
+    const m = this.m;
+    const x = vector.x, y = vector.y, z = vector.z;
+    target.x = m[0] * x + m[4] * y + m[8] * z;
+    target.y = m[1] * x + m[5] * y + m[9] * z;
+    target.z = m[2] * x + m[6] * y + m[10] * z;
+    return target;
+  }
+  toNormalMatrix(target) {
+    const m = this.m;
+    target[0] = m[0];
+    target[1] = m[1];
+    target[2] = m[2];
+    target[3] = m[4];
+    target[4] = m[5];
+    target[5] = m[6];
+    target[6] = m[8];
+    target[7] = m[9];
+    target[8] = m[10];
+    if (!invertLinear3(target, 3)) {
+      target.fill(0);
+      target[0] = target[4] = target[8] = 1;
+      return target;
+    }
+    transposeLinear3(target, 3);
+    return target;
+  }
   transposeLinear() {
     transposeLinear3(this.m, 4);
     return this;
@@ -2439,6 +2445,319 @@ var Mat4x3 = class {
     m[13] = -(m[1] * tx + m[5] * ty + m[9] * tz);
     m[14] = -(m[2] * tx + m[6] * ty + m[10] * tz);
     return this;
+  }
+};
+function readPoint(array, index, stride, target) {
+  if (stride >= 3)
+    return target.setArray(array, index);
+  return target.setScalar(array[index], stride > 1 ? array[index + 1] : 0, 0);
+}
+var scratchAffine = new Mat4x3();
+function asAffine(matrix) {
+  if (matrix instanceof Mat4x3)
+    return matrix;
+  scratchAffine.toArray().set(matrix.toArray());
+  return scratchAffine;
+}
+var _Box = class _Box {
+  constructor(min = new Vec3(Infinity, Infinity, Infinity), max = new Vec3(-Infinity, -Infinity, -Infinity)) {
+    __publicField(this, "min");
+    __publicField(this, "max");
+    this.min = min.clone();
+    this.max = max.clone();
+  }
+  set(min, max) {
+    this.min.copy(min);
+    this.max.copy(max);
+    return this;
+  }
+  setFromPoints(points, stride = 3) {
+    this.makeEmpty();
+    if (points.length === 0)
+      return this;
+    if (points[0] instanceof Vec3)
+      for (const p of points)
+        this.expandByPoint(p);
+    else {
+      const arr = points;
+      const tmp = new Vec3();
+      for (let i = 0; i + stride <= arr.length; i += stride)
+        this.expandByPoint(readPoint(arr, i, stride, tmp));
+    }
+    return this;
+  }
+  makeEmpty() {
+    this.min.setScalar(Infinity, Infinity, Infinity);
+    this.max.setScalar(-Infinity, -Infinity, -Infinity);
+    return this;
+  }
+  isEmpty() {
+    return this.max.x < this.min.x || this.max.y < this.min.y || this.max.z < this.min.z;
+  }
+  getCenter(target = new Vec3()) {
+    if (this.isEmpty())
+      return target.setScalar(0, 0, 0);
+    return target.addVectors(this.min, this.max).halve();
+  }
+  getSize(target = new Vec3()) {
+    if (this.isEmpty())
+      return target.setScalar(0, 0, 0);
+    return target.subVectors(this.max, this.min);
+  }
+  expandByPoint(point) {
+    this.min.min(point);
+    this.max.max(point);
+    return this;
+  }
+  containsPoint(point) {
+    return point.isInBounds(this.min, this.max);
+  }
+  intersectsBox(box) {
+    return !(box.max.x < this.min.x || box.min.x > this.max.x || box.max.y < this.min.y || box.min.y > this.max.y || box.max.z < this.min.z || box.min.z > this.max.z);
+  }
+  clone() {
+    return new _Box(this.min, this.max);
+  }
+  copy(box) {
+    this.min.copy(box.min);
+    this.max.copy(box.max);
+    return this;
+  }
+  applyMatrix4(matrix) {
+    if (this.isEmpty())
+      return this;
+    const affine = asAffine(matrix);
+    const center = this.getCenter(_Box._center);
+    const extent = _Box._extent.subVectors(this.max, this.min).halve();
+    const column = _Box._column;
+    affine.transformPoint(center, center);
+    this.min.copy(center);
+    this.max.copy(center);
+    for (let axis = 0; axis < 3; axis++) {
+      const half = axis === 0 ? extent.x : axis === 1 ? extent.y : extent.z;
+      affine.getColumn(axis, column).absolute().scale(half);
+      this.min.subtract(column);
+      this.max.add(column);
+    }
+    return this;
+  }
+};
+__publicField(_Box, "_center", new Vec3());
+__publicField(_Box, "_extent", new Vec3());
+__publicField(_Box, "_column", new Vec3());
+var Box = _Box;
+var _Sphere = class _Sphere {
+  constructor(center = new Vec3(), radius = 0) {
+    __publicField(this, "center");
+    __publicField(this, "radius");
+    this.center = center.clone();
+    this.radius = radius;
+  }
+  set(center, radius) {
+    this.center.copy(center);
+    this.radius = radius;
+    return this;
+  }
+  setFromPoints(points, optionalCenter, stride = 3) {
+    const box = new Box().setFromPoints(points, stride);
+    if (optionalCenter)
+      this.center.copy(optionalCenter);
+    else
+      box.getCenter(this.center);
+    let maxRadiusSq = 0;
+    if (points.length > 0 && points[0] instanceof Vec3)
+      for (const p of points)
+        maxRadiusSq = Math.max(maxRadiusSq, this.center.getDistance(p, true));
+    else {
+      const arr = points;
+      const tmp = new Vec3();
+      for (let i = 0; i + stride <= arr.length; i += stride)
+        maxRadiusSq = Math.max(maxRadiusSq, this.center.getDistance(readPoint(arr, i, stride, tmp), true));
+    }
+    this.radius = Math.sqrt(maxRadiusSq);
+    return this;
+  }
+  containsPoint(point) {
+    return this.center.getDistance(point, true) <= this.radius * this.radius;
+  }
+  intersectsSphere(sphere) {
+    const radiusSum = this.radius + sphere.radius;
+    return this.center.getDistance(sphere.center, true) <= radiusSum * radiusSum;
+  }
+  intersectsBox(box) {
+    const closest = _Sphere._scratchClamp.copy(this.center).clamp(box.min, box.max);
+    return this.center.getDistance(closest, true) <= this.radius * this.radius;
+  }
+  applyMatrix4(matrix) {
+    const affine = asAffine(matrix);
+    affine.transformPoint(this.center, this.center);
+    this.radius *= affine.getScale(_Sphere._scale).maxComponent();
+    return this;
+  }
+  clone() {
+    return new _Sphere(this.center, this.radius);
+  }
+  copy(sphere) {
+    this.center.copy(sphere.center);
+    this.radius = sphere.radius;
+    return this;
+  }
+};
+__publicField(_Sphere, "_scratchClamp", new Vec3());
+__publicField(_Sphere, "_scale", new Vec3());
+var Sphere = _Sphere;
+var _Ray2 = class _Ray2 {
+  constructor(origin = new Vec2(), direction = new Vec2(1, 0)) {
+    __publicField(this, "origin");
+    __publicField(this, "direction");
+    this.origin = origin.clone();
+    this.direction = direction.clone().normalize();
+  }
+  set(origin, direction) {
+    this.origin.copy(origin);
+    this.direction.copy(direction).normalize();
+    return this;
+  }
+  at(t, target = new Vec2()) {
+    return target.copy(this.origin).addScaledVector(this.direction, t);
+  }
+  intersectRect(rect, maxDistance, target) {
+    return rect.raycast(this.origin, this.at(maxDistance, _Ray2._end), target);
+  }
+  intersectsRect(rect, maxDistance) {
+    return this.intersectRect(rect, maxDistance) !== null;
+  }
+  intersectCirc(circ, maxDistance, target) {
+    return circ.raycast(this.origin, this.at(maxDistance, _Ray2._end), target);
+  }
+  intersectsCirc(circ, maxDistance) {
+    return this.intersectCirc(circ, maxDistance) !== null;
+  }
+  clone() {
+    return new _Ray2(this.origin, this.direction);
+  }
+  copy(ray) {
+    this.origin.copy(ray.origin);
+    this.direction.copy(ray.direction);
+    return this;
+  }
+};
+__publicField(_Ray2, "_end", new Vec2());
+var Ray2 = _Ray2;
+var _Ray3 = class _Ray3 {
+  constructor(origin = new Vec3(), direction = new Vec3(0, 0, -1)) {
+    __publicField(this, "origin");
+    __publicField(this, "direction");
+    this.origin = origin.clone();
+    this.direction = direction.clone().normalize();
+  }
+  set(origin, direction) {
+    this.origin.copy(origin);
+    this.direction.copy(direction).normalize();
+    return this;
+  }
+  at(t, target = new Vec3()) {
+    return target.copy(this.origin).addScaledVector(this.direction, t);
+  }
+  intersectsBox(box) {
+    return this.intersectBox(box) !== null;
+  }
+  static safeInverse(d) {
+    return 1 / (Math.abs(d) < 1e-15 ? d < 0 ? -1e-15 : 1e-15 : d);
+  }
+  intersectBox(box, target = new Vec3()) {
+    const inv = _Ray3._inv.setScalar(_Ray3.safeInverse(this.direction.x), _Ray3.safeInverse(this.direction.y), _Ray3.safeInverse(this.direction.z));
+    const t1 = _Ray3._t1.subVectors(box.min, this.origin).multiply(inv);
+    const t2 = _Ray3._t2.subVectors(box.max, this.origin).multiply(inv);
+    const near = _Ray3._inv.minVectors(t1, t2).maxComponent();
+    const far = t1.maxVectors(t1, t2).minComponent();
+    if (near > far || far < 0)
+      return null;
+    return this.at(near >= 0 ? near : far, target);
+  }
+  intersectsSphere(sphere) {
+    return this.intersectSphere(sphere) !== null;
+  }
+  intersectSphere(sphere, target = new Vec3()) {
+    const v1 = _Ray3._v1.subVectors(sphere.center, this.origin);
+    const tca = v1.dotProduct(this.direction);
+    const d2 = v1.getMagnitude(true) - tca * tca;
+    const radius2 = sphere.radius * sphere.radius;
+    if (d2 > radius2)
+      return null;
+    const thc = Math.sqrt(radius2 - d2);
+    const t0 = tca - thc;
+    const t1 = tca + thc;
+    if (t0 < 0 && t1 < 0)
+      return null;
+    const t = t0 < 0 ? t1 : t0;
+    return this.at(t, target);
+  }
+  intersectTriangle(a, b, c, backfaceCulling = false, target = new Vec3()) {
+    const edge1 = _Ray3._edge1.subVectors(b, a);
+    const edge2 = _Ray3._edge2.subVectors(c, a);
+    const pvec = _Ray3._pvec.crossVectors(this.direction, edge2);
+    const det = edge1.dotProduct(pvec);
+    if (backfaceCulling ? det < 1e-6 : Math.abs(det) < 1e-6)
+      return null;
+    const invDet = 1 / det;
+    const tvec = _Ray3._tvec.subVectors(this.origin, a);
+    const u = tvec.dotProduct(pvec) * invDet;
+    if (u < 0 || u > 1)
+      return null;
+    const qvec = _Ray3._qvec.crossVectors(tvec, edge1);
+    const v = this.direction.dotProduct(qvec) * invDet;
+    if (v < 0 || u + v > 1)
+      return null;
+    const t = edge2.dotProduct(qvec) * invDet;
+    if (t < 0)
+      return null;
+    return this.at(t, target);
+  }
+  clone() {
+    return new _Ray3(this.origin, this.direction);
+  }
+  copy(ray) {
+    this.origin.copy(ray.origin);
+    this.direction.copy(ray.direction);
+    return this;
+  }
+};
+__publicField(_Ray3, "_v1", new Vec3());
+__publicField(_Ray3, "_edge1", new Vec3());
+__publicField(_Ray3, "_edge2", new Vec3());
+__publicField(_Ray3, "_pvec", new Vec3());
+__publicField(_Ray3, "_tvec", new Vec3());
+__publicField(_Ray3, "_qvec", new Vec3());
+__publicField(_Ray3, "_inv", new Vec3());
+__publicField(_Ray3, "_t1", new Vec3());
+__publicField(_Ray3, "_t2", new Vec3());
+var Ray3 = _Ray3;
+var Plane = class {
+  constructor(normal = new Vec3(1, 0, 0), constant = 0) {
+    __publicField(this, "normal");
+    __publicField(this, "constant");
+    this.normal = normal.clone();
+    this.constant = constant;
+  }
+  set(normal, constant) {
+    this.normal.copy(normal);
+    this.constant = constant;
+    return this;
+  }
+  setComponents(x, y, z, w) {
+    this.normal.setScalar(x, y, z);
+    this.constant = w;
+    return this.normalize();
+  }
+  normalize() {
+    const len = this.normal.getMagnitude() || 1;
+    this.normal.divideScalar(len);
+    this.constant /= len;
+    return this;
+  }
+  distanceToPoint(point) {
+    return this.normal.dotProduct(point) + this.constant;
   }
 };
 var Mat4 = class {
@@ -2564,8 +2883,27 @@ var Mat4 = class {
     return this;
   }
   multiply(matrix4x4) {
+    return this.multiplyBuffer(matrix4x4.m);
+  }
+  multiplyAffine(matrix4x3) {
+    return this.multiplyBuffer(matrix4x3.toArray());
+  }
+  setFromMat4x3(matrix4x3) {
+    matrixToArray(matrix4x3.toArray(), this.m);
+    return this;
+  }
+  transformPoint(vector, target = new Vec3()) {
+    const m = this.m;
+    const x = vector.x, y = vector.y, z = vector.z;
+    const w = m[3] * x + m[7] * y + m[11] * z + m[15];
+    const invW = w !== 0 ? 1 / w : 1;
+    target.x = (m[0] * x + m[4] * y + m[8] * z + m[12]) * invW;
+    target.y = (m[1] * x + m[5] * y + m[9] * z + m[13]) * invW;
+    target.z = (m[2] * x + m[6] * y + m[10] * z + m[14]) * invW;
+    return target;
+  }
+  multiplyBuffer(b) {
     const a = this.m;
-    const b = matrix4x4.m;
     const a00 = a[0], a01 = a[1], a02 = a[2], a03 = a[3];
     const a10 = a[4], a11 = a[5], a12 = a[6], a13 = a[7];
     const a20 = a[8], a21 = a[9], a22 = a[10], a23 = a[11];
@@ -2635,6 +2973,155 @@ var Mat4 = class {
     return this;
   }
 };
+var Frustum = class {
+  constructor() {
+    __publicField(this, "planes");
+    this.planes = [
+      new Plane(),
+      new Plane(),
+      new Plane(),
+      new Plane(),
+      new Plane(),
+      new Plane()
+    ];
+  }
+  setFromProjectionViewMatrix(matrixOrArray) {
+    const m = matrixOrArray instanceof Mat4 ? matrixOrArray.toArray() : matrixOrArray;
+    this.planes[0].setComponents(m[3] + m[0], m[7] + m[4], m[11] + m[8], m[15] + m[12]);
+    this.planes[1].setComponents(m[3] - m[0], m[7] - m[4], m[11] - m[8], m[15] - m[12]);
+    this.planes[2].setComponents(m[3] + m[1], m[7] + m[5], m[11] + m[9], m[15] + m[13]);
+    this.planes[3].setComponents(m[3] - m[1], m[7] - m[5], m[11] - m[9], m[15] - m[13]);
+    this.planes[4].setComponents(m[3] + m[2], m[7] + m[6], m[11] + m[10], m[15] + m[14]);
+    this.planes[5].setComponents(m[3] - m[2], m[7] - m[6], m[11] - m[10], m[15] - m[14]);
+    return this;
+  }
+  intersectsSphere(sphere) {
+    const center = sphere.center;
+    const negRadius = -sphere.radius;
+    for (let i = 0; i < 6; i++)
+      if (this.planes[i].distanceToPoint(center) < negRadius)
+        return false;
+    return true;
+  }
+  intersectsBox(box) {
+    for (let i = 0; i < 6; i++) {
+      const plane = this.planes[i];
+      const px = plane.normal.x > 0 ? box.max.x : box.min.x;
+      const py = plane.normal.y > 0 ? box.max.y : box.min.y;
+      const pz = plane.normal.z > 0 ? box.max.z : box.min.z;
+      if (plane.normal.x * px + plane.normal.y * py + plane.normal.z * pz + plane.constant < 0)
+        return false;
+    }
+    return true;
+  }
+  containsPoint(point) {
+    for (let i = 0; i < 6; i++)
+      if (this.planes[i].distanceToPoint(point) < 0)
+        return false;
+    return true;
+  }
+};
+var Mat3 = class {
+  constructor(x1, x2, x3, y1, y2, y3, t1, t2, t3) {
+    __publicField(this, "m");
+    this.m = new Float32Array(9);
+    if (arguments.length === 0)
+      this.identity();
+    else
+      this.make(x1, x2, x3, y1, y2, y3, t1, t2, t3);
+  }
+  make(x1, x2, x3, y1, y2, y3, t1, t2, t3) {
+    this.m[0] = x1 ?? 0;
+    this.m[1] = x2 ?? 0;
+    this.m[2] = x3 ?? 0;
+    this.m[3] = y1 ?? 0;
+    this.m[4] = y2 ?? 0;
+    this.m[5] = y3 ?? 0;
+    this.m[6] = t1 ?? 0;
+    this.m[7] = t2 ?? 0;
+    this.m[8] = t3 ?? 0;
+  }
+  copy(matrix3x3) {
+    matrixToArray(matrix3x3.m, this.m);
+    return this;
+  }
+  toArray(target) {
+    return matrixToArray(this.m, target);
+  }
+  toString() {
+    return "(" + this.m[0] + "," + this.m[1] + "," + this.m[2] + ";" + this.m[3] + "," + this.m[4] + "," + this.m[5] + ";" + this.m[6] + "," + this.m[7] + "," + this.m[8] + ")";
+  }
+  identity() {
+    this.make(1, 0, 0, 0, 1, 0, 0, 0, 1);
+    return this;
+  }
+  scale(vector2) {
+    const m = this.m;
+    const sx = vector2.x;
+    const sy = vector2.y;
+    m[0] *= sx;
+    m[1] *= sx;
+    m[2] *= sx;
+    m[3] *= sy;
+    m[4] *= sy;
+    m[5] *= sy;
+    return this;
+  }
+  rotate(angle) {
+    const m = this.m;
+    const c = Math.cos(angle);
+    const s = Math.sin(angle);
+    const x0 = m[0], x1 = m[1], x2 = m[2];
+    const y0 = m[3], y1 = m[4], y2 = m[5];
+    m[0] = c * x0 + s * y0;
+    m[1] = c * x1 + s * y1;
+    m[2] = c * x2 + s * y2;
+    m[3] = -s * x0 + c * y0;
+    m[4] = -s * x1 + c * y1;
+    m[5] = -s * x2 + c * y2;
+    return this;
+  }
+  translate(vector2) {
+    const m = this.m;
+    const tx = vector2.x;
+    const ty = vector2.y;
+    m[6] += m[0] * tx + m[3] * ty;
+    m[7] += m[1] * tx + m[4] * ty;
+    m[8] += m[2] * tx + m[5] * ty;
+    return this;
+  }
+  multiply(matrix3x3) {
+    const a = this.m;
+    const b = matrix3x3.m;
+    const a0 = a[0], a1 = a[1], a2 = a[2];
+    const a3 = a[3], a4 = a[4], a5 = a[5];
+    const a6 = a[6], a7 = a[7], a8 = a[8];
+    a[0] = a0 * b[0] + a3 * b[1] + a6 * b[2];
+    a[1] = a1 * b[0] + a4 * b[1] + a7 * b[2];
+    a[2] = a2 * b[0] + a5 * b[1] + a8 * b[2];
+    a[3] = a0 * b[3] + a3 * b[4] + a6 * b[5];
+    a[4] = a1 * b[3] + a4 * b[4] + a7 * b[5];
+    a[5] = a2 * b[3] + a5 * b[4] + a8 * b[5];
+    a[6] = a0 * b[6] + a3 * b[7] + a6 * b[8];
+    a[7] = a1 * b[6] + a4 * b[7] + a7 * b[8];
+    a[8] = a2 * b[6] + a5 * b[7] + a8 * b[8];
+    return this;
+  }
+  transpose() {
+    transposeLinear3(this.m, 3);
+    return this;
+  }
+  determinant() {
+    return determinantLinear3(this.m, 3);
+  }
+  invert() {
+    invertLinear3(this.m, 3);
+    return this;
+  }
+};
+var lookAtX = new Vec3();
+var lookAtY = new Vec3();
+var lookAtZ = new Vec3();
 var Quat = class _Quat {
   constructor(w = 1, x = 0, y = 0, z = 0) {
     __publicField(this, "w");
@@ -2677,6 +3164,29 @@ var Quat = class _Quat {
     this.vector.y = cx * sy * cz - sx * cy * sz;
     this.vector.z = cx * cy * sz + sx * sy * cz;
     return this;
+  }
+  setFromRotationMatrix(matrix) {
+    const m = matrix.toArray();
+    const lx = Math.hypot(m[0], m[1], m[2]) || 1;
+    const ly = Math.hypot(m[4], m[5], m[6]) || 1;
+    const lz = Math.hypot(m[8], m[9], m[10]) || 1;
+    return this.setFromBasis(m[0] / lx, m[1] / lx, m[2] / lx, m[4] / ly, m[5] / ly, m[6] / ly, m[8] / lz, m[9] / lz, m[10] / lz);
+  }
+  lookAt(eye, target, up) {
+    if (!setLookAtAxes(eye, target, up, lookAtX, lookAtY, lookAtZ))
+      return this;
+    return this.setFromBasis(lookAtX.x, lookAtX.y, lookAtX.z, lookAtY.x, lookAtY.y, lookAtY.z, lookAtZ.x, lookAtZ.y, lookAtZ.z);
+  }
+  getEuler(target = new Vec3()) {
+    const x = this.vector.x, y = this.vector.y, z = this.vector.z, w = this.w;
+    const x2 = x + x, y2 = y + y, z2 = z + z;
+    const m13 = x * z2 + w * y2;
+    const ey = Math.asin(Utils.clamp(m13, -1, 1));
+    if (Math.abs(m13) < 0.9999999)
+      target.setScalar(Math.atan2(-(y * z2 - w * x2), 1 - (x * x2 + y * y2)), ey, Math.atan2(-(x * y2 - w * z2), 1 - (y * y2 + z * z2)));
+    else
+      target.setScalar(Math.atan2(y * z2 + w * x2, 1 - (x * x2 + z * z2)), ey, 0);
+    return target;
   }
   getAxisAngle(axis) {
     const length = this.vector.getMagnitude();
@@ -2827,6 +3337,23 @@ var Quat = class _Quat {
   isIdentity() {
     return Math.abs(this.w - 1) < 1e-6 && this.vector.getMagnitude(true) < 1e-12;
   }
+  setFromBasis(m00, m10, m20, m01, m11, m21, m02, m12, m22) {
+    const trace = m00 + m11 + m22;
+    if (trace > 0) {
+      const s2 = 0.5 / Math.sqrt(trace + 1);
+      return this.set(0.25 / s2, (m21 - m12) * s2, (m02 - m20) * s2, (m10 - m01) * s2);
+    }
+    if (m00 > m11 && m00 > m22) {
+      const s2 = 2 * Math.sqrt(1 + m00 - m11 - m22);
+      return this.set((m21 - m12) / s2, 0.25 * s2, (m01 + m10) / s2, (m02 + m20) / s2);
+    }
+    if (m11 > m22) {
+      const s2 = 2 * Math.sqrt(1 + m11 - m00 - m22);
+      return this.set((m02 - m20) / s2, (m01 + m10) / s2, 0.25 * s2, (m12 + m21) / s2);
+    }
+    const s = 2 * Math.sqrt(1 + m22 - m00 - m11);
+    return this.set((m10 - m01) / s, (m02 + m20) / s, (m12 + m21) / s, 0.25 * s);
+  }
   setProduct(ax, ay, az, aw, bx, by, bz, bw) {
     this.vector.x = ax * bw + aw * bx + ay * bz - az * by;
     this.vector.y = ay * bw + aw * by + az * bx - ax * bz;
@@ -2861,17 +3388,23 @@ var Quat = class _Quat {
 export {
   Accumulator,
   Bezier,
+  Box,
   Circ,
+  Frustum,
   GRID_EMPTY_CELL,
   Grid,
   Mat3,
   Mat4,
   Mat4x3,
   NumArray,
+  Plane,
   Quat,
   Rand,
+  Ray2,
+  Ray3,
   Rect,
   RollingAverage,
+  Sphere,
   Time,
   Trigo,
   Utils,

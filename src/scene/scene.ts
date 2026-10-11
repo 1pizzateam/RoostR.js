@@ -220,12 +220,12 @@ export class Scene {
     return this.renderer.getParameter(this.context.BLEND);
   }
 
-  public raycast(ray: Ray): { mesh: Mesh; distance: number; point: Vec3 }[] {
+  public raycast(ray: Ray, precise: boolean = false): { mesh: Mesh; distance: number; point: Vec3 }[] {
     this.computeWorldMatrices();
     const hits: { mesh: Mesh; distance: number; point: Vec3 }[] = [];
     const visit = (mesh: Mesh): void => {
       if (!mesh.isActive()) return;
-      const hit = mesh.raycast(ray);
+      const hit = mesh.raycast(ray, precise);
       if (hit)
         hits.push({ mesh, distance: hit.distance, point: hit.point });
       for (let child of mesh.children)

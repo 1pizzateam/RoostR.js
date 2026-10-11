@@ -1,55 +1,55 @@
 {
-  "hash": "253994c4",
+  "hash": "a3b64780",
   "configHash": "c530977e",
-  "lockfileHash": "263f90f7",
-  "browserHash": "487c7a75",
+  "lockfileHash": "977ee8a5",
+  "browserHash": "d1c9195a",
   "optimized": {
     "vue": {
       "src": "../../../../node_modules/vue/dist/vue.runtime.esm-bundler.js",
       "file": "vue.js",
-      "fileHash": "7d339dd7",
+      "fileHash": "25b2abe4",
       "needsInterop": false
     },
     "vitepress > @vue/devtools-api": {
       "src": "../../../../node_modules/@vue/devtools-api/dist/index.js",
       "file": "vitepress___@vue_devtools-api.js",
-      "fileHash": "cbcaa58a",
+      "fileHash": "d0d767fc",
       "needsInterop": false
     },
     "vitepress > @vueuse/core": {
       "src": "../../../../node_modules/@vueuse/core/index.mjs",
       "file": "vitepress___@vueuse_core.js",
-      "fileHash": "c593fe0c",
+      "fileHash": "60d3c312",
       "needsInterop": false
     },
     "vitepress > @vueuse/integrations/useFocusTrap": {
       "src": "../../../../node_modules/@vueuse/integrations/useFocusTrap.mjs",
       "file": "vitepress___@vueuse_integrations_useFocusTrap.js",
-      "fileHash": "f4d83b18",
+      "fileHash": "bd92308a",
       "needsInterop": false
     },
     "vitepress > mark.js/src/vanilla.js": {
       "src": "../../../../node_modules/mark.js/src/vanilla.js",
       "file": "vitepress___mark__js_src_vanilla__js.js",
-      "fileHash": "d04f2797",
+      "fileHash": "87fbdab7",
       "needsInterop": false
     },
     "vitepress > minisearch": {
       "src": "../../../../node_modules/minisearch/dist/es/index.js",
       "file": "vitepress___minisearch.js",
-      "fileHash": "741bdc20",
+      "fileHash": "58921fcf",
       "needsInterop": false
     },
     "@1pizzateam/loopr": {
       "src": "../../../../node_modules/@1pizzateam/loopr/dist/loopr.js",
       "file": "@1pizzateam_loopr.js",
-      "fileHash": "e4ff78df",
+      "fileHash": "95297aa7",
       "needsInterop": false
     },
     "@1pizzateam/spock": {
       "src": "../../../../node_modules/@1pizzateam/spock/dist/spock.js",
       "file": "@1pizzateam_spock.js",
-      "fileHash": "fd7d9a6f",
+      "fileHash": "ca4705d2",
       "needsInterop": false
     }
   },

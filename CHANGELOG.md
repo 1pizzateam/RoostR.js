@@ -6,6 +6,7 @@ Version 0.7.0 (October 10th 2026)
    - Added `Uniform` support for Spock values: custom uniforms accept `Vec2`, `Vec3`, `Quat`, `Mat3`, `Mat4` and `Mat4x3` directly.
    - Setters, constructors of lights/materials and `Mesh` transforms accept `Vec3`, number arrays or scalars (`Vec3Like`); array arguments were previously turned into `NaN` in light and material constructors.
  * Spatial types now live in Spock (`Box`, `Sphere`, `Ray3`, `Plane`, `Frustum`). RoostR re-exports them under the existing names `BoundingBox`, `BoundingSphere`, `Ray`, `SpatialPlane` and `Frustum`, so imports do not change.
+ * Picking: `Mesh.raycast(ray, precise)` and `Scene.raycast(ray, precise)` optionally test triangles (`TRIANGLES` / `TRIANGLE_STRIP`) in local space with `Mat4x3.invertAffine` / `transformPoint` / `transformDirection` and `Ray3.intersectTriangle`; the default is still the bounding sphere.
  * Lighting and blending:
    - `PhongShader` uses packed vec4 light uniforms (`uLightPositionType`, `uLightDiffuseCutoff`, `uLightSpecularExponent`), about 40% fewer uniform vectors, so it fits mobile GPUs limited to 64 fragment uniform vectors. The classic `uLightPosition`/`uLightType`/... uniforms are still uploaded to custom shaders that declare them.
    - Added per-mesh blending: `Mesh.setBlend(source, destination, equation)` (default stays additive `SRC_ALPHA`, `ONE`) and `Mesh.setDepthWrite(enabled)`. The scene only changes blend/depth state between meshes that differ.

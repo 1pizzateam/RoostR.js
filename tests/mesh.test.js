@@ -641,6 +641,40 @@ test("mesh.raycast tests ray intersection in world space", () => {
   expect(mesh.raycast(missRay)).toBeNull();
 });
 
+test("mesh.raycast precise tests triangles instead of the bounding sphere", () => {
+  const context = createMockContext();
+  const mesh = new Mesh(new Cube(2.0), context);
+  mesh.updateModelMatrix();
+  mesh.setWorldMatrix(new Mat4x3().identity());
+
+  const hit = mesh.raycast(new Ray(new Vec3(0.5, 0.5, 10), new Vec3(0, 0, -1)), true);
+  expect(hit).not.toBeNull();
+  expect(hit.point.z).toBeCloseTo(1);
+  expect(hit.distance).toBeCloseTo(9);
+
+  // Inside the bounding sphere but outside the cube.
+  const corner = new Ray(new Vec3(1.2, 1.2, 10), new Vec3(0, 0, -1));
+  expect(mesh.raycast(corner)).not.toBeNull();
+  expect(mesh.raycast(corner, true)).toBeNull();
+});
+
+test("mesh.raycast precise follows the world transform", () => {
+  const context = createMockContext();
+  const mesh = new Mesh(new Cube(2.0), context);
+  mesh.setPosition(5, 0, 0);
+  mesh.scale.setScalar(2, 2, 2);
+  mesh.updateModelMatrix();
+  mesh.setWorldMatrix(new Mat4x3().identity());
+
+  const hit = mesh.raycast(new Ray(new Vec3(5, 0, 10), new Vec3(0, 0, -1)), true);
+  expect(hit).not.toBeNull();
+  expect(hit.point.x).toBeCloseTo(5);
+  expect(hit.point.z).toBeCloseTo(2);
+  expect(hit.distance).toBeCloseTo(8);
+
+  expect(mesh.raycast(new Ray(new Vec3(8.5, 0, 10), new Vec3(0, 0, -1)), true)).toBeNull();
+});
+
 test("computeBoundingBox and computeBoundingSphere cache results until transformed", () => {
   const context = createMockContext();
   const mesh = new Mesh(new Cube(2.0), context);

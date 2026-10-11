@@ -64,6 +64,14 @@ export class Mesh implements IMesh {
   private static readonly scratchView = new Mat4x3();
   private static readonly scratchVec = new Vec3();
   private static readonly scratchCamera = new Vec3();
+  private static readonly scratchDir = new Vec3();
+  private static readonly scratchA = new Vec3();
+  private static readonly scratchB = new Vec3();
+  private static readonly scratchC = new Vec3();
+  private static readonly scratchHit = new Vec3();
+  private static readonly scratchWorldHit = new Vec3();
+  private static readonly scratchInverse = new Mat4x3();
+  private static readonly scratchRay = new Ray();
   public isBoundsDirty : boolean = true;
   public isNormalMatrixDirty : boolean = true;
   public localBoundingBox : BoundingBox;
@@ -438,13 +446,59 @@ export class Mesh implements IMesh {
     return this.boundingSphere;
   }
 
-  public raycast(ray: Ray): { distance: number; point: Vec3 } | null {
+  // Bounding sphere test by default; with `precise` the ray is also tested against the triangles
+  // (TRIANGLES and TRIANGLE_STRIP meshes) in local space, so rotated and scaled meshes are handled.
+  public raycast(ray: Ray, precise: boolean = false): { distance: number; point: Vec3 } | null {
     if (!this.isActive()) return null;
     const sphere = this.computeBoundingSphere();
     const hitPoint = ray.intersectSphere(sphere);
     if (!hitPoint) return null;
-    const distance = ray.origin.getDistance(hitPoint);
-    return { distance, point: hitPoint };
+    if (precise && this.vertices && (this.primitive === 'TRIANGLES' || this.primitive === 'TRIANGLE_STRIP'))
+      return this.raycastTriangles(ray);
+    return { distance: ray.origin.getDistance(hitPoint), point: hitPoint };
+  }
+
+  private raycastTriangles(ray: Ray): { distance: number; point: Vec3 } | null {
+    const inverse = Mesh.scratchInverse.copy(this.worldMatrix).invertAffine();
+    const localRay = Mesh.scratchRay.set(
+      inverse.transformPoint(ray.origin, Mesh.scratchVec),
+      inverse.transformDirection(ray.direction, Mesh.scratchDir)
+    );
+    const strip = this.primitive === 'TRIANGLE_STRIP';
+    let best: Vec3 | null = null;
+    let bestDistance = Infinity;
+
+    for (const subMesh of this.subMeshes) {
+      const end = subMesh.start + subMesh.count;
+      for (let i = subMesh.start; i + 2 < end; i += strip ? 1 : 3) {
+        this.getVertex(i, Mesh.scratchA);
+        // Odd strip triangles flip their winding.
+        if (strip && (i - subMesh.start) % 2 === 1) {
+          this.getVertex(i + 2, Mesh.scratchB);
+          this.getVertex(i + 1, Mesh.scratchC);
+        } else {
+          this.getVertex(i + 1, Mesh.scratchB);
+          this.getVertex(i + 2, Mesh.scratchC);
+        }
+        const local = localRay.intersectTriangle(Mesh.scratchA, Mesh.scratchB, Mesh.scratchC, false, Mesh.scratchHit);
+        if (!local) continue;
+        const world = this.worldMatrix.transformPoint(local, Mesh.scratchWorldHit);
+        const distance = ray.origin.getDistance(world);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          best = (best ?? new Vec3()).copy(world);
+        }
+      }
+    }
+    return best ? { distance: bestDistance, point: best } : null;
+  }
+
+  // Reads the position of the vertex at `index` (through the index buffer when present).
+  private getVertex(index: number, target: Vec3): Vec3 {
+    const vertices = this.vertices as ArrayLike<number>;
+    const size = this.itemSize || 3;
+    const offset = (this.indices ? this.indices[index] : index) * size;
+    return target.setScalar(vertices[offset], vertices[offset + 1], size > 2 ? vertices[offset + 2] : 0);
   }
 
   public useBasicMaterial(options?: IMaterialShortcutOptions): this {
