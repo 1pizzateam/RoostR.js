@@ -1,12 +1,12 @@
 import { SceneRenderer }  from '../renderer/scene';
 import { SceneGraph } from './sceneGraph';
-import { Mesh } from '../mesh';
-import { Lights, AnyLight } from './lights';
-import { Camera } from '../cameras/camera';
+import type { Mesh } from '../mesh';
+import { Lights, type AnyLight } from './lights';
+import type { Camera } from '../cameras/camera';
 import { Time, Vec3, Vec2 } from '@1pizzateam/spock';
-import { Frustum, Ray3 as Ray } from '@1pizzateam/spock';
-import { IFlatLights, IFrameInfo } from '../interfaces';
-import { assignVec3, Vec3Like } from '../vector';
+import { Frustum, type Ray3 as Ray } from '@1pizzateam/spock';
+import type { IFlatLights, IFrameInfo } from '../interfaces';
+import { assignVec3, type Vec3Like } from '../vector';
 
 export interface ISceneOptions {
   canvasId?: string | HTMLCanvasElement;
@@ -228,10 +228,10 @@ export class Scene {
       const hit = mesh.raycast(ray, precise);
       if (hit)
         hits.push({ mesh, distance: hit.distance, point: hit.point });
-      for (let child of mesh.children)
+      for (const child of mesh.children)
         visit(child);
     };
-    for (let mesh of this.meshes)
+    for (const mesh of this.meshes)
       if (mesh.traversalStamp !== this.traversalStamp)
         visit(mesh);
     hits.sort((a, b) => a.distance - b.distance);
@@ -256,7 +256,7 @@ export class Scene {
     const camPos = camera.position;
 
     let renderedCount = 0;
-    for (let mesh of this.opaqueList) {
+    for (const mesh of this.opaqueList) {
       this.renderer.setDepthWrite(mesh.depthWrite);
       mesh.renderSelf(projMatrix, viewMatrix, flatLights, time, false, camPos, this.fog, frame);
       renderedCount++;
@@ -271,19 +271,19 @@ export class Scene {
   private markDescendants(): number {
     const stamp = ++this.traversalStamp;
     const mark = (mesh: Mesh): void => {
-      for (let child of mesh.children) {
+      for (const child of mesh.children) {
         child.traversalStamp = stamp;
         mark(child);
       }
     };
-    for (let mesh of this.meshes)
+    for (const mesh of this.meshes)
       mark(mesh);
     return stamp;
   }
 
   private computeWorldMatrices(): void {
     const stamp = this.markDescendants();
-    for (let mesh of this.meshes)
+    for (const mesh of this.meshes)
       if (mesh.traversalStamp !== stamp)
         mesh.computeWorldMatrix( this.graph );
   }
@@ -309,10 +309,10 @@ export class Scene {
         } else
           this.opaqueList.push(mesh);
       }
-      for (let child of mesh.children)
+      for (const child of mesh.children)
         visit(child);
     };
-    for (let mesh of this.meshes)
+    for (const mesh of this.meshes)
       if (mesh.traversalStamp !== stamp)
         visit(mesh);
   }
@@ -329,7 +329,7 @@ export class Scene {
     const viewMatrix = camera.getViewMatrix();
     const camPos = camera.position;
 
-    for (let mesh of list) {
+    for (const mesh of list) {
       const blend = mesh.blendOptions;
       this.enableBlendMode(blend.equation, blend.source, blend.destination);
       this.renderer.setDepthWrite(mesh.depthWrite);

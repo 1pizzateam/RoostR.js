@@ -1,6 +1,6 @@
 
-import { SubMesh } from '../geometry/submesh';
-import { GLState, getGLState } from './state';
+import type { SubMesh } from '../geometry/submesh';
+import { type GLState, getGLState } from './state';
 
 export class MeshRenderer {
 
