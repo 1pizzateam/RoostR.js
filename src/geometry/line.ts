@@ -11,23 +11,25 @@ export class Line extends BasicMesh {
   // nbSubMeshes : number;
   declare primitive   : string;
 
-  constructor(vertices: Vec3[] | number[], thickness?: number) {
+  constructor(vertices: Vec3[] = [], thickness = 2.0) {
     super();
-    this.thickness = thickness ? thickness * 0.5 : 1.0;
-
-    if (vertices && vertices.length > 0 && vertices[0] instanceof Vec3) {
-      const flat: number[] = [];
-      for (const v of vertices as Vec3[])
-        flat.push(v.x, v.y, v.z);
-      this.vertices = flat;
-    } else
-      this.vertices = (vertices as number[]) || [];
+    this.thickness = (thickness || 2.0) * 0.5;
     this.itemSize = 3;
+    this.primitive = 'LINE_STRIP';
+    this.setPoints(vertices);
+  }
+
+  public setPoints(vertices: Vec3[]): this {
+    const flat: number[] = [];
+    if (vertices)
+      for (const v of vertices)
+        flat.push(v.x, v.y, v.z);
+    this.vertices = flat;
+
     this.subMeshes = [
       new SubMesh(0, this.vertices.length / this.itemSize)
     ];
-
-    this.primitive = 'LINE_STRIP';
+    return this;
   }
 
 }

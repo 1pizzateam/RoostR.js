@@ -15,17 +15,10 @@ scene.addLight(ambient);
 
 ```typescript
 new AmbientLight(
-  rOrVec: Vec3 | number = 1.0,
-  g: number = 1.0,
-  b: number = 1.0,
+  diffuse: Vec3 = new Vec3(1.0, 1.0, 1.0),
   intensity: number = 1.0
 )
 ```
-
-### Signatures
-
-- `new AmbientLight(color: Vec3, intensity: number = 1.0)`
-- `new AmbientLight(r: number, g: number, b: number, intensity: number = 1.0)`
 
 ---
 
@@ -41,14 +34,14 @@ new AmbientLight(
 
 ## Methods
 
-### `setColor(xOrVec: Vec3 | number, y?: number, z?: number): this`
+### `setColor(diffuse: Vec3): this`
 
-Set the ambient light color tint using a `Vec3` or RGB scalars.
+Set the ambient light color tint using a `Vec3`.
 
 ### `setIntensity(intensity: number): this`
 
 Set the light intensity multiplier.
 
-### `getColor(): Vec3`
+### `getColor(target?: Vec3): Vec3`
 
-Retrieve the current ambient color `Vec3`.
+Retrieve the current ambient color into an optional pre-allocated `Vec3` target.

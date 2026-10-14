@@ -3,10 +3,10 @@ import type { SubMesh } from './submesh';
 
 export class BasicMesh implements IGeometry {
 
-  vertices    : number[] | null;
-  indices     : number[] | null;
-  normals     : number[] | null;
-  uvs         : number[] | null;
+  vertices    : number[] | Float32Array | null;
+  indices     : number[] | Int32Array | Uint16Array | null;
+  normals     : number[] | Float32Array | null;
+  uvs         : number[] | Float32Array | null;
   subMeshes   : SubMesh[];
   itemSize    : number;
   // nbSubMeshes : number;

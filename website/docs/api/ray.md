@@ -46,7 +46,7 @@ The `direction` vector is automatically normalized upon assignment.
 
 Set origin point and direction.
 
-### `at(t: number): Vec3`
+### `at(t: number, target: Vec3 = new Vec3()): Vec3`
 
 Calculate the 3D coordinate along the ray at distance $t$:
 

@@ -12,45 +12,32 @@ export class PerspectiveCamera extends Camera {
 
   constructor(
     fov: number,
-    zNearOrContext?: number | WebGLRenderingContext | null,
-    zFarOrNear?: number,
-    contextOrFar?: WebGLRenderingContext | number | null
+    nearFar: Vec2 = new Vec2(0.1, 1000),
+    context?: WebGLRenderingContext | null
   ) {
     super(  new Vec3(),
             new Vec3(),
             new Vec3(0.0, 1.0, 0.0)
           );
 
-    let zNear = 0.1;
-    let zFar = 1000;
-    let context: WebGLRenderingContext | null = null;
-
-    if (zNearOrContext && typeof zNearOrContext !== 'number') {
-      context = zNearOrContext as WebGLRenderingContext;
-      zNear = typeof zFarOrNear === 'number' ? zFarOrNear : 0.1;
-      zFar = typeof contextOrFar === 'number' ? contextOrFar : 1000;
-    } else {
-      zNear = typeof zNearOrContext === 'number' ? zNearOrContext : 0.1;
-      zFar = typeof zFarOrNear === 'number' ? zFarOrNear : 1000;
-      if (contextOrFar && typeof contextOrFar !== 'number')
-        context = contextOrFar as WebGLRenderingContext;
-    }
-
     this.fov   = fov;
     this.ratio = 0;
-    this.zNear = zNear;
-    this.zFar  = zFar;
+    this.zNear = nearFar.x;
+    this.zFar  = nearFar.y;
 
-    const viewport = context && typeof context.getParameter === 'function' ? context.getParameter(context.VIEWPORT) : null;
+    let viewport: Vec2 | null = null;
+    if (context && typeof context.getParameter === 'function') {
+      const vp = context.getParameter(context.VIEWPORT);
+      if (vp && vp.length >= 4)
+        viewport = new Vec2(vp[2], vp[3]);
+    }
     this.setProjectionMatrix(viewport);
     super.setViewMatrix();
   }
 
-  public setProjectionMatrix(viewport?: Vec2 | Int32Array | number[] | null): void {
-    if (viewport instanceof Vec2)
+  public setProjectionMatrix(viewport?: Vec2 | null): void {
+    if (viewport)
       this.ratio = viewport.x / Math.max(1, viewport.y);
-    else if (viewport && viewport.length >= 4)
-      this.ratio = viewport[2] / Math.max(1, viewport[3]);
     else
       this.ratio = this.ratio || 1;
     this.projectionMatrix.perspective(this.fov, this.ratio, this.zNear, this.zFar);
@@ -62,10 +49,16 @@ export class PerspectiveCamera extends Camera {
     this.setProjectionMatrix();
   }
 
-  public setNearFar(zNear: number, zFar: number): void {
-    this.zNear = zNear;
-    this.zFar  = zFar;
+  public setNearFar(nearFar: Vec2): void {
+    this.zNear = nearFar.x;
+    this.zFar = nearFar.y;
     this.setProjectionMatrix();
+  }
+
+  public getNearFar(target: Vec2 = new Vec2()): Vec2 {
+    target.x = this.zNear;
+    target.y = this.zFar;
+    return target;
   }
 
 }

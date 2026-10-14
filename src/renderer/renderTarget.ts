@@ -9,20 +9,10 @@ export class RenderTarget {
   texture: WebGLTexture | null;
   depthBuffer: WebGLRenderbuffer | null;
 
-  constructor(
-    sizeOrWidth: Vec2 | number,
-    heightOrContext: number | WebGLRenderingContext,
-    context?: WebGLRenderingContext
-  ) {
-    if (sizeOrWidth instanceof Vec2) {
-      this.width = sizeOrWidth.x;
-      this.height = sizeOrWidth.y;
-      this.context = heightOrContext as WebGLRenderingContext;
-    } else {
-      this.width = sizeOrWidth;
-      this.height = heightOrContext as number;
-      this.context = context!;
-    }
+  constructor(size: Vec2, context: WebGLRenderingContext) {
+    this.width = size.x;
+    this.height = size.y;
+    this.context = context;
 
     this.framebuffer = null;
     this.texture = null;
@@ -103,22 +93,22 @@ export class RenderTarget {
     gl.viewport(0, 0, this.width, this.height);
   }
 
-  public unbind(viewportWidthOrSize?: Vec2 | number, viewportHeight?: number): void {
+  public unbind(viewportSize?: Vec2): void {
     const gl = this.context;
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    if (viewportWidthOrSize instanceof Vec2)
-      gl.viewport(0, 0, viewportWidthOrSize.x, viewportWidthOrSize.y);
-    else if (viewportWidthOrSize !== undefined && viewportHeight !== undefined)
-      gl.viewport(0, 0, viewportWidthOrSize, viewportHeight);
+    if (viewportSize)
+      gl.viewport(0, 0, viewportSize.x, viewportSize.y);
   }
 
   public getSize(target: Vec2 = new Vec2()): Vec2 {
-    return target.setScalar(this.width, this.height);
+    target.x = this.width;
+    target.y = this.height;
+    return target;
   }
 
-  public setSize(sizeOrWidth: Vec2 | number, height?: number): void {
-    const w = sizeOrWidth instanceof Vec2 ? sizeOrWidth.x : sizeOrWidth;
-    const h = sizeOrWidth instanceof Vec2 ? sizeOrWidth.y : (height ?? 0);
+  public setSize(size: Vec2): void {
+    const w = size.x;
+    const h = size.y;
     if (this.width === w && this.height === h) return;
     this.width = w;
     this.height = h;

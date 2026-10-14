@@ -40,17 +40,14 @@ export class CustomMesh implements IGeometry {
                       ];
   }
 
-  private static toFloat32(array: Vec3[] | Float32Array | number[]): Float32Array {
-    if (array.length > 0 && array[0] instanceof Vec3) {
-      const flat = new Float32Array(array.length * 3);
-      for (let i = 0; i < array.length; i++)
-        (array as Vec3[])[i].toArray(flat, i * 3);
-      return flat;
-    }
-    return array instanceof Float32Array ? array.slice(0) : new Float32Array(array as number[]);
+  private static toFloat32(array: Vec3[]): Float32Array {
+    const flat = new Float32Array(array.length * 3);
+    for (let i = 0; i < array.length; i++)
+      array[i].toArray(flat, i * 3);
+    return flat;
   }
 
-  public setVertices(array: Vec3[] | Float32Array | number[]): void {
+  public setVertices(array: Vec3[]): void {
     this.vertices = CustomMesh.toFloat32(array);
   }
 
@@ -58,7 +55,7 @@ export class CustomMesh implements IGeometry {
     this.indices = array instanceof Int32Array ? array.slice(0) : new Int32Array(array);
   }
 
-  public setNormals(array: Vec3[] | Float32Array | number[]): void {
+  public setNormals(array: Vec3[]): void {
     this.normals = CustomMesh.toFloat32(array);
   }
 

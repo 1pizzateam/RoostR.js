@@ -53,7 +53,8 @@ import {
   Material,
   DirectionalLight,
   PointLight,
-  Vec3
+  Vec3,
+  Vec2
 } from '@1pizzateam/roostr';
 import { Player } from '@1pizzateam/loopr';
 
@@ -64,20 +65,20 @@ const gl = canvas.getContext('webgl');
 const scene = new Scene({
   canvasId: canvas,
   context: gl,
-  viewport: { x: 0, y: 0, width: canvas.width, height: canvas.height },
+  viewport: new Vec2(canvas.width, canvas.height),
   clearColor: new Vec3(0.08, 0.1, 0.14)
 });
 
 // 2. Set up perspective camera and interactive orbit controls
-const camera = new PerspectiveCamera(45, gl, 0.1, 100);
-camera.setPosition(0, 3, 6);
-camera.lookAt(0, 0, 0);
+const camera = new PerspectiveCamera(45, new Vec2(0.1, 100), gl);
+camera.setPosition(new Vec3(0, 3, 6));
+camera.lookAt(new Vec3(0, 0, 0));
 
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
 
 // 3. Create a 3D Mesh with Phong material
-const cubeMesh = new Mesh(gl, new Cube(2.0));
+const cubeMesh = new Mesh(new Cube(new Vec3(2.0, 2.0, 2.0)), gl);
 cubeMesh.addProgram(PhongShader.create(gl));
 cubeMesh.addMaterial(new Material({
   ambient: new Vec3(0.2, 0.2, 0.2),
@@ -89,11 +90,11 @@ scene.addMesh(cubeMesh);
 
 // 4. Add lights (directional sunlight + warm fill point light + ambient)
 const sunLight = new DirectionalLight(new Vec3(-0.6, -1.0, -0.4));
-sunLight.setDiffuse(0.95, 0.88, 0.80);
+sunLight.setDiffuse(new Vec3(0.95, 0.88, 0.80));
 scene.addLight(sunLight);
 
 const pointLight = new PointLight(new Vec3(2.5, 2.8, 2.2));
-pointLight.setDiffuse(1.0, 0.60, 0.20);
+pointLight.setDiffuse(new Vec3(1.0, 0.60, 0.20));
 scene.addLight(pointLight);
 
 const ambientLight = new AmbientLight(new Vec3(0.35, 0.38, 0.45));

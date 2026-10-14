@@ -83,6 +83,7 @@ RoostR is packaged as an ES module and can be imported directly into native brow
       PhongShader,
       Material,
       DirectionalLight,
+      Vec2,
       Vec3
     } from './node_modules/@1pizzateam/roostr/dist/roostr.js';
 
@@ -94,15 +95,15 @@ RoostR is packaged as an ES module and can be imported directly into native brow
     const scene = new Scene({
       canvasId: canvas,
       context: gl,
-      viewport: { x: 0, y: 0, width: canvas.width, height: canvas.height },
+      viewport: new Vec2(canvas.width, canvas.height),
       clearColor: new Vec3(0.1, 0.12, 0.16)
     });
 
-    const camera = new PerspectiveCamera(45, gl, 0.1, 100);
-    camera.setPosition(0, 2, 5);
-    camera.lookAt(0, 0, 0);
+    const camera = new PerspectiveCamera(45, new Vec2(0.1, 100), gl);
+    camera.setPosition(new Vec3(0, 2, 5));
+    camera.lookAt(new Vec3(0, 0, 0));
 
-    const cube = new Mesh(gl, new Cube(1.5));
+    const cube = new Mesh(new Cube(new Vec3(1.5, 1.5, 1.5)), gl);
     cube.addProgram(PhongShader.create(gl));
     cube.addMaterial(new Material({ diffuse: new Vec3(1.0, 0.5, 0.2) }));
     scene.addMesh(cube);

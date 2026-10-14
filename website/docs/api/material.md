@@ -25,9 +25,9 @@ new Material(options?: IMaterialOptions)
 
 | Option | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `ambient` | `Vec3 \| number[]` | `[0.5, 0.5, 0.5]` | Ambient reflection coefficient. |
-| `diffuse` | `Vec3 \| number[]` | `[0.6, 0.6, 0.6]` | Diffuse color reflectivity. |
-| `specular` | `Vec3 \| number[]` | `[0.8, 0.8, 0.8]` | Specular reflection highlight color. |
+| `ambient` | `Vec3` | `new Vec3(0.5, 0.5, 0.5)` | Ambient reflection coefficient. |
+| `diffuse` | `Vec3` | `new Vec3(0.6, 0.6, 0.6)` | Diffuse color reflectivity. |
+| `specular` | `Vec3` | `new Vec3(0.8, 0.8, 0.8)` | Specular reflection highlight color. |
 | `shininess` | `number` | `8.0` | Specular highlight sharpness exponent (higher = sharper). |
 
 ::: tip Transparency & Blending
@@ -50,15 +50,15 @@ Alpha blending in RoostR is configured on the [`Mesh`](/api/mesh) via `mesh.blen
 
 ## Methods
 
-### `setAmbient(xOrVec: Vec3 | number, y?: number, z?: number): void`
+### `setAmbient(ambient: Vec3): void`
 
 Set ambient reflection RGB values in range $[0, 1]$.
 
-### `setDiffuse(xOrVec: Vec3 | number, y?: number, z?: number): void`
+### `setDiffuse(diffuse: Vec3): void`
 
 Set diffuse color RGB values in range $[0, 1]$.
 
-### `setSpecular(xOrVec: Vec3 | number, y?: number, z?: number): void`
+### `setSpecular(specular: Vec3): void`
 
 Set specular highlight RGB values in range $[0, 1]$.
 

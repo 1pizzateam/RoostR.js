@@ -1,4 +1,4 @@
-import { Texture } from "../dist/roostr";
+import { Texture, Vec2 } from "../dist/roostr";
 import { createMockContext } from "./helpers/webgl-mock";
 
 test("creates and returns a WebGLTexture", () => {
@@ -85,8 +85,7 @@ test("supports raw Uint8Array source", () => {
   const context = createMockContext();
   const rawData = new Uint8Array([255, 0, 0, 255]);
   const texture = Texture.create(rawData, context, {
-    width: 1,
-    height: 1
+    size: new Vec2(1, 1),
   });
 
   expect(texture).not.toBeNull();
@@ -107,7 +106,7 @@ test("Texture.update updates texture subimage", () => {
   const context = createMockContext();
   const texture = {};
   const rawData = new Uint8Array([0, 255, 0, 255]);
-  Texture.update(texture, rawData, context, 0, 0, 1, 1);
+  Texture.update(texture, rawData, context, new Vec2(0, 0), new Vec2(1, 1));
 
   expect(context.bindTexture).toHaveBeenCalledWith(context.TEXTURE_2D, texture);
   expect(context.texSubImage2D).toHaveBeenCalled();

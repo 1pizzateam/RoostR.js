@@ -1,10 +1,9 @@
-import { Vec3, Vec2, Utils } from '@1pizzateam/spock';
+import { Utils, Vec2, Vec3 } from '@1pizzateam/spock';
 import { Program } from '../program';
 import { getGLState } from './state';
 
 export interface IRendererOptions {
-  width?: number;
-  height?: number;
+  size?: Vec2;
   // Forwarded to canvas.getContext('webgl', ...). alpha defaults to false.
   contextAttributes?: WebGLContextAttributes;
   // GPU resources are lost with the context. The browser gives back the same context object, so RoostR
@@ -46,8 +45,9 @@ export class Renderer {
     this.context = null;
     if (this.canvas) {
       // default resolution
-      this.canvas.width = options.width ?? 1280;
-      this.canvas.height = options.height ?? 720;
+      const size = options.size ?? new Vec2(1280, 720);
+      this.canvas.width = size.x;
+      this.canvas.height = size.y;
       const attributes = { alpha: false, ...options.contextAttributes };
       this.context = (<WebGLRenderingContext>this.canvas.getContext("webgl", attributes) || 
                       <WebGLRenderingContext>this.canvas.getContext("experimental-webgl", attributes)) || null;
@@ -77,9 +77,9 @@ export class Renderer {
     this.setCullFace('BACK');
 
     //this.setViewport(1280,720);
-    this.setViewport(this.context.drawingBufferWidth, this.context.drawingBufferHeight);
+    this.setViewport(new Vec2(this.context.drawingBufferWidth, this.context.drawingBufferHeight));
     // console.log(this.context.getParameter(this.context.VIEWPORT));
-    this.setClearColor(0.0, 0.0, 0.0, 1.0);
+    this.setClearColor(new Vec3(0.0, 0.0, 0.0), 1.0);
 
   }
 
@@ -124,33 +124,20 @@ export class Renderer {
   }
 
   // specifies the affine transformation of x and y from normalized device coordinates to window coordinates.
-  public setViewport( width: number, height: number ): void {
+  public setViewport(size: Vec2): void {
     if (this.context)
-      this.context.viewport(0, 0, width, height); //defaut values
+      this.context.viewport(0, 0, size.x, size.y);
   }
 
   // This specifies what color values to use when calling the clear() method. The values are clamped between 0 and 1.
-  public setClearColor( rOrVec: Vec3 | number, g?: number, b?: number, a?: number ): void {
-    if (this.context)
-      if (rOrVec instanceof Vec3) {
-        const alpha = g !== undefined ? Utils.clamp(g, 0, 1) : 1.0;
-        this.context.clearColor(
-          Utils.clamp(rOrVec.x, 0, 1),
-          Utils.clamp(rOrVec.y, 0, 1),
-          Utils.clamp(rOrVec.z, 0, 1),
-          alpha
-        );
-      } else {
-        const green = g !== undefined ? Utils.clamp(g, 0, 1) : 0;
-        const blue  = b !== undefined ? Utils.clamp(b, 0, 1) : 0;
-        const alpha = a !== undefined ? Utils.clamp(a, 0, 1) : 1.0;
-        this.context.clearColor(
-          Utils.clamp(rOrVec, 0, 1),
-          green,
-          blue,
-          alpha
-        );
-      }
+  public setClearColor(color: Vec3, alpha = 1.0): void {
+    if (!this.context) return;
+    this.context.clearColor(
+      Utils.clamp(color.x, 0, 1),
+      Utils.clamp(color.y, 0, 1),
+      Utils.clamp(color.z, 0, 1),
+      Utils.clamp(alpha, 0, 1)
+    );
   }
 
   public clearFrame(): void {
@@ -166,14 +153,20 @@ export class Renderer {
     return this.canvas;
   }
 
-  public setSize(sizeOrWidth: Vec2 | number, height?: number): void {
-    const w = sizeOrWidth instanceof Vec2 ? sizeOrWidth.x : sizeOrWidth;
-    const h = sizeOrWidth instanceof Vec2 ? sizeOrWidth.y : (height ?? 0);
+  public setSize(size: Vec2): void {
     if (this.canvas) {
-      this.canvas.width = w;
-      this.canvas.height = h;
+      this.canvas.width = size.x;
+      this.canvas.height = size.y;
     }
-    this.setViewport(w, h);
+    this.setViewport(size);
+  }
+
+  public getSize(target = new Vec2()): Vec2 {
+    if (this.canvas) {
+      target.x = this.canvas.width;
+      target.y = this.canvas.height;
+    }
+    return target;
   }
 
   private findById(id: string): HTMLCanvasElement | null {

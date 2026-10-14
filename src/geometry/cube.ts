@@ -4,18 +4,14 @@ import { SubMesh } from './submesh';
 
 export class Cube extends BasicMesh {
 
-  constructor(sizeOrDimensions: Vec3 | number = 1.0, flat: boolean = false) {
+  constructor(size: Vec3 = new Vec3(2.0, 2.0, 2.0), flat: boolean = false) {
     super();
-    let sx: number, sy: number, sz: number;
-    if (sizeOrDimensions instanceof Vec3) {
-      const half = sizeOrDimensions.clone().halve();
-      sx = half.x || 0.5;
-      sy = half.y || 0.5;
-      sz = half.z || 0.5;
-    } else {
-      const s = sizeOrDimensions ? sizeOrDimensions * 0.5 : 1.0;
-      sx = s; sy = s; sz = s;
-    }
+    const halfX = (size ? size.x : 2.0) * 0.5;
+    const halfY = (size ? size.y : 2.0) * 0.5;
+    const halfZ = (size ? size.z : 2.0) * 0.5;
+    const sx = halfX || 1.0;
+    const sy = halfY || 1.0;
+    const sz = halfZ || 1.0;
 
     if (flat) {
       this.vertices = [

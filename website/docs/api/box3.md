@@ -41,7 +41,7 @@ new BoundingBox(min?: Vec3, max?: Vec3)
 
 Set bounding box corners.
 
-### `setFromPoints(points: number[] | Vec3[]): this`
+### `setFromPoints(points: Vec3[]): this`
 
 Expand the box to tightly enclose an array of 3D points.
 
@@ -49,11 +49,11 @@ Expand the box to tightly enclose an array of 3D points.
 
 Construct an AABB given a central point and dimension vector.
 
-### `getCenter(): Vec3`
+### `getCenter(target: Vec3 = new Vec3()): Vec3`
 
 Calculate the central midpoint coordinate $\frac{\min + \max}{2}$.
 
-### `getSize(): Vec3`
+### `getSize(target: Vec3 = new Vec3()): Vec3`
 
 Calculate the bounding dimension vector $\max - \min$.
 

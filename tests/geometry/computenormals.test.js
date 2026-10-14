@@ -10,9 +10,9 @@ describe('CustomMesh computeVertexNormals', () => {
     const mesh = new CustomMesh();
     // A single flat triangle in XY plane facing +Z
     mesh.setVertices([
-      0, 0, 0,
-      1, 0, 0,
-      0, 1, 0
+      new Vec3(0, 0, 0),
+      new Vec3(1, 0, 0),
+      new Vec3(0, 1, 0)
     ]);
     mesh.setIndices([0, 1, 2]);
 
@@ -28,9 +28,9 @@ describe('CustomMesh computeVertexNormals', () => {
   test('computes vertex normals for non-indexed triangles', () => {
     const mesh = new CustomMesh();
     mesh.setVertices([
-      0, 0, 0,
-      1, 0, 0,
-      0, 1, 0
+      new Vec3(0, 0, 0),
+      new Vec3(1, 0, 0),
+      new Vec3(0, 1, 0)
     ]);
 
     const normals = mesh.computeVertexNormals();

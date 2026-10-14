@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals';
-import { Scene, Mesh, Quad, DirectionalLight, PointLight, SpotLight, OrthographicCamera, PerspectiveCamera, Material, CustomMesh, Vec3, Vec2 } from "../dist/roostr";
+import { Scene, Mesh, Quad, DirectionalLight, PointLight, SpotLight, OrthographicCamera, PerspectiveCamera, Material, CustomMesh, Vec3, Vec2, Rect, BoundingBox } from "../dist/roostr";
 import { createMockContext } from "./helpers/webgl-mock";
 
 function createScene() {
@@ -24,7 +24,7 @@ test("starts with no meshes", () => {
 
 test("addMesh appends a mesh and increments the mesh count", () => {
   const { scene, context } = createScene();
-  const mesh = new Mesh(new Quad(2, 2), context);
+  const mesh = new Mesh(new Quad(new Vec2(2, 2)), context);
   scene.addMesh(mesh);
   expect(scene.meshes).toEqual([mesh]);
   expect(scene.nbMeshes).toBe(1);
@@ -32,7 +32,7 @@ test("addMesh appends a mesh and increments the mesh count", () => {
 
 test("clearMeshes empties the mesh list and resets the count", () => {
   const { scene, context } = createScene();
-  scene.addMesh(new Mesh(new Quad(2, 2), context));
+  scene.addMesh(new Mesh(new Quad(new Vec2(2, 2)), context));
   scene.clearMeshes();
   expect(scene.meshes).toEqual([]);
   expect(scene.nbMeshes).toBe(0);
@@ -43,7 +43,7 @@ test("addLight registers a light and getLightsProperty exposes its flattened dat
   const light = new DirectionalLight();
   scene.addLight(light);
 
-  const camera = new OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
+  const camera = new OrthographicCamera(new Rect(2, 2, 0, 0), new Vec2(0.1, 100));
   scene.render(camera, 0); // flattens registered lights as a side effect
 
   const positions = scene.getLightsProperty("position");
@@ -69,12 +69,12 @@ test("getRendererBlendMode reads the BLEND parameter from the context", () => {
 
 test("render draws every active mesh using the camera's matrices", () => {
   const { scene, context } = createScene();
-  const mesh = new Mesh(new Quad(2, 2), context);
+  const mesh = new Mesh(new Quad(new Vec2(2, 2)), context);
   mesh.addProgram("vertex-src", "fragment-src", new Material());
   const renderSpy = jest.spyOn(mesh, "renderSelf");
   scene.addMesh(mesh);
 
-  const camera = new OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
+  const camera = new OrthographicCamera(new Rect(2, 2, 0, 0), new Vec2(0.1, 100));
   scene.render(camera, 16);
 
   expect(renderSpy).toHaveBeenCalled();
@@ -105,7 +105,7 @@ test("getLightsProperty returns undefined for unknown property", () => {
 
 test("addMesh ignores duplicate mesh additions", () => {
   const { scene, context } = createScene();
-  const mesh = new Mesh(new Quad(2, 2), context);
+  const mesh = new Mesh(new Quad(new Vec2(2, 2)), context);
   scene.addMesh(mesh);
   scene.addMesh(mesh);
   expect(scene.meshes.length).toBe(1);
@@ -114,8 +114,8 @@ test("addMesh ignores duplicate mesh additions", () => {
 
 test("removeMesh removes a mesh and decrements count", () => {
   const { scene, context } = createScene();
-  const mesh1 = new Mesh(new Quad(2, 2), context);
-  const mesh2 = new Mesh(new Quad(2, 2), context);
+  const mesh1 = new Mesh(new Quad(new Vec2(2, 2)), context);
+  const mesh2 = new Mesh(new Quad(new Vec2(2, 2)), context);
   scene.addMesh(mesh1);
   scene.addMesh(mesh2);
   expect(scene.removeMesh(mesh1)).toBe(true);
@@ -151,16 +151,16 @@ test("supports ambientColor and fog configuration", () => {
 
 test("frustum culling skips rendering meshes outside frustum when enabled", () => {
   const { scene, context } = createScene();
-  const camera = new PerspectiveCamera(45, 0.1, 100, context);
-  camera.setPosition(0, 0, 10);
-  camera.setTarget(0, 0, 0);
+  const camera = new PerspectiveCamera(45, new Vec2(0.1, 100), context);
+  camera.setPosition(new Vec3(0, 0, 10));
+  camera.setTarget(new Vec3(0, 0, 0));
 
-  const meshIn = new Mesh(new Quad(2, 2), context);
-  meshIn.setPosition(0, 0, 0);
+  const meshIn = new Mesh(new Quad(new Vec2(2, 2)), context);
+  meshIn.setPosition(new Vec3(0, 0, 0));
   scene.addMesh(meshIn);
 
-  const meshFarOut = new Mesh(new Quad(2, 2), context);
-  meshFarOut.setPosition(1000, 1000, 0);
+  const meshFarOut = new Mesh(new Quad(new Vec2(2, 2)), context);
+  meshFarOut.setPosition(new Vec3(1000, 1000, 0));
   scene.addMesh(meshFarOut);
 
   scene.enableFrustumCulling = true;
@@ -170,12 +170,12 @@ test("frustum culling skips rendering meshes outside frustum when enabled", () =
 
 test("setLocalBounds sizes culling bounds of a mesh whose buffer starts empty", () => {
   const { scene, context } = createScene();
-  const camera = new PerspectiveCamera(45, 0.1, 100, context);
-  camera.setPosition(0, 0, 10);
-  camera.setTarget(0, 0, 0);
+  const camera = new PerspectiveCamera(45, new Vec2(0.1, 100), context);
+  camera.setPosition(new Vec3(0, 0, 10));
+  camera.setTarget(new Vec3(0, 0, 0));
 
   const geometry = new CustomMesh();
-  geometry.setVertices(new Float32Array(12));
+  geometry.setVertices([new Vec3(0, 0, 0), new Vec3(0, 0, 0), new Vec3(0, 0, 0), new Vec3(0, 0, 0)]);
   geometry.setPrimitive("LINES");
   const mesh = new Mesh(geometry, context);
   mesh.addProgram("void main(){}", "void main(){}", new Material());
@@ -183,30 +183,30 @@ test("setLocalBounds sizes culling bounds of a mesh whose buffer starts empty", 
   scene.enableFrustumCulling = true;
 
   // all-zero vertices measure as an empty point at the origin, which is in view
-  mesh.setLocalBounds(new Vec3(500, 500, 0), new Vec3(520, 520, 10));
+  mesh.setLocalBounds(new BoundingBox(new Vec3(500, 500, 0), new Vec3(520, 520, 10)));
   expect(scene.render(camera)).toBe(0);
 
-  mesh.setLocalBounds(new Vec3(-1, -1, 0), new Vec3(1, 1, 1));
+  mesh.setLocalBounds(new BoundingBox(new Vec3(-1, -1, 0), new Vec3(1, 1, 1)));
   expect(scene.render(camera)).toBe(1);
 
-  mesh.setPosition(1000, 0, 0); // the bounds follow the mesh transform
+  mesh.setPosition(new Vec3(1000, 0, 0)); // the bounds follow the mesh transform
   expect(scene.render(camera)).toBe(0);
 });
 
 test("renderBlended sorts meshes by depth back-to-front", () => {
   const { scene, context } = createScene();
-  const camera = new PerspectiveCamera(45, 0.1, 100, context);
-  camera.setPosition(0, 0, 10);
-  camera.setTarget(0, 0, 0);
+  const camera = new PerspectiveCamera(45, new Vec2(0.1, 100), context);
+  camera.setPosition(new Vec3(0, 0, 10));
+  camera.setTarget(new Vec3(0, 0, 0));
 
-  const meshNear = new Mesh(new Quad(2, 2), context);
+  const meshNear = new Mesh(new Quad(new Vec2(2, 2)), context);
   meshNear.activateBlendMode();
-  meshNear.setPosition(0, 0, 5);
+  meshNear.setPosition(new Vec3(0, 0, 5));
   scene.addMesh(meshNear);
 
-  const meshFar = new Mesh(new Quad(2, 2), context);
+  const meshFar = new Mesh(new Quad(new Vec2(2, 2)), context);
   meshFar.activateBlendMode();
-  meshFar.setPosition(0, 0, -5);
+  meshFar.setPosition(new Vec3(0, 0, -5));
   scene.addMesh(meshFar);
 
   const rendered = scene.renderBlended(camera);
@@ -215,15 +215,15 @@ test("renderBlended sorts meshes by depth back-to-front", () => {
 
 test("render passes camera.position and scene.fog to mesh.renderSelf", () => {
   const { scene, context } = createScene();
-  const mesh = new Mesh(new Quad(2, 2), context);
+  const mesh = new Mesh(new Quad(new Vec2(2, 2)), context);
   mesh.addProgram("vert", "frag", new Material());
   const renderSpy = jest.spyOn(mesh, "renderSelf");
   scene.addMesh(mesh);
 
   scene.setFog(new Vec3(0.1, 0.2, 0.3), 5, 50);
 
-  const camera = new PerspectiveCamera(45, 0.1, 100, context);
-  camera.setPosition(10, 20, 30);
+  const camera = new PerspectiveCamera(45, new Vec2(0.1, 100), context);
+  camera.setPosition(new Vec3(10, 20, 30));
 
   scene.render(camera);
 
@@ -275,7 +275,7 @@ test("flattening mixed light types keeps properties aligned and provides typed a
 
 test("setSize updates canvas size and viewport", () => {
   const { scene, context } = createScene();
-  scene.setSize(800, 600);
+  scene.setSize(new Vec2(800, 600));
   expect(context.viewport).toHaveBeenCalledWith(0, 0, 800, 600);
   expect(context.canvas.width).toBe(800);
   expect(context.canvas.height).toBe(600);
@@ -288,7 +288,7 @@ test("setSize updates canvas size and viewport", () => {
 
 test("destroy cleans up meshes, lights, and fog", () => {
   const { scene, context } = createScene();
-  const mesh = new Mesh(new Quad(2, 2), context);
+  const mesh = new Mesh(new Quad(new Vec2(2, 2)), context);
   const destroySpy = jest.spyOn(mesh, "destroy");
   scene.addMesh(mesh);
   scene.addLight(new DirectionalLight());
@@ -304,5 +304,24 @@ test("destroy cleans up meshes, lights, and fog", () => {
   expect(scene.meshes).toHaveLength(0);
   expect(scene.lights.nbDirectionals).toBe(0);
   expect(scene.fog).toBeNull();
+});
+
+test("supports vector-first setViewport, getSize, and setClearColor", () => {
+  const context = createMockContext();
+  const scene = new Scene({
+    context,
+    viewport: new Vec2(800, 600),
+    clearColor: new Vec3(0.1, 0.2, 0.3)
+  });
+
+  expect(scene.getSize().toArray()).toEqual([800, 600]);
+  expect(context.clearColor).toHaveBeenCalledWith(0.1, 0.2, 0.3, 1.0);
+
+  scene.setViewport(new Vec2(500, 400), new Vec2(10, 20));
+  expect(context.viewport).toHaveBeenLastCalledWith(10, 20, 500, 400);
+  expect(scene.getSize().toArray()).toEqual([500, 400]);
+
+  scene.setClearColor(new Vec3(0.5, 0.6, 0.7), 0.9);
+  expect(context.clearColor).toHaveBeenCalledWith(0.5, 0.6, 0.7, 0.9);
 });
 

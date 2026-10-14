@@ -1,24 +1,24 @@
-import { Trigo, Utils } from '@1pizzateam/spock';
+import { Trigo, Utils, Vec2 } from '@1pizzateam/spock';
 import { BasicMesh } from './basic';
 import { SubMesh } from './submesh';
 
 export class Cylinder extends BasicMesh {
 
   constructor(
-    radiusTop: number = 1.0,
-    radiusBottom: number = 1.0,
-    height: number = 1.0,
-    radialSegments: number = 16,
-    heightSegments: number = 1,
-    openEnded: boolean = false
+    radii: Vec2 = new Vec2(1.0, 1.0),
+    height = 1.0,
+    radialSegments = 16,
+    heightSegments = 1,
+    openEnded = false
   ) {
     super();
 
-    const rTop = radiusTop !== undefined ? radiusTop : 1.0;
-    const rBottom = radiusBottom !== undefined ? radiusBottom : 1.0;
-    const h = height || 1.0;
-    const radSeg = Utils.clamp(Utils.floor(radialSegments || 16, 0), 3, Infinity);
-    const hSeg = Utils.clamp(Utils.floor(heightSegments || 1, 0), 1, Infinity);
+    const rTop = radii.x;
+    const rBottom = radii.y;
+    const h = height;
+    const radSeg = Utils.clamp(Utils.floor(radialSegments, 0), 3, Infinity);
+    const hSeg = Utils.clamp(Utils.floor(heightSegments, 0), 1, Infinity);
+    const open = openEnded;
 
     const vertices: number[] = [];
     const normals: number[] = [];
@@ -77,7 +77,7 @@ export class Cylinder extends BasicMesh {
       }
 
     // Caps
-    if (!openEnded) {
+    if (!open) {
       // Top cap
       if (rTop > 0) {
         const centerIndexTop = index++;

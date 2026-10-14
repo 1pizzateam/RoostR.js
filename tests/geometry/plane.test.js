@@ -2,7 +2,7 @@ import { Plane, Vec2 } from '../../dist/roostr.js';
 
 describe('Plane Geometry', () => {
   test('creates a default XZ Plane', () => {
-    const plane = new Plane(10, 20, 2, 2, 'xz');
+    const plane = new Plane(new Vec2(10, 20), new Vec2(2, 2), 'xz');
     expect(plane.vertices).toBeDefined();
     expect(plane.indices).toBeDefined();
     expect(plane.normals).toBeDefined();
@@ -19,14 +19,14 @@ describe('Plane Geometry', () => {
   });
 
   test('creates Plane using Vec2 dimensions', () => {
-    const plane = new Plane(new Vec2(10, 20), 2, 2, 'xz');
+    const plane = new Plane(new Vec2(10, 20), new Vec2(2, 2), 'xz');
     expect(plane.vertices.length).toBe(27);
     expect(plane.indices.length).toBe(24);
     expect(plane.normals[1]).toBe(1);
   });
 
   test('creates an XY Plane', () => {
-    const plane = new Plane(4, 4, 1, 1, 'xy');
+    const plane = new Plane(new Vec2(4, 4), new Vec2(1, 1), 'xy');
     // 2 x 2 vertices = 4 vertices * 3 coords = 12
     expect(plane.vertices.length).toBe(12);
     // 1 quad = 6 indices

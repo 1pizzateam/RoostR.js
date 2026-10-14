@@ -1,4 +1,4 @@
-import { Sphere } from "../../dist/roostr";
+import { Sphere, Vec3 } from "../../dist/roostr";
 
 test("has vertices divisible by itemSize (3 components per vertex)", () => {
   const sphere = new Sphere();
@@ -28,4 +28,21 @@ test("inherits itemSize 3 and primitive TRIANGLES from BasicMesh", () => {
   const sphere = new Sphere();
   expect(sphere.itemSize).toBe(3);
   expect(sphere.primitive).toBe("TRIANGLES");
+});
+
+test("scales vertices by Vec3 scale", () => {
+  const defaultSphere = new Sphere();
+  const scaledSphere = new Sphere(new Vec3(2, 2, 2));
+  expect(scaledSphere.vertices[0]).toBeCloseTo(defaultSphere.vertices[0] * 2);
+  expect(scaledSphere.vertices[1]).toBeCloseTo(defaultSphere.vertices[1] * 2);
+  expect(scaledSphere.vertices[2]).toBeCloseTo(defaultSphere.vertices[2] * 2);
+});
+
+test("scales vertices by Vec3 scale and recomputes normals", () => {
+  const defaultSphere = new Sphere();
+  const scaledSphere = new Sphere(new Vec3(2, 3, 4));
+  expect(scaledSphere.vertices[0]).toBeCloseTo(defaultSphere.vertices[0] * 2);
+  expect(scaledSphere.vertices[1]).toBeCloseTo(defaultSphere.vertices[1] * 3);
+  expect(scaledSphere.vertices[2]).toBeCloseTo(defaultSphere.vertices[2] * 4);
+  expect(scaledSphere.normals.length).toBe(scaledSphere.vertices.length);
 });

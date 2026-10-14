@@ -1,13 +1,22 @@
 import { Vec3 } from '@1pizzateam/spock';
 import { DirectionalLight } from './directional';
 
+export interface IPointLightOptions {
+  position?: Vec3;
+  diffuse?: Vec3;
+  specular?: Vec3;
+  constantAttenuation?: number;
+  linearAttenuation?: number;
+  quadraticAttenuation?: number;
+}
+
 export class PointLight extends DirectionalLight {
 
   constantAttenuation  : number;
   linearAttenuation    : number;
   quadraticAttenuation : number;
 
-  constructor(positionOrOptions?: Vec3 | number[] | { position?: Vec3 | number[]; diffuse?: Vec3 | number[]; specular?: Vec3 | number[]; constantAttenuation?: number; linearAttenuation?: number; quadraticAttenuation?: number }) {
+  constructor(positionOrOptions?: Vec3 | IPointLightOptions) {
     super();
     this.constantAttenuation = 0;
     this.linearAttenuation = 1.0;
@@ -15,12 +24,12 @@ export class PointLight extends DirectionalLight {
     this.type = 'point';
 
     if (positionOrOptions)
-      if (positionOrOptions instanceof Vec3 || Array.isArray(positionOrOptions))
-        this.setPosition(positionOrOptions as any);
-      else if (typeof positionOrOptions === 'object') {
-        if (positionOrOptions.position) this.setPosition(positionOrOptions.position as any);
-        if (positionOrOptions.diffuse) this.setDiffuse(positionOrOptions.diffuse as any);
-        if (positionOrOptions.specular) this.setSpecular(positionOrOptions.specular as any);
+      if (positionOrOptions instanceof Vec3)
+        this.setPosition(positionOrOptions);
+      else {
+        if (positionOrOptions.position) this.setPosition(positionOrOptions.position);
+        if (positionOrOptions.diffuse) this.setDiffuse(positionOrOptions.diffuse);
+        if (positionOrOptions.specular) this.setSpecular(positionOrOptions.specular);
         if (positionOrOptions.constantAttenuation !== undefined) this.setConstantAttenuation(positionOrOptions.constantAttenuation);
         if (positionOrOptions.linearAttenuation !== undefined) this.setLinearAttenuation(positionOrOptions.linearAttenuation);
         if (positionOrOptions.quadraticAttenuation !== undefined) this.setQuadraticAttenuation(positionOrOptions.quadraticAttenuation);

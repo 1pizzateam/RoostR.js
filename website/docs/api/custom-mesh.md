@@ -3,16 +3,16 @@
 `CustomMesh` allows importing or procedurally building arbitrary 3D geometry from raw vertex positions, index arrays, UV coordinates, and normals.
 
 ```javascript
-import { CustomMesh, Mesh, PhongShader } from '@1pizzateam/roostr';
+import { CustomMesh, Mesh, PhongShader, Vec3 } from '@1pizzateam/roostr';
 
 const customGeom = new CustomMesh();
 
-// 1. Supply vertices (x, y, z triplets)
+// 1. Supply vertices (Vec3 array)
 customGeom.setVertices([
-  -1, 0,  1,
-   1, 0,  1,
-   0, 1.5, 0,
-   0, 0, -1
+  new Vec3(-1, 0,  1),
+  new Vec3( 1, 0,  1),
+  new Vec3( 0, 1.5, 0),
+  new Vec3( 0, 0, -1)
 ]);
 
 // 2. Supply triangle indices
@@ -49,17 +49,17 @@ scene.addMesh(mesh);
 
 ## `CustomMesh` Methods
 
-### `setVertices(array: Vec3[] | Float32Array | number[]): void`
+### `setVertices(array: Vec3[]): void`
 
-Assigns vertex coordinates buffer. Accepts an array of Spock `Vec3` objects, a flat `Float32Array`, or a flat number array.
+Assigns vertex coordinates buffer using an array of Spock `Vec3` positions.
 
 ### `setIndices(array: Int32Array | number[]): void`
 
 Assigns index buffer.
 
-### `setNormals(array: Vec3[] | Float32Array | number[]): void`
+### `setNormals(array: Vec3[]): void`
 
-Assigns normal vectors buffer. Accepts an array of Spock `Vec3` normal vectors, a flat `Float32Array`, or a flat number array.
+Assigns normal vectors buffer using an array of Spock `Vec3` normal vectors.
 
 ### `setUvs(array: Float32Array | number[]): void`
 

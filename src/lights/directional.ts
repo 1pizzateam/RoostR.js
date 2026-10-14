@@ -1,7 +1,12 @@
 import { Vec3 } from '@1pizzateam/spock';
-import { Light } from '../types';
-import { assignVec3, Vec3Like } from '../vector';
+import type { Light } from '../types';
 
+export interface IDirectionalLightOptions {
+  direction?: Vec3;
+  diffuse?: Vec3;
+  specular?: Vec3;
+  position?: Vec3;
+}
 
 export class DirectionalLight {
 
@@ -11,7 +16,7 @@ export class DirectionalLight {
   direction: Vec3;
   type     : Light;
 
-  constructor(directionOrOptions?: Vec3 | number[] | { direction?: Vec3 | number[]; diffuse?: Vec3 | number[]; specular?: Vec3 | number[]; position?: Vec3 | number[] }) {
+  constructor(directionOrOptions?: Vec3 | IDirectionalLightOptions) {
     this.position  = new Vec3();
     this.direction = new Vec3(0, -1, 0);
     this.diffuse   = new Vec3(0.6, 0.6, 0.6);
@@ -19,9 +24,9 @@ export class DirectionalLight {
     this.type      = 'directional';
 
     if (directionOrOptions)
-      if (directionOrOptions instanceof Vec3 || Array.isArray(directionOrOptions))
+      if (directionOrOptions instanceof Vec3)
         this.setDirection(directionOrOptions);
-      else if (typeof directionOrOptions === 'object') {
+      else {
         if (directionOrOptions.direction) this.setDirection(directionOrOptions.direction);
         if (directionOrOptions.diffuse) this.setDiffuse(directionOrOptions.diffuse);
         if (directionOrOptions.specular) this.setSpecular(directionOrOptions.specular);
@@ -29,20 +34,20 @@ export class DirectionalLight {
       }
   }
 
-  public setPosition(xOrVec: Vec3Like | number, y?: number, z?: number): void {
-    assignVec3(this.position, xOrVec, y, z);
+  public setPosition(position: Vec3): void {
+    this.position.copy(position);
   }
 
-  public setDirection(xOrVec: Vec3Like | number, y?: number, z?: number): void {
-    assignVec3(this.direction, xOrVec, y, z).normalize();
+  public setDirection(direction: Vec3): void {
+    this.direction.copy(direction).normalize();
   }
 
-  public setDiffuse(xOrVec: Vec3Like | number, y?: number, z?: number): void {
-    assignVec3(this.diffuse, xOrVec, y, z);
+  public setDiffuse(diffuse: Vec3): void {
+    this.diffuse.copy(diffuse);
   }
 
-  public setSpecular(xOrVec: Vec3Like | number, y?: number, z?: number): void {
-    assignVec3(this.specular, xOrVec, y, z);
+  public setSpecular(specular: Vec3): void {
+    this.specular.copy(specular);
   }
 
 }

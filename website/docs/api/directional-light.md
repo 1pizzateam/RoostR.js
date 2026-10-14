@@ -6,8 +6,8 @@ Simulates an infinite parallel light source such as the sun or moon, illuminatin
 import { DirectionalLight, Vec3 } from '@1pizzateam/roostr';
 
 const sun = new DirectionalLight(new Vec3(0.5, 1.0, 0.3));
-sun.setDiffuse(0.9, 0.85, 0.8);
-sun.setSpecular(1.0, 1.0, 1.0);
+sun.setDiffuse(new Vec3(0.9, 0.85, 0.8));
+sun.setSpecular(new Vec3(1.0, 1.0, 1.0));
 scene.addLight(sun);
 ```
 
@@ -17,11 +17,11 @@ scene.addLight(sun);
 
 ```typescript
 new DirectionalLight(
-  directionOrOptions?: Vec3 | number[] | {
-    direction?: Vec3 | number[];
-    diffuse?: Vec3 | number[];
-    specular?: Vec3 | number[];
-    position?: Vec3 | number[];
+  directionOrOptions?: Vec3 | {
+    direction?: Vec3;
+    diffuse?: Vec3;
+    specular?: Vec3;
+    position?: Vec3;
   }
 )
 ```
@@ -43,18 +43,18 @@ The light direction points from the light source towards the illuminated surface
 
 ## Methods
 
-### `setDirection(xOrVec: Vec3 | number, y?: number, z?: number): void`
+### `setDirection(direction: Vec3): void`
 
 Set the direction vector pointing from the light source towards the scene.
 
-### `setPosition(xOrVec: Vec3 | number, y?: number, z?: number): void`
+### `setPosition(position: Vec3): void`
 
 Set the reference position vector.
 
-### `setDiffuse(xOrVec: Vec3 | number, y?: number, z?: number): void`
+### `setDiffuse(diffuse: Vec3): void`
 
 Set the diffuse color.
 
-### `setSpecular(xOrVec: Vec3 | number, y?: number, z?: number): void`
+### `setSpecular(specular: Vec3): void`
 
 Set the specular highlight color.

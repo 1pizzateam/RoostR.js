@@ -3,18 +3,17 @@
 `Sprite` is a flat image in the 3D scene that turns to face the camera: an enemy, a pickup, a tree or a particle. The image can be a sprite sheet, and `setFrame` picks which cell to draw. It extends [`Mesh`](/api/mesh), so position, scale, parenting, picking and frustum culling work as usual.
 
 ```javascript
-import { Sprite, Material, Scene } from '@1pizzateam/roostr';
+import { Sprite, Material, Scene, Vec2, Vec3 } from '@1pizzateam/roostr';
 
 const ghost = new Sprite(gl, {
-  width: 40,
-  height: 60,
+  size: new Vec2(40, 60),
   texture: atlasCanvas,   // four poses side by side
   frames: 4,
   anchor: 'bottom',       // its feet are on the mesh position
   billboard: 'cylindrical' // stays upright, turns to face the camera
 });
 
-ghost.setPosition(x, 0, z);
+ghost.setPosition(new Vec3(x, 0, z));
 ghost.setFrame(2);
 scene.addMesh(ghost);
 ```
@@ -25,7 +24,7 @@ scene.addMesh(ghost);
 
 | Option | Type | Description |
 | :--- | :--- | :--- |
-| `width`, `height` | `number` | Size of the sprite in world units. |
+| `size` | `Vec2` | Size of the sprite in world units (default `new Vec2(1, 1)`). |
 | `texture` | `TextureSource` | Image to draw. It can also be set later with `setTexture`. |
 | `textureOptions` | `ITextureOptions` | Filtering, wrapping and size (for a `Uint8Array`). Use `NEAREST` filters for pixel art. |
 | `frames` | `number` | Equal cells laid side by side in the image. Default `1`. |
@@ -54,9 +53,26 @@ While it is a billboard the mesh rotation is ignored; scale still applies.
 | :--- | :--- |
 | `setFrame(frame)` | Draws that cell of the sprite sheet, counted from the left. Values outside the range wrap around. |
 | `getFrame()` | The cell currently drawn. |
+| `setFrames(frames)` | Changes the total number of frames in the sprite sheet. |
+| `getFrames()` | The total number of frames. |
+| `setBillboard(mode)` | Dynamically updates billboard mode (`'spherical'`, `'cylindrical'`, or `'none'`) and refreshes local bounds. |
+| `getBillboard()` | The current billboard mode. |
 | `setAlphaCutoff(cutoff)` | Changes the alpha cutoff. |
+| `getAlphaCutoff()` | The current alpha cutoff. |
+| `setDepthBias(bias)` | Sets the depth bias in world units. |
+| `getDepthBias()` | The current depth bias. |
+| `getWidth()` | The width of the sprite in world units. |
+| `getHeight()` | The height of the sprite in world units. |
+| `getSize(target?)` | Returns the `Vec2` dimensions of the sprite in world units. |
+| `getAnchor()` | The anchor point (`'center'` or `'bottom'`). |
 
 Image rows are read like any other RoostR texture: with the default `flipY`, the first row of the image is the top of the sprite.
+
+---
+
+## Raycasting and Picking
+
+Sprites fully support 3D raycasting and picking via [`Scene.pick`](/api/scene) or `sprite.raycast(ray)`. When billboard mode is `'spherical'` or `'cylindrical'`, `raycast` dynamically computes the camera-facing billboard plane and quad boundaries facing the ray, allowing precise pointer and cursor intersection from any viewing angle in 3D space with zero allocations.
 
 ---
 
@@ -79,7 +95,8 @@ Uniforms such as `uSampler`, `uMaterialDiffuse`, `uAlphaCutoff` and the fog unif
 
 ```javascript
 const sprite = new Sprite(gl, {
-  width: 32, height: 32, texture: image,
+  size: new Vec2(32, 32),
+  texture: image,
   fragment: `
     precision mediump float;
     uniform sampler2D uSampler;

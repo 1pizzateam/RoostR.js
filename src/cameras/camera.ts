@@ -80,27 +80,18 @@ export class Camera {
     return this.inverseProjectionViewMatrix;
   }
 
-  public setPosition(xOrVec: Vec3 | number, y?: number, z?: number): void {
-    if (xOrVec instanceof Vec3)
-      this.position.copy(xOrVec);
-    else
-      this.position.setScalar(xOrVec, y, z);
+  public setPosition(position: Vec3): void {
+    this.position.copy(position);
     this.setViewMatrix();
   }
 
-  public setTarget(xOrVec: Vec3 | number, y?: number, z?: number): void {
-    if (xOrVec instanceof Vec3)
-      this.target.copy(xOrVec);
-    else
-      this.target.setScalar(xOrVec, y, z);
+  public setTarget(target: Vec3): void {
+    this.target.copy(target);
     this.setViewMatrix();
   }
 
-  public setUp(xOrVec: Vec3 | number, y?: number, z?: number): void {
-    if (xOrVec instanceof Vec3)
-      this.up.copy(xOrVec);
-    else
-      this.up.setScalar(xOrVec, y, z);
+  public setUp(up: Vec3): void {
+    this.up.copy(up);
     this.setViewMatrix();
   }
 
@@ -137,28 +128,14 @@ export class Camera {
     return this.projectionMatrix;
   }
 
-  public getRay(ndcOrX: Vec2 | number, ndcYOrTarget?: number | Ray, targetRay: Ray = new Ray()): Ray {
-    let ndcX: number;
-    let ndcY: number;
-    let outRay = targetRay;
-
-    if (ndcOrX instanceof Vec2) {
-      ndcX = ndcOrX.x;
-      ndcY = ndcOrX.y;
-      if (ndcYOrTarget instanceof Ray)
-        outRay = ndcYOrTarget;
-    } else {
-      ndcX = ndcOrX;
-      ndcY = typeof ndcYOrTarget === 'number' ? ndcYOrTarget : 0;
-    }
-
+  public getRay(ndc: Vec2, targetRay: Ray = new Ray()): Ray {
     const inverse = this.getInverseProjectionViewMatrix();
-    const near = inverse.transformPoint(Camera._scratchNdc.setScalar(ndcX, ndcY, -1.0), Camera._scratchNear);
-    const far = inverse.transformPoint(Camera._scratchNdc.setScalar(ndcX, ndcY, 1.0), Camera._scratchFar);
+    const near = inverse.transformPoint(Camera._scratchNdc.setScalar(ndc.x, ndc.y, -1.0), Camera._scratchNear);
+    const far = inverse.transformPoint(Camera._scratchNdc.setScalar(ndc.x, ndc.y, 1.0), Camera._scratchFar);
     const dir = Camera._scratchDir.subVectors(far, near).normalize();
 
-    outRay.set(near, dir);
-    return outRay;
+    targetRay.set(near, dir);
+    return targetRay;
   }
 
 }

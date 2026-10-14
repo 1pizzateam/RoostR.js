@@ -1,6 +1,6 @@
 {
   "name": "@1pizzateam/roostr",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "WebGL 3D engine written in TypeScript",
   "type": "module",
   "sideEffects": false,

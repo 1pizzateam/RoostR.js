@@ -1,13 +1,12 @@
 import { Vec3 } from '@1pizzateam/spock';
 
 import { Uniform } from './uniform';
-import { IMaterialUniforms } from './interfaces';
-import { assignVec3, Vec3Like } from './vector';
+import type { IMaterialUniforms } from './interfaces';
 
 export interface IMaterialOptions {
-  ambient?: Vec3Like;
-  diffuse?: Vec3Like;
-  specular?: Vec3Like;
+  ambient?: Vec3;
+  diffuse?: Vec3;
+  specular?: Vec3;
   shininess?: number;
 }
 
@@ -44,18 +43,18 @@ export class Material {
     }
   }
 
-  public setAmbient(xOrVec: Vec3Like | number, y?: number, z?: number): void {
-    assignVec3(this.ambient, xOrVec, y, z).toArray(this.uniforms.materialAmbient.value as number[]);
+  public setAmbient(ambient: Vec3): void {
+    this.ambient.copy(ambient).toArray(this.uniforms.materialAmbient.value as number[]);
     this.version++;
   }
 
-  public setDiffuse(xOrVec: Vec3Like | number, y?: number, z?: number): void {
-    assignVec3(this.diffuse, xOrVec, y, z).toArray(this.uniforms.materialDiffuse.value as number[]);
+  public setDiffuse(diffuse: Vec3): void {
+    this.diffuse.copy(diffuse).toArray(this.uniforms.materialDiffuse.value as number[]);
     this.version++;
   }
 
-  public setSpecular(xOrVec: Vec3Like | number, y?: number, z?: number): void {
-    assignVec3(this.specular, xOrVec, y, z).toArray(this.uniforms.materialSpecular.value as number[]);
+  public setSpecular(specular: Vec3): void {
+    this.specular.copy(specular).toArray(this.uniforms.materialSpecular.value as number[]);
     this.version++;
   }
 

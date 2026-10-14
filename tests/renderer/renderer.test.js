@@ -1,4 +1,4 @@
-import { Renderer, Vec3 } from "../../dist/roostr";
+import { Renderer, Vec3, Vec2 } from "../../dist/roostr";
 import { createMockContext, createMockCanvas } from "../helpers/webgl-mock";
 
 test("finds the canvas by id and resizes it to the default resolution", () => {
@@ -59,15 +59,18 @@ test("setViewport delegates to context.viewport with a (0, 0) origin", () => {
   const context = createMockContext();
   createMockCanvas("canvas", context);
   const renderer = new Renderer("canvas");
-  renderer.setViewport(800, 600);
+  renderer.setViewport(new Vec2(800, 600));
   expect(context.viewport).toHaveBeenLastCalledWith(0, 0, 800, 600);
+
+  renderer.setViewport(new Vec2(1024, 768));
+  expect(context.viewport).toHaveBeenLastCalledWith(0, 0, 1024, 768);
 });
 
 test("setClearColor delegates to context.clearColor and clamps values between 0 and 1", () => {
   const context = createMockContext();
   createMockCanvas("canvas", context);
   const renderer = new Renderer("canvas");
-  renderer.setClearColor(1.5, -0.5, 0.25, 2.0);
+  renderer.setClearColor(new Vec3(1.5, -0.5, 0.25), 2.0);
   expect(context.clearColor).toHaveBeenLastCalledWith(1, 0, 0.25, 1);
 });
 
@@ -77,6 +80,9 @@ test("setClearColor accepts a Vec3 and alpha parameter", () => {
   const renderer = new Renderer("canvas");
   renderer.setClearColor(new Vec3(0.2, 0.4, 0.6), 0.8);
   expect(context.clearColor).toHaveBeenLastCalledWith(0.2, 0.4, 0.6, 0.8);
+
+  renderer.setClearColor(new Vec3(0.1, 0.3, 0.5), 0.7);
+  expect(context.clearColor).toHaveBeenLastCalledWith(0.1, 0.3, 0.5, 0.7);
 });
 
 test("clearFrame clears the color and depth buffers", () => {
@@ -100,8 +106,8 @@ test("handles missing canvas element gracefully without throwing", () => {
     renderer.enable("CULL_FACE");
     renderer.disable("CULL_FACE");
     renderer.setCullFace("BACK");
-    renderer.setViewport(100, 100);
-    renderer.setClearColor(0, 0, 0, 1);
+    renderer.setViewport(new Vec2(100, 100));
+    renderer.setClearColor(new Vec3(0, 0, 0), 1);
     renderer.clearFrame();
     renderer.defaultSettings();
   }).not.toThrow();
@@ -121,7 +127,7 @@ test("setSize updates canvas dimensions and viewport", () => {
   const context = createMockContext();
   const canvas = createMockCanvas("canvas", context);
   const renderer = new Renderer("canvas");
-  renderer.setSize(1920, 1080);
+  renderer.setSize(new Vec2(1920, 1080));
   expect(canvas.width).toBe(1920);
   expect(canvas.height).toBe(1080);
   expect(context.viewport).toHaveBeenLastCalledWith(0, 0, 1920, 1080);

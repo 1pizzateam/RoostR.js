@@ -1,3 +1,5 @@
+import { Vec2 } from '@1pizzateam/spock';
+
 export type TextureSource = HTMLImageElement | HTMLCanvasElement | ImageData | ImageBitmap | Uint8Array;
 
 export interface ITextureOptions {
@@ -7,8 +9,7 @@ export interface ITextureOptions {
   magFilter?: number;
   flipY?: boolean;
   generateMipmaps?: boolean;
-  width?: number;
-  height?: number;
+  size?: Vec2;
 }
 
 const isPowerOfTwo = (n: number): boolean => (n & (n - 1)) === 0;
@@ -27,7 +28,7 @@ export const Texture = {
     context: WebGLRenderingContext,
     options?: ITextureOptions
   ): WebGLTexture | null {
-    let webGLTexture = context.createTexture();
+    const webGLTexture = context.createTexture();
     if (!webGLTexture) return null;
 
     const flipY = options?.flipY !== undefined ? options.flipY : true;
@@ -44,19 +45,21 @@ export const Texture = {
     context.texParameteri(context.TEXTURE_2D, context.TEXTURE_WRAP_S, wrapS);
     context.texParameteri(context.TEXTURE_2D, context.TEXTURE_WRAP_T, wrapT);
 
-    if (source instanceof Uint8Array)
+    if (source instanceof Uint8Array) {
+      const width = options?.size ? options.size.x : 1;
+      const height = options?.size ? options.size.y : 1;
       context.texImage2D(
         context.TEXTURE_2D,
         0,
         context.RGBA,
-        options?.width || 1,
-        options?.height || 1,
+        width,
+        height,
         0,
         context.RGBA,
         context.UNSIGNED_BYTE,
         source
       );
-    else
+    } else
       context.texImage2D(
         context.TEXTURE_2D,
         0,
@@ -67,8 +70,8 @@ export const Texture = {
       );
 
     if (options?.generateMipmaps) {
-      const width = source instanceof Uint8Array ? options.width || 1 : (<{ width: number }>source).width;
-      const height = source instanceof Uint8Array ? options.height || 1 : (<{ height: number }>source).height;
+      const width = source instanceof Uint8Array ? (options?.size ? options.size.x : 1) : (<{ width: number }>source).width;
+      const height = source instanceof Uint8Array ? (options?.size ? options.size.y : 1) : (<{ height: number }>source).height;
       if (canGenerateMipmaps(context, width, height))
         context.generateMipmap(context.TEXTURE_2D);
       else
@@ -97,22 +100,24 @@ export const Texture = {
     texture: WebGLTexture,
     source: TextureSource,
     context: WebGLRenderingContext,
-    xOffset: number = 0,
-    yOffset: number = 0,
-    width?: number,
-    height?: number,
+    offset: Vec2 = new Vec2(),
+    size?: Vec2,
     flipY: boolean = true
   ): void {
     context.bindTexture(context.TEXTURE_2D, texture);
     context.pixelStorei(context.UNPACK_FLIP_Y_WEBGL, flipY ? 1 : 0);
+    const xOffset = offset.x;
+    const yOffset = offset.y;
+    const width = size ? size.x : 1;
+    const height = size ? size.y : 1;
     if (source instanceof Uint8Array)
       context.texSubImage2D(
         context.TEXTURE_2D,
         0,
         xOffset,
         yOffset,
-        width || 1,
-        height || 1,
+        width,
+        height,
         context.RGBA,
         context.UNSIGNED_BYTE,
         source

@@ -18,32 +18,32 @@ test("sets type to 'directional'", () => {
   expect(light.type).toBe("directional");
 });
 
-test("setPosition copies the given vector or scalars", () => {
+test("setPosition copies the given vector", () => {
   const light = new DirectionalLight();
   light.setPosition(new Vec3(1, 2, 3));
   expect(light.position.x).toBe(1);
   expect(light.position.y).toBe(2);
   expect(light.position.z).toBe(3);
 
-  light.setPosition(4, 5, 6);
+  light.setPosition(new Vec3(4, 5, 6));
   expect(light.position.toArray()).toEqual([4, 5, 6]);
 });
 
-test("setDiffuse copies the given vector or scalars", () => {
+test("setDiffuse copies the given vector", () => {
   const light = new DirectionalLight();
   light.setDiffuse(new Vec3(0.1, 0.2, 0.3));
   expect(light.diffuse.toArray()).toEqual([0.1, 0.2, 0.3]);
 
-  light.setDiffuse(0.7, 0.8, 0.9);
+  light.setDiffuse(new Vec3(0.7, 0.8, 0.9));
   expect(light.diffuse.toArray()).toEqual([0.7, 0.8, 0.9]);
 });
 
-test("setSpecular copies the given vector or scalars", () => {
+test("setSpecular copies the given vector", () => {
   const light = new DirectionalLight();
   light.setSpecular(new Vec3(0.4, 0.5, 0.6));
   expect(light.specular.toArray()).toEqual([0.4, 0.5, 0.6]);
 
-  light.setSpecular(1, 1, 1);
+  light.setSpecular(new Vec3(1, 1, 1));
   expect(light.specular.toArray()).toEqual([1, 1, 1]);
 });
 
@@ -52,11 +52,11 @@ test("initializes default direction to (0, -1, 0)", () => {
   expect(light.direction.toArray()).toEqual([0, -1, 0]);
 });
 
-test("setDirection copies the given vector or scalars", () => {
+test("setDirection copies the given vector", () => {
   const light = new DirectionalLight();
   light.setDirection(new Vec3(1, 0, 0));
   expect(light.direction.toArray()).toEqual([1, 0, 0]);
 
-  light.setDirection(0, 0, -1);
+  light.setDirection(new Vec3(0, 0, -1));
   expect(light.direction.toArray()).toEqual([0, 0, -1]);
 });

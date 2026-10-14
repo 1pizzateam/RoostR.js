@@ -20,7 +20,7 @@ describe('AmbientLight', () => {
 
   test('setColor and setIntensity update properties and support chaining', () => {
     const light = new AmbientLight();
-    light.setColor(0.2, 0.3, 0.4).setIntensity(0.5);
+    light.setColor(new Vec3(0.2, 0.3, 0.4)).setIntensity(0.5);
     expect(light.intensity).toBe(0.5);
     expect(light.color.x).toBe(0.2);
     expect(light.color.y).toBe(0.3);

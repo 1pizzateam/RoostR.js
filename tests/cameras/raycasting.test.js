@@ -8,37 +8,30 @@ describe('Camera and Scene Raycasting', () => {
   });
 
   test('camera.getRay unprojects NDC coordinates into a valid world-space Ray', () => {
-    const camera = new PerspectiveCamera(45, 0.1, 100, context);
-    camera.setPosition(0, 0, 10);
-    camera.setTarget(0, 0, 0);
+    const camera = new PerspectiveCamera(45, new Vec2(0.1, 100), context);
+    camera.setPosition(new Vec3(0, 0, 10));
+    camera.setTarget(new Vec3(0, 0, 0));
 
-    const ray = camera.getRay(0, 0);
+    const ray = camera.getRay(new Vec2(0, 0));
     expect(ray.origin.z).toBeCloseTo(10, 0);
     expect(ray.direction.z).toBeLessThan(0); // pointing towards negative Z (into the scene)
-
-    // Vector-first overload with Vec2
-    const rayVec = camera.getRay(new Vec2(0, 0));
-    expect(rayVec.origin.z).toBeCloseTo(10, 0);
-    expect(rayVec.direction.z).toBeLessThan(0);
-    expect(rayVec.direction.x).toBeCloseTo(ray.direction.x);
-    expect(rayVec.direction.y).toBeCloseTo(ray.direction.y);
   });
 
   test('scene.raycast finds intersecting meshes sorted by distance', () => {
     const scene = new Scene(context);
-    const camera = new PerspectiveCamera(45, 0.1, 100, context);
-    camera.setPosition(0, 0, 10);
-    camera.setTarget(0, 0, 0);
+    const camera = new PerspectiveCamera(45, new Vec2(0.1, 100), context);
+    camera.setPosition(new Vec3(0, 0, 10));
+    camera.setTarget(new Vec3(0, 0, 0));
 
-    const cube1 = new Mesh(new Cube(1.0), context);
-    cube1.setPosition(0, 0, 0);
+    const cube1 = new Mesh(new Cube(new Vec3(1.0, 1.0, 1.0)), context);
+    cube1.setPosition(new Vec3(0, 0, 0));
     scene.addMesh(cube1);
 
-    const cube2 = new Mesh(new Cube(1.0), context);
-    cube2.setPosition(0, 0, 5);
+    const cube2 = new Mesh(new Cube(new Vec3(1.0, 1.0, 1.0)), context);
+    cube2.setPosition(new Vec3(0, 0, 5));
     scene.addMesh(cube2);
 
-    const ray = camera.getRay(0, 0);
+    const ray = camera.getRay(new Vec2(0, 0));
     const hits = scene.raycast(ray);
 
     expect(hits.length).toBe(2);

@@ -9,7 +9,7 @@ import { Frustum } from '@1pizzateam/roostr';
 
 const frustum = new Frustum();
 // Extracted automatically from the camera's projection-view matrix
-frustum.setFromProjectionMatrix(pvMatrix);
+frustum.setFromProjectionViewMatrix(pvMatrix);
 
 if (frustum.intersectsSphere(mesh.boundingSphere)) {
   // Render mesh
@@ -30,7 +30,7 @@ Initializes 6 normalized `SpatialPlane` boundary equations.
 
 ## Methods
 
-### `setFromProjectionMatrix(pvMatrix: Mat4 | Float32Array): this`
+### `setFromProjectionViewMatrix(pvMatrix: Mat4): this`
 
 Extracts the 6 frustum clipping planes directly from the combined projection-view matrix using the Gribb-Hartmann plane extraction technique and normalizes the plane equations in place without allocations.
 

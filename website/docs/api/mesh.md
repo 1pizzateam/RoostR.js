@@ -5,10 +5,10 @@ The foundational 3D scene node representing a renderable geometry bound to WebGL
 ```javascript
 import { Mesh, Cube, PhongShader, Material, Vec3 } from '@1pizzateam/roostr';
 
-const mesh = new Mesh(new Cube(1.5), gl);
+const mesh = new Mesh(new Cube(new Vec3(1.5, 1.5, 1.5)), gl);
 mesh.addProgram(PhongShader.create(gl));
 mesh.addMaterial(new Material({ diffuse: new Vec3(0.9, 0.5, 0.1) }));
-mesh.setPosition(0, 1, 0);
+mesh.setPosition(new Vec3(0, 1, 0));
 scene.addMesh(mesh);
 ```
 
@@ -51,45 +51,43 @@ Allocates hardware WebGL vertex (`ARRAY_BUFFER`), index (`ELEMENT_ARRAY_BUFFER`)
 
 ## Spatial & Transform Methods
 
-### `setPosition(xOrVec: Vec3 | number, y?: number, z?: number): void`
+### `setPosition(position: Vec3): this`
 
 Set the mesh local position.
 
 ```javascript
-mesh.setPosition(0, 2.5, -4);
-// Or using Spock Vec3
 mesh.setPosition(new Vec3(0, 2.5, -4));
 ```
 
-### `setRotation(xOrVec: Vec3 | number[] | number, y?: number, z?: number): this`
+### `setRotation(rotation: Vec3): this`
 
 Set the Euler rotation in radians. The mesh's `quaternion` is the single source of truth: `mesh.rotation` is a getter that derives the Euler angles from it on demand (use `setRotation` to change it).
 
 ```javascript
-mesh.setRotation(0, Math.PI / 4, 0);
+mesh.setRotation(new Vec3(0, Math.PI / 4, 0));
 ```
 
-### `setScale(xOrVec: Vec3 | number, y?: number, z?: number): void`
+### `setScale(scale: Vec3): this`
 
 Set the non-uniform or uniform local scale.
 
 ```javascript
-mesh.setScale(1.5, 2.0, 1.5);
+mesh.setScale(new Vec3(1.5, 2.0, 1.5));
 ```
 
-### `setQuaternion(q: Quat): void`
+### `setQuaternion(q: Quat): this`
 
 Rotate the mesh using a Spock `Quat` quaternion.
 
-### `translate(xOrVec: Vec3 | number, y?: number, z?: number): void`
+### `translate(translation: Vec3): this`
 
 Translate the mesh relative to its current position.
 
-### `rotateX(rad: number) / rotateY(rad: number) / rotateZ(rad: number): void`
+### `rotateX(rad: number) / rotateY(rad: number) / rotateZ(rad: number): this`
 
 Rotate around the respective local coordinate axes.
 
-### `rotateOnAxis(axis: Vec3, angle: number): void`
+### `rotateOnAxis(axis: Vec3, angle: number): this`
 
 Rotate around an arbitrary 3D axis vector.
 
@@ -97,9 +95,9 @@ Rotate around an arbitrary 3D axis vector.
 
 Orient the mesh so its -Z axis faces a target 3D point (`Quat.lookAt`). Unchanged if the mesh is already at the target.
 
-### `scaleBy(factor: number | Vec3): void`
+### `scaleBy(factor: Vec3): this`
 
-Multiply the current mesh scale by a scalar factor or vector.
+Multiply the current mesh scale by a vector factor.
 
 ### `slerp(targetRotation: Quat, t: number): void`
 

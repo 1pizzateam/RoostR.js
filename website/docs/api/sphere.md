@@ -38,7 +38,7 @@ new BoundingSphere(center?: Vec3, radius?: number)
 
 Set the center coordinates and radius.
 
-### `setFromPoints(points: number[] | Vec3[]): this`
+### `setFromPoints(points: Vec3[]): this`
 
 Compute a bounding sphere enclosing an array of 3D coordinates.
 

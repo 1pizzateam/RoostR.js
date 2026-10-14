@@ -8,7 +8,7 @@ describe('RenderTarget', () => {
   });
 
   test('creates framebuffer, texture and depth renderbuffer', () => {
-    const target = new RenderTarget(512, 512, context);
+    const target = new RenderTarget(new Vec2(512, 512), context);
     expect(target.framebuffer).not.toBeNull();
     expect(target.texture).not.toBeNull();
     expect(target.depthBuffer).not.toBeNull();
@@ -26,11 +26,11 @@ describe('RenderTarget', () => {
   });
 
   test('bind and unbind update WebGL state', () => {
-    const target = new RenderTarget(256, 256, context);
+    const target = new RenderTarget(new Vec2(256, 256), context);
     target.bind();
     expect(context.bindFramebuffer).toHaveBeenCalledWith(context.FRAMEBUFFER, target.framebuffer);
 
-    target.unbind(800, 600);
+    target.unbind(new Vec2(800, 600));
     expect(context.bindFramebuffer).toHaveBeenCalledWith(context.FRAMEBUFFER, null);
     expect(context.viewport).toHaveBeenCalledWith(0, 0, 800, 600);
 
@@ -42,8 +42,8 @@ describe('RenderTarget', () => {
   });
 
   test('setSize updates dimensions', () => {
-    const target = new RenderTarget(256, 256, context);
-    target.setSize(1024, 1024);
+    const target = new RenderTarget(new Vec2(256, 256), context);
+    target.setSize(new Vec2(1024, 1024));
     expect(target.width).toBe(1024);
     expect(target.height).toBe(1024);
 

@@ -1,4 +1,4 @@
-import { Vec3, Rect } from '@1pizzateam/spock';
+import { Vec3, Vec2, Rect } from '@1pizzateam/spock';
 import { Camera } from './camera';
 
 export class OrthographicCamera extends Camera {
@@ -9,15 +9,10 @@ export class OrthographicCamera extends Camera {
   bottom : number;
   near : number;
   far : number;
-  //camera : Camera;
 
   constructor(
-    boundsOrLeft: Rect | number,
-    rightOrNear?: number,
-    topOrFar?: number,
-    bottom?: number,
-    near?: number,
-    far?: number
+    bounds: Rect,
+    nearFar: Vec2 = new Vec2(-1000, 1000)
   ) {
     super(
       new Vec3(),
@@ -25,21 +20,12 @@ export class OrthographicCamera extends Camera {
       new Vec3(0.0, 1.0, 0.0)
     );
 
-    if (boundsOrLeft instanceof Rect) {
-      this.left = boundsOrLeft.topLeftCorner.x;
-      this.right = boundsOrLeft.bottomRightCorner.x;
-      this.bottom = boundsOrLeft.topLeftCorner.y;
-      this.top = boundsOrLeft.bottomRightCorner.y;
-      this.near = rightOrNear !== undefined ? rightOrNear : -1000;
-      this.far = topOrFar !== undefined ? topOrFar : 1000;
-    } else {
-      this.left = boundsOrLeft;
-      this.right = rightOrNear!;
-      this.top = topOrFar!;
-      this.bottom = bottom!;
-      this.near = near !== undefined ? near : -1000;
-      this.far = far !== undefined ? far : 1000;
-    }
+    this.left = bounds.topLeftCorner.x;
+    this.right = bounds.bottomRightCorner.x;
+    this.bottom = bounds.topLeftCorner.y;
+    this.top = bounds.bottomRightCorner.y;
+    this.near = nearFar.x;
+    this.far = nearFar.y;
 
     this.setProjectionMatrix();
     super.setViewMatrix();
@@ -50,30 +36,22 @@ export class OrthographicCamera extends Camera {
     super.setProjectionMatrix();
   }
 
-  public setBounds(
-    boundsOrLeft: Rect | number,
-    rightOrNear?: number,
-    topOrFar?: number,
-    bottom?: number,
-    near?: number,
-    far?: number
-  ): void {
-    if (boundsOrLeft instanceof Rect) {
-      this.left = boundsOrLeft.topLeftCorner.x;
-      this.right = boundsOrLeft.bottomRightCorner.x;
-      this.bottom = boundsOrLeft.topLeftCorner.y;
-      this.top = boundsOrLeft.bottomRightCorner.y;
-      if (rightOrNear !== undefined) this.near = rightOrNear;
-      if (topOrFar !== undefined) this.far = topOrFar;
-    } else {
-      this.left = boundsOrLeft;
-      this.right = rightOrNear!;
-      this.top = topOrFar!;
-      this.bottom = bottom!;
-      if (near !== undefined) this.near = near;
-      if (far !== undefined) this.far = far;
+  public setBounds(bounds: Rect, nearFar?: Vec2): void {
+    this.left = bounds.topLeftCorner.x;
+    this.right = bounds.bottomRightCorner.x;
+    this.bottom = bounds.topLeftCorner.y;
+    this.top = bounds.bottomRightCorner.y;
+    if (nearFar) {
+      this.near = nearFar.x;
+      this.far = nearFar.y;
     }
     this.setProjectionMatrix();
+  }
+
+  public getNearFar(target: Vec2 = new Vec2()): Vec2 {
+    target.x = this.near;
+    target.y = this.far;
+    return target;
   }
 
 }

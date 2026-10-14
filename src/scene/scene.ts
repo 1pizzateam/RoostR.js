@@ -1,22 +1,23 @@
 import { SceneRenderer }  from '../renderer/scene';
 import { SceneGraph } from './sceneGraph';
-import type { Mesh } from '../mesh';
+import type { Mesh } from '../objects/mesh';
 import { Lights, type AnyLight } from './lights';
 import type { Camera } from '../cameras/camera';
-import { Time, Vec3, Vec2 } from '@1pizzateam/spock';
-import { Frustum, type Ray3 as Ray } from '@1pizzateam/spock';
+import { Time, Vec3, Vec2, Utils } from '@1pizzateam/spock';
+import type { Frustum, Ray3 as Ray } from '@1pizzateam/spock';
 import type { IFlatLights, IFrameInfo } from '../interfaces';
-import { assignVec3, type Vec3Like } from '../vector';
+import { raycastScene } from './sceneRaycast';
+import { SceneCollector } from './sceneCollector';
 
 export interface ISceneOptions {
   canvasId?: string | HTMLCanvasElement;
   context?: WebGLRenderingContext;
-  viewport?: { x?: number; y?: number; width: number; height: number };
-  clearColor?: Vec3 | number[];
+  viewport?: { position?: Vec2; size: Vec2 } | Vec2;
+  clearColor?: Vec3;
   cullFace?: 'BACK' | 'FRONT' | 'NONE';
   frontFace?: 'CCW' | 'CW';
   depthTest?: boolean;
-  ambientColor?: Vec3Like;
+  ambientColor?: Vec3;
   fog?: { color: Vec3; near: number; far: number } | null;
   enableFrustumCulling?: boolean;
 }
@@ -31,15 +32,12 @@ export class Scene {
   public  context  : WebGLRenderingContext;
   public  renderer : SceneRenderer;
   public  graph    : SceneGraph;
+  public  collector: SceneCollector;
   // Size of the render surface, uploaded to shaders as the screen resolution.
   public  resolution : Vec2;
-  private scratchFrustum: Frustum = new Frustum();
-  private scratchVec: Vec3 = new Vec3();
   private frame: IFrameInfo = { id: 0 };
   private frameCounter: number = 0;
   private traversalStamp: number = 0;
-  private opaqueList: Mesh[] = [];
-  private blendedList: Mesh[] = [];
 
   constructor(contextOrOptions: WebGLRenderingContext | ISceneOptions){
     this.meshes = [];
@@ -48,6 +46,7 @@ export class Scene {
     this.ambientColor = new Vec3(0, 0, 0);
     this.fog = null;
     this.enableFrustumCulling = false;
+    this.collector = new SceneCollector();
 
     let ctx: WebGLRenderingContext | null = null;
     let opts: ISceneOptions | null = null;
@@ -73,15 +72,14 @@ export class Scene {
     this.graph = new SceneGraph();
 
     if (opts && this.context) {
-      if (opts.viewport)
-        this.setViewport(opts.viewport.x || 0, opts.viewport.y || 0, opts.viewport.width, opts.viewport.height);
-      if (opts.clearColor) {
-        const c = opts.clearColor;
-        if (Array.isArray(c))
-          this.context.clearColor(c[0] ?? 0, c[1] ?? 0, c[2] ?? 0, c[3] ?? 1);
-        else if ('x' in (c as any) && 'y' in (c as any) && 'z' in (c as any))
-          this.context.clearColor((c as any).x, (c as any).y, (c as any).z, 1.0);
+      if (opts.viewport) {
+        if (opts.viewport instanceof Vec2)
+          this.setViewport(opts.viewport);
+        else
+          this.setViewport(opts.viewport.size, opts.viewport.position);
       }
+      if (opts.clearColor)
+        this.setClearColor(opts.clearColor);
       if (opts.depthTest !== false && this.context.DEPTH_TEST) {
         this.context.enable(this.context.DEPTH_TEST);
         if (this.context.LEQUAL) this.context.depthFunc(this.context.LEQUAL);
@@ -105,21 +103,40 @@ export class Scene {
     return (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')) as WebGLRenderingContext | null;
   }
 
-  public setViewport(x: number, y: number, width: number, height: number): void {
-    this.resolution.setScalar(width, height);
+  public setViewport(size: Vec2, position?: Vec2): void {
+    const x = position?.x ?? 0;
+    const y = position?.y ?? 0;
+    const w = size.x;
+    const h = size.y;
+
+    this.resolution.x = w;
+    this.resolution.y = h;
     if (this.context && this.context.viewport)
-      this.context.viewport(x, y, width, height);
+      this.context.viewport(x, y, w, h);
   }
 
-  public setSize(sizeOrWidth: Vec2 | number, height?: number): void {
-    const w = sizeOrWidth instanceof Vec2 ? sizeOrWidth.x : sizeOrWidth;
-    const h = sizeOrWidth instanceof Vec2 ? sizeOrWidth.y : (height ?? 0);
+  public getSize(target: Vec2 = new Vec2()): Vec2 {
+    target.copy(this.resolution);
+    return target;
+  }
+
+  public setClearColor(color: Vec3, alpha = 1.0): void {
+    if (!this.context) return;
+    this.context.clearColor(
+      Utils.clamp(color.x, 0, 1),
+      Utils.clamp(color.y, 0, 1),
+      Utils.clamp(color.z, 0, 1),
+      Utils.clamp(alpha, 0, 1)
+    );
+  }
+
+  public setSize(size: Vec2): void {
     if (this.context && this.context.canvas) {
       const canvas = this.context.canvas as HTMLCanvasElement;
-      canvas.width = w;
-      canvas.height = h;
+      canvas.width = size.x;
+      canvas.height = size.y;
     }
-    this.setViewport(0, 0, w, h);
+    this.setViewport(size);
   }
 
   public clear(color: boolean = true, depth: boolean = true): void {
@@ -155,29 +172,17 @@ export class Scene {
     return this.lights.removeLight(light);
   }
 
-  public setAmbientColor(rOrVec: Vec3Like | number, g?: number, b?: number): this {
-    if (typeof rOrVec === 'number')
-      this.ambientColor.setScalar(rOrVec, g ?? 0, b ?? 0);
-    else
-      assignVec3(this.ambientColor, rOrVec);
+  public setAmbientColor(color: Vec3): this {
+    this.ambientColor.copy(color);
     return this;
   }
 
-  public setFog(color: Vec3Like, near: number, far?: number): this;
-  public setFog(r: number, g: number, b: number, near?: number, far?: number): this;
-  public setFog(color: Vec3Like | number, nearOrG: number, farOrB?: number, near?: number, far?: number): this {
-    if (typeof color === 'number')
-      this.fog = {
-        color: new Vec3(color, nearOrG, farOrB ?? 0),
-        near: near ?? 1,
-        far: far ?? 1000
-      };
-    else
-      this.fog = {
-        color: assignVec3(new Vec3(), color),
-        near: nearOrG,
-        far: farOrB ?? 1000
-      };
+  public setFog(color: Vec3, near: number, far = 1000): this {
+    this.fog = {
+      color: new Vec3(color.x, color.y, color.z),
+      near,
+      far
+    };
     return this;
   }
 
@@ -230,20 +235,7 @@ export class Scene {
 
   public raycast(ray: Ray, precise: boolean = false): { mesh: Mesh; distance: number; point: Vec3 }[] {
     this.computeWorldMatrices();
-    const hits: { mesh: Mesh; distance: number; point: Vec3 }[] = [];
-    const visit = (mesh: Mesh): void => {
-      if (!mesh.isActive()) return;
-      const hit = mesh.raycast(ray, precise);
-      if (hit)
-        hits.push({ mesh, distance: hit.distance, point: hit.point });
-      for (const child of mesh.children)
-        visit(child);
-    };
-    for (const mesh of this.meshes)
-      if (mesh.traversalStamp !== this.traversalStamp)
-        visit(mesh);
-    hits.sort((a, b) => a.distance - b.distance);
-    return hits;
+    return raycastScene(this.meshes, this.traversalStamp, ray, precise);
   }
 
   public render (camera: Camera, time: number = Time.now()): number {
@@ -251,10 +243,10 @@ export class Scene {
     const flatLights = this.lights.flatten(this.ambientColor);
 
     const frustum = this.enableFrustumCulling
-      ? this.scratchFrustum.setFromProjectionViewMatrix(camera.getProjectionViewMatrix())
+      ? this.collector.scratchFrustum.setFromProjectionViewMatrix(camera.getProjectionViewMatrix())
       : null;
 
-    this.collect(camera, frustum, true, true, this.traversalStamp);
+    this.collector.collect(this.meshes, camera, frustum, true, true, this.traversalStamp);
 
     const frame = this.beginFrame();
     this.disableBlendMode();
@@ -264,13 +256,13 @@ export class Scene {
     const camPos = camera.position;
 
     let renderedCount = 0;
-    for (const mesh of this.opaqueList) {
+    for (const mesh of this.collector.opaqueList) {
       this.renderer.setDepthWrite(mesh.depthWrite);
       mesh.renderSelf(projMatrix, viewMatrix, flatLights, time, false, camPos, this.fog, frame);
       renderedCount++;
     }
 
-    renderedCount += this.drawBlended(camera, time, flatLights, frame);
+    renderedCount += this.collector.drawBlended(this, camera, time, flatLights, frame);
     this.renderer.setDepthWrite(true);
     return renderedCount;
   }
@@ -303,60 +295,14 @@ export class Scene {
     return this.frame;
   }
 
-  // Walks every root mesh and its descendants, culling per node and splitting by blend mode.
-  private collect(camera: Camera, frustum: Frustum | null, opaque: boolean, blended: boolean, stamp: number): void {
-    this.opaqueList.length = 0;
-    this.blendedList.length = 0;
-    const visit = (mesh: Mesh): void => {
-      if (!mesh.isActive()) return;
-      const wanted = mesh.blendMode ? blended : opaque;
-      if (wanted && !(frustum && !frustum.intersectsSphere(mesh.computeBoundingSphere()))) {
-        if (mesh.blendMode) {
-          mesh.sortKey = mesh.getWorldPosition(this.scratchVec).getDistance(camera.position, true);
-          this.blendedList.push(mesh);
-        } else
-          this.opaqueList.push(mesh);
-      }
-      for (const child of mesh.children)
-        visit(child);
-    };
-    for (const mesh of this.meshes)
-      if (mesh.traversalStamp !== stamp)
-        visit(mesh);
-  }
-
-  // Blended meshes are drawn farthest first with additive blending.
-  private drawBlended(camera: Camera, time: number, flatLights: IFlatLights, frame: IFrameInfo): number {
-    const list = this.blendedList;
-    if (list.length === 0)
-      return 0;
-    if (list.length > 1)
-      list.sort((a, b) => b.sortKey - a.sortKey);
-
-    const projMatrix = camera.getProjectionMatrix();
-    const viewMatrix = camera.getViewMatrix();
-    const camPos = camera.position;
-
-    for (const mesh of list) {
-      const blend = mesh.blendOptions;
-      this.enableBlendMode(blend.equation, blend.source, blend.destination);
-      this.renderer.setDepthWrite(mesh.depthWrite);
-      mesh.renderSelf(projMatrix, viewMatrix, flatLights, time, true, camPos, this.fog, frame);
-    }
-
-    this.disableBlendMode();
-    this.renderer.setDepthWrite(true);
-    return list.length;
-  }
-
   public renderBlended (
     camera: Camera,
     time: number = Time.now(),
     flatLights: IFlatLights = this.lights.flatten(this.ambientColor),
     frustum: Frustum | null = null
   ): number {
-    this.collect(camera, frustum, false, true, this.markDescendants());
-    return this.drawBlended(camera, time, flatLights, this.beginFrame());
+    this.collector.collect(this.meshes, camera, frustum, false, true, this.markDescendants());
+    return this.collector.drawBlended(this, camera, time, flatLights, this.beginFrame());
   }
 
 }

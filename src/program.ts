@@ -56,7 +56,7 @@ export const Program = {
       cache = new Map();
       caches.set(context, cache);
     }
-    const key = vertexShader + '\u0000' + fragmentShader;
+    const key = `${vertexShader}\u0000${fragmentShader}`;
     let entry = cache.get(key);
     if (!entry) {
       const program = Program.create(context, vertexShader, fragmentShader);

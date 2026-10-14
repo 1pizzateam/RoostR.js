@@ -1,6 +1,10 @@
-Unreleased
+Version 0.8.0 (October 14th 2026)
 -----------------------------
- * New `Sprite` mesh: a flat image that turns to face the camera, for enemies, pickups, trees and particles. `new Sprite(gl, { width, height, texture, frames, anchor, billboard, alphaCutoff, depthBias, material, fragment })`.
+ * New `Node` scene-graph base class extracted from `Mesh`:
+   - Encapsulates hierarchical transforms (position, rotation Euler / Quaternion synchronization, scale), parent-child relationships, world matrix computation, dirty flagging, local/world bounds, and distance/inside-bounds checks.
+   - `Mesh` now extends `Node`, inheriting all transform and hierarchy capabilities while focusing on rendering, geometry, programs, materials, and textures.
+   - Exported as `Node` in root package exports.
+ * New `Sprite` mesh: a flat image that turns to face the camera, for enemies, pickups, trees and particles. `new Sprite(gl, { size, texture, frames, anchor, billboard, alphaCutoff, depthBias, material, fragment })`.
    - `billboard` is `'spherical'` (default, faces the camera), `'cylindrical'` (stays upright, turns about the vertical axis) or `'none'`; `anchor` is `'center'` or `'bottom'` (feet on the mesh position).
    - The image can be a sprite sheet: `frames` is the number of equal cells side by side and `setFrame(n)` picks one. The material's diffuse colour tints the image, pixels under `alphaCutoff` are discarded, and scene fog is applied.
    - Position, scale and parent work as on any mesh; frustum culling uses bounds that cover every way a billboard can turn. The texture is owned by the mesh, so `Scene.restore()` rebuilds it. A custom `fragment` shader can replace the built-in one and receives `vTextureCoord` and `vDepth`.
@@ -11,6 +15,14 @@ Unreleased
    - `Renderer` now forgets the shared programs and the cached GL state before calling `onContextRestored`.
    - New `Scene.restore()`, `Mesh.restore()` and `RenderTarget.restore()` rebuild buffers, programs, custom-uniform locations and owned textures from the data kept on the CPU. Call them from `onContextRestored`. Data uploaded by hand (`bufferSubData`), textures passed as a `WebGLTexture` (including a render target's) and programs passed as a `WebGLProgram` are not rebuilt: upload or assign them again. A mesh whose program cannot be rebuilt stops drawing instead of misdrawing.
    - New `Program.reset(context)` and `Program.sources(program)`. `Program.release` no longer evicts a newer program that shares the cache key of a pre-reset one.
+ * Strict Vector-Only Architecture across all spatial APIs leveraging `@1pizzateam/spock`:
+   - Enforced strict vector types (`Vec3`, `Vec2`, `BoundingBox`, `BoundingSphere`, `Ray`, `Ray2`, `SpatialPlane`, `Frustum`, `Quat`, `Mat4`, `Mat4x3`, `Mat3`) across all constructors, setters, methods, and options.
+   - Eliminated scalar coordinate overloads `(x, y, z)` / `(width, height)` and raw array fallbacks `[x, y, z]` for spatial parameters.
+   - Zero runtime type-branching / polymorphism in hot paths.
+   - Allocation-free getters supporting optional pre-allocated target vector instances.
+   - Primitive geometries updated: `Cube(size: Vec3)`, `Cylinder(radii: Vec2)`, `Plane(size: Vec2, segments?: Vec2)`, `Quad(size?: Vec2 | Rect)`, `MultiQuad(size?: Vec2 | Rect)`.
+   - Cameras & Renderer updated: `PerspectiveCamera(fov, nearFar: Vec2)`, `OrthographicCamera(bounds: Rect, nearFar: Vec2)`, `RenderTarget(size: Vec2)`, `Renderer.setSize(Vec2)`, `Renderer.setViewport(Vec2)`.
+   - Complete documentation and interactive website demos updated to the new strict vector architecture.
 
 Version 0.7.0 (October 10th 2026)
 -----------------------------

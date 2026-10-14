@@ -5,15 +5,15 @@ RoostR ships with built-in procedural compound models: `VWing` (starfighter spac
 ```javascript
 import { VWing, Cannon, Mesh, PhongShader, Material, Vec3 } from '@1pizzateam/roostr';
 
-const ship = new Mesh(gl, new VWing(1.5));
+const ship = new Mesh(new VWing(1.5), gl);
 ship.addProgram(PhongShader.create(gl));
 ship.addMaterial(new Material({ diffuse: new Vec3(0.2, 0.7, 1.0) }));
 scene.addMesh(ship);
 
-const turret = new Mesh(gl, new Cannon(1.2));
+const turret = new Mesh(new Cannon(1.2), gl);
 turret.addProgram(PhongShader.create(gl));
 turret.addMaterial(new Material({ diffuse: new Vec3(0.8, 0.3, 0.2) }));
-turret.setPosition(4, 0, 0);
+turret.setPosition(new Vec3(4, 0, 0));
 scene.addMesh(turret);
 ```
 

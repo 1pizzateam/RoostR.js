@@ -5,9 +5,9 @@ A 3D perspective projection camera with field-of-view, aspect ratio, depth clipp
 ```javascript
 import { PerspectiveCamera, Vec3, Vec2 } from '@1pizzateam/roostr';
 
-const camera = new PerspectiveCamera(45, gl, 0.1, 1000);
-camera.setPosition(0, 5, 10);
-camera.lookAt(0, 0, 0);
+const camera = new PerspectiveCamera(45, new Vec2(0.1, 1000), gl);
+camera.setPosition(new Vec3(0, 5, 10));
+camera.lookAt(new Vec3(0, 0, 0));
 ```
 
 ---
@@ -17,24 +17,18 @@ camera.lookAt(0, 0, 0);
 ```typescript
 new PerspectiveCamera(
   fov: number,
-  contextOrNear?: WebGLRenderingContext | number | null,
-  zFarOrNear?: number,
-  contextOrFar?: WebGLRenderingContext | number | null
+  nearFar: Vec2 = new Vec2(0.1, 1000),
+  context?: WebGLRenderingContext | null
 )
 ```
-
-Supports flexible parameter orderings:
-- `new PerspectiveCamera(fov, context, zNear = 0.1, zFar = 1000)`
-- `new PerspectiveCamera(fov, zNear = 0.1, zFar = 1000, context?)`
 
 ### Parameters
 
 | Name | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `fov` | `number` | — | Vertical field of view in degrees. |
-| `context` | `WebGLRenderingContext` | `null` | The active WebGL context for aspect ratio resolution. |
-| `zNear` | `number` | `0.1` | Near clipping distance. |
-| `zFar` | `number` | `1000` | Far clipping distance. |
+| `nearFar` | `Vec2` | `new Vec2(0.1, 1000)` | Near and far clipping distances $(x = zNear, y = zFar)$. |
+| `context` | `WebGLRenderingContext` | `null` | Optional active WebGL context for initial aspect ratio resolution. |
 
 ---
 
@@ -54,39 +48,43 @@ Supports flexible parameter orderings:
 
 ## Methods
 
-### `setPosition(xOrVec: Vec3 | number, y?: number, z?: number): void`
+### `setPosition(position: Vec3): void`
 
-Set camera position in world space using either a `Vec3` or scalar `(x, y, z)` coordinates.
+Set camera position in world space.
 
-### `lookAt(target: Vec3 | number, y?: number, z?: number): void`
+### `lookAt(target: Vec3): void`
 
 Orient camera to point towards a target coordinate in world space.
 
 ```javascript
-camera.lookAt(0, 1.5, 0);
-// Or passing a Vec3:
+camera.lookAt(new Vec3(0, 1.5, 0));
+// Or passing a mesh world position:
 camera.lookAt(mesh.getWorldPosition());
 ```
 
-### `setTarget(xOrVec: Vec3 | number, y?: number, z?: number): void`
+### `setTarget(target: Vec3): void`
 
 Updates the camera look target and recomputes the view matrix.
 
-### `setUp(xOrVec: Vec3 | number, y?: number, z?: number): void`
+### `setUp(up: Vec3): void`
 
-Sets the camera up vector (default `(0, 1, 0)`).
+Sets the camera up vector (default `new Vec3(0, 1, 0)`).
 
 ### `setFov(fov: number): void`
 
 Updates field of view and recomputes the projection matrix.
 
-### `setProjectionMatrix(viewport?: Vec2 | Int32Array | number[] | null): void`
+### `setProjectionMatrix(viewport?: Vec2 | null): void`
 
-Recomputes the aspect ratio and perspective projection matrix from a new viewport. Accepts a Spock `Vec2` representing `(width, height)` or a WebGL viewport array `[x, y, width, height]`.
+Recomputes the aspect ratio and perspective projection matrix from a new viewport size `Vec2(width, height)`.
 
-### `setNearFar(zNear: number, zFar: number): void`
+### `setNearFar(nearFar: Vec2): void`
 
-Updates near/far clipping distances and recomputes projection matrix.
+Updates near/far clipping distances using a `Vec2(zNear, zFar)` and recomputes projection matrix.
+
+### `getNearFar(target?: Vec2): Vec2`
+
+Gets near/far clipping distances into a target `Vec2`.
 
 ### `dolly(distance: number): void`
 
@@ -96,13 +94,13 @@ Move camera forward/backward along its current viewing axis.
 
 Calculates the normalized direction vector along which the camera is facing.
 
-### `getDistance(target?: Vec3): number`
+### `getDistance(): number`
 
 Calculates Euclidean distance from camera position to target.
 
-### `getRay(ndcOrX: Vec2 | number, ndcYOrTarget?: number | Ray, targetRay: Ray = new Ray()): Ray`
+### `getRay(ndc: Vec2, targetRay?: Ray): Ray`
 
-Unprojects Normalized Device Coordinates (NDC) in $[-1, 1]$ into a world-space `Ray`. Supports vector-first `Vec2` or scalar `(ndcX, ndcY)`:
+Unprojects Normalized Device Coordinates (NDC) in $[-1, 1]$ into a world-space `Ray`:
 
 ```javascript
 // Convert mouse click on canvas to Normalized Device Coordinates (NDC [-1, 1]):

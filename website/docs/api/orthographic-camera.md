@@ -3,22 +3,17 @@
 A parallel projection camera where objects maintain the same visual size regardless of distance from the lens. Essential for 2D overlays, UI HUDs, isometric games, and architectural previews.
 
 ```javascript
-import { OrthographicCamera, Vec3, Vec2 } from '@1pizzateam/roostr';
+import { OrthographicCamera, Rect, Vec3, Vec2 } from '@1pizzateam/roostr';
 
 const aspect = canvas.width / canvas.height;
 const frustumSize = 10;
 
 const camera = new OrthographicCamera(
-  -frustumSize * aspect / 2,
-   frustumSize * aspect / 2,
-   frustumSize / 2,
-  -frustumSize / 2,
-   0.1,
-   1000,
-   gl
+  new Rect(-frustumSize * aspect / 2, frustumSize / 2, frustumSize * aspect / 2, -frustumSize / 2),
+  new Vec2(0.1, 1000)
 );
-camera.setPosition(10, 10, 10);
-camera.lookAt(0, 0, 0);
+camera.setPosition(new Vec3(10, 10, 10));
+camera.lookAt(new Vec3(0, 0, 0));
 ```
 
 ---
@@ -27,22 +22,17 @@ camera.lookAt(0, 0, 0);
 
 ```typescript
 new OrthographicCamera(
-  boundsOrLeft: Rect | number,
-  rightOrNear?: number,
-  topOrFar?: number,
-  bottom?: number,
-  near?: number,
-  far?: number
+  bounds: Rect,
+  nearFar: Vec2 = new Vec2(-1000, 1000)
 )
 ```
 
-Can be initialized either with explicit boundary numbers or directly with a Spock [`Rect`](https://1pizzateam.github.io/Spock.js/):
+Initialized with a Spock [`Rect`](https://1pizzateam.github.io/Spock.js/) defining view boundaries and a `Vec2` for clipping planes $(x = near, y = far)$:
 
 ```javascript
-import { OrthographicCamera, Rect } from '@1pizzateam/roostr';
+import { OrthographicCamera, Rect, Vec2 } from '@1pizzateam/roostr';
 
-// Using a Spock Rect directly:
-const camera = new OrthographicCamera(new Rect(20, 10, 0, 0), 0.1, 1000);
+const camera = new OrthographicCamera(new Rect(20, 10, 0, 0), new Vec2(0.1, 1000));
 ```
 
 ---
@@ -53,30 +43,34 @@ const camera = new OrthographicCamera(new Rect(20, 10, 0, 0), 0.1, 1000);
 | :--- | :--- | :--- |
 | `projectionMatrix` | `Mat4` | 4x4 orthographic projection matrix. |
 | `viewMatrix` | `Mat4x3` | Inverted camera view matrix for world-to-eye transform. |
-| `left`, `right`, `top`, `bottom` | `number` | Frustum boundaries. |
-| `near`, `far` | `number` | Clipping planes. |
+| `left`, `right`, `top`, `bottom` | `number` | Frustum boundaries derived from `bounds`. |
+| `near`, `far` | `number` | Clipping planes derived from `nearFar`. |
 
 ---
 
 ## Methods
 
-### `setBounds(boundsOrLeft: Rect | number, rightOrNear?: number, topOrFar?: number, bottom?: number, near?: number, far?: number): void`
+### `setBounds(bounds: Rect, nearFar?: Vec2): void`
 
-Updates the camera viewing boundaries and automatically recomputes the projection matrix. Accepts either a Spock `Rect` or individual boundary coordinates.
+Updates the camera viewing boundaries and optional near/far clipping distances, then automatically recomputes the projection matrix.
 
-### `setProjectionMatrix(left: number, right: number, top: number, bottom: number, zNear?: number, zFar?: number): void`
+### `setProjectionMatrix(): void`
 
-Update the orthographic bounding box extents and rebuild the projection matrix.
+Recomputes the orthographic projection matrix.
 
-### `setPosition(xOrVec: Vec3 | number, y?: number, z?: number): void`
+### `getNearFar(target?: Vec2): Vec2`
+
+Gets near/far clipping distances into a target `Vec2`.
+
+### `setPosition(position: Vec3): void`
 
 Set camera position in world space.
 
-### `lookAt(target: Vec3 | number, y?: number, z?: number): void`
+### `lookAt(target: Vec3): void`
 
-Orient camera to point towards a target coordinate.
+Orient camera to point towards a target coordinate in world space.
 
-### `getRay(ndcOrX: Vec2 | number, ndcYOrTarget?: number | Ray, targetRay: Ray = new Ray()): Ray`
+### `getRay(ndc: Vec2, targetRay?: Ray): Ray`
 
 Generate a parallel world-space `Ray` originating from the unprojected orthographic plane using Normalized Device Coordinates (NDC $[-1, 1]$):
 
@@ -88,7 +82,7 @@ const ray = camera.getRay(new Vec2(ndcX, ndcY));
 
 Calculates the normalized direction vector along which the camera is facing.
 
-### `getDistance(target?: Vec3): number`
+### `getDistance(): number`
 
 Calculates distance from camera to target point.
 

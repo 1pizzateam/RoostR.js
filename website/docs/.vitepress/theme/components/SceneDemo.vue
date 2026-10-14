@@ -13,7 +13,8 @@ import {
   DirectionalLight,
   PointLight,
   AmbientLight,
-  Vec3
+  Vec3,
+  Vec2
 } from '@1pizzateam/roostr';
 import { Player } from '@1pizzateam/loopr';
 
@@ -39,10 +40,10 @@ let rotY = 0;
 
 function createShapeGeometry(name) {
   switch (name) {
-    case 'cylinder': return new Cylinder(1.2, 1.2, 2.5, 32);
+    case 'cylinder': return new Cylinder(new Vec2(1.2, 1.2), 2.5, 32);
     case 'cube':
     default:
-      return new Cube(2.2, true);
+      return new Cube(new Vec3(2.2, 2.2, 2.2), true);
   }
 }
 
@@ -53,7 +54,7 @@ function updateMainShape(name) {
   let prevRot = null;
   if (mainMesh) {
     if (mainMesh.rotation) {
-      prevRot = [mainMesh.rotation.x, mainMesh.rotation.y, mainMesh.rotation.z];
+      prevRot = new Vec3(mainMesh.rotation.x, mainMesh.rotation.y, mainMesh.rotation.z);
     }
     scene.removeMesh(mainMesh);
     mainMesh.destroy();
@@ -67,11 +68,11 @@ function updateMainShape(name) {
     specular: phongMat.specular,
     shininess: phongMat.shininess
   });
-  mainMesh.setPosition(0, 1.2, 0);
+  mainMesh.setPosition(new Vec3(0, 1.2, 0));
   if (name === 'cylinder') {
-    mainMesh.setRotation(0.25, rotY, 0.55);
+    mainMesh.setRotation(new Vec3(0.25, rotY, 0.55));
   } else {
-    mainMesh.setRotation(0.35, rotY, 0);
+    mainMesh.setRotation(new Vec3(0.35, rotY, 0));
   }
   scene.addMesh(mainMesh);
 }
@@ -81,18 +82,18 @@ function setLightingTheme(themeName) {
   if (!dirLight || !pointLight) return;
 
   if (themeName === 'cyber') {
-    dirLight.setDiffuse(0.2, 0.4, 0.9);
-    pointLight.setDiffuse(0.9, 0.1, 0.8);
-    pointLight.setSpecular(1.0, 0.4, 0.9);
+    dirLight.setDiffuse(new Vec3(0.2, 0.4, 0.9));
+    pointLight.setDiffuse(new Vec3(0.9, 0.1, 0.8));
+    pointLight.setSpecular(new Vec3(1.0, 0.4, 0.9));
   } else if (themeName === 'emerald') {
-    dirLight.setDiffuse(0.2, 0.8, 0.4);
-    pointLight.setDiffuse(0.1, 0.9, 0.7);
-    pointLight.setSpecular(0.6, 1.0, 0.8);
+    dirLight.setDiffuse(new Vec3(0.2, 0.8, 0.4));
+    pointLight.setDiffuse(new Vec3(0.1, 0.9, 0.7));
+    pointLight.setSpecular(new Vec3(0.6, 1.0, 0.8));
   } else {
     // Warm default
-    dirLight.setDiffuse(0.95, 0.85, 0.75);
-    pointLight.setDiffuse(1.0, 0.55, 0.15);
-    pointLight.setSpecular(1.0, 0.9, 0.7);
+    dirLight.setDiffuse(new Vec3(0.95, 0.85, 0.75));
+    pointLight.setDiffuse(new Vec3(1.0, 0.55, 0.15));
+    pointLight.setSpecular(new Vec3(1.0, 0.9, 0.7));
   }
 }
 
@@ -119,9 +120,9 @@ onMounted(() => {
 
   scene = new Scene(gl);
 
-  camera = new PerspectiveCamera(45, 0.1, 100, gl);
-  camera.setPosition(0, 3.2, 6.8);
-  camera.lookAt(0, 0.8, 0);
+  camera = new PerspectiveCamera(45, new Vec2(0.1, 100), gl);
+  camera.setPosition(new Vec3(0, 3.2, 6.8));
+  camera.lookAt(new Vec3(0, 0.8, 0));
 
   controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true;
@@ -148,27 +149,27 @@ onMounted(() => {
   updateMainShape('cube');
 
   // Floor
-  floorMesh = new Mesh(new Plane(16, 16, 8, 8), gl);
+  floorMesh = new Mesh(new Plane(new Vec2(16, 16), new Vec2(8, 8)), gl);
   floorMesh.usePhongMaterial({
     ambient: phongMatFloor.ambient,
     diffuse: phongMatFloor.diffuse,
     specular: phongMatFloor.specular,
     shininess: phongMatFloor.shininess
   });
-  floorMesh.setPosition(0, -0.6, 0);
+  floorMesh.setPosition(new Vec3(0, -0.6, 0));
   scene.addMesh(floorMesh);
 
   // Fixed studio lights
   // 1. Key Directional sunlight shining DOWNWARD from upper right (-0.6, -1.0, -0.4)
   dirLight = new DirectionalLight(new Vec3(-0.6, -1.0, -0.4));
-  dirLight.setDiffuse(1.0, 0.95, 0.90);
-  dirLight.setSpecular(0.7, 0.7, 0.7);
+  dirLight.setDiffuse(new Vec3(1.0, 0.95, 0.90));
+  dirLight.setSpecular(new Vec3(0.7, 0.7, 0.7));
   scene.addLight(dirLight);
 
   // 2. Fixed warm point fill light from front upper right
   pointLight = new PointLight(new Vec3(3.0, 3.0, 2.5));
-  pointLight.setDiffuse(1.0, 0.65, 0.25);
-  pointLight.setSpecular(1.0, 0.9, 0.7);
+  pointLight.setDiffuse(new Vec3(1.0, 0.65, 0.25));
+  pointLight.setSpecular(new Vec3(1.0, 0.9, 0.7));
   pointLight.setLinearAttenuation(0.06);
   pointLight.setQuadraticAttenuation(0.015);
   scene.addLight(pointLight);
@@ -190,9 +191,9 @@ onMounted(() => {
 
       if (mainMesh) {
         if (currentShape.value === 'cylinder') {
-          mainMesh.setRotation(0.25, rotY, 0.55);
+          mainMesh.setRotation(new Vec3(0.25, rotY, 0.55));
         } else {
-          mainMesh.setRotation(0.35, rotY, 0);
+          mainMesh.setRotation(new Vec3(0.35, rotY, 0));
         }
       }
     }
@@ -227,7 +228,7 @@ onMounted(() => {
       canvas.width = w;
       canvas.height = h;
       gl.viewport(0, 0, w, h);
-      camera.setProjectionMatrix([0, 0, w, h]);
+      camera.setProjectionMatrix(new Vec2(w, h));
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       scene.render(camera);
     }

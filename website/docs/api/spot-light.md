@@ -6,10 +6,10 @@ A directional spotlight source emitting a cone of light from a 3D origin point o
 import { SpotLight, Vec3 } from '@1pizzateam/roostr';
 
 const spot = new SpotLight(new Vec3(0, 5, 0));
-spot.setDirection(0, -1, 0); // Point downwards
-spot.setCutoff(0.85);        // Cone beam cutoff angle
-spot.setExponent(16.0);      // Spot beam sharpness
-spot.setDiffuse(0.3, 0.7, 1.0);
+spot.setDirection(new Vec3(0, -1, 0)); // Point downwards
+spot.setCutoff(0.85);                 // Cone beam cutoff angle
+spot.setExponent(16.0);               // Spot beam sharpness
+spot.setDiffuse(new Vec3(0.3, 0.7, 1.0));
 scene.addLight(spot);
 ```
 
@@ -18,7 +18,16 @@ scene.addLight(spot);
 ## Constructor
 
 ```typescript
-new SpotLight(position?: Vec3)
+new SpotLight(
+  positionOrOptions?: Vec3 | {
+    position?: Vec3;
+    diffuse?: Vec3;
+    specular?: Vec3;
+    direction?: Vec3;
+    cutoff?: number;
+    exponent?: number;
+  }
+)
 ```
 
 ---
@@ -28,21 +37,21 @@ new SpotLight(position?: Vec3)
 | Property | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `position` | `Vec3` | `(0, 0, 0)` | 3D origin position. |
-| `direction` | `Vec3` | `(0, -1, 0)` | Normalized direction pointing along the spotlight axis. |
+| `direction` | `Vec3` | `(1, 0, 0)` | Normalized direction pointing along the spotlight axis. |
 | `diffuse` | `Vec3` | `(1, 1, 1)` | Diffuse RGB color intensity. |
 | `specular` | `Vec3` | `(1, 1, 1)` | Specular reflection highlight color. |
-| `cutoff` | `number` | `0.9` | Cosine of half the spotlight cone angle $\cos(\theta)$. |
-| `exponent` | `number` | `10.0` | Angular beam falloff concentration exponent. |
+| `cutoff` | `number` | `180` | Beam cutoff angle. |
+| `exponent` | `number` | `0` | Angular beam falloff concentration exponent. |
 
 ---
 
 ## Methods
 
-### `setPosition(x: number | Vec3, y?: number, z?: number): void`
+### `setPosition(position: Vec3): void`
 
 Set spotlight 3D origin in world coordinates.
 
-### `setDirection(x: number | Vec3, y?: number, z?: number): void`
+### `setDirection(direction: Vec3): void`
 
 Set the direction vector of the cone beam.
 

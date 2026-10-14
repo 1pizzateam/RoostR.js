@@ -9,12 +9,12 @@ import { Scene, DirectionalLight, PointLight, SpotLight, AmbientLight, Vec3 } fr
 
 // 1. Sun
 const sun = new DirectionalLight(new Vec3(0.5, 1.0, 0.4));
-sun.setDiffuse(0.9, 0.85, 0.8);
+sun.setDiffuse(new Vec3(0.9, 0.85, 0.8));
 scene.addLight(sun);
 
 // 2. Point light
 const torch = new PointLight(new Vec3(2, 2, 0));
-torch.setDiffuse(1.0, 0.5, 0.1);
+torch.setDiffuse(new Vec3(1.0, 0.5, 0.1));
 scene.addLight(torch);
 
 // 3. Ambient

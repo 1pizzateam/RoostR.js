@@ -15,7 +15,8 @@ import {
   PhongShader,
   DirectionalLight,
   AmbientLight,
-  Vec3
+  Vec3,
+  Vec2
 } from '@1pizzateam/roostr';
 import { Player } from '@1pizzateam/loopr';
 
@@ -36,10 +37,10 @@ let resizeObserver = null;
 
 function getGeometry(shape) {
   switch (shape) {
-    case 'cube': return new Cube(2.0);
+    case 'cube': return new Cube(new Vec3(2.0, 2.0, 2.0));
     case 'hemisphere': return new Hemisphere(1.4, 24, 16);
-    case 'cylinder': return new Cylinder(1.1, 1.1, 2.4, 28);
-    case 'plane': return new Plane(3.0, 3.0, 8, 8);
+    case 'cylinder': return new Cylinder(new Vec2(1.1, 1.1), 2.4, 28);
+    case 'plane': return new Plane(new Vec2(3.0, 3.0), new Vec2(8, 8));
     case 'sphere':
     default:
       return new Sphere(1.4, 28, 20);
@@ -105,7 +106,7 @@ function selectShape(shape) {
     shininess: material.shininess
   });
   if (prevRot) {
-    mesh.setRotation(prevRot[0], prevRot[1], prevRot[2]);
+    mesh.setRotation(new Vec3(prevRot[0], prevRot[1], prevRot[2]));
   }
   scene.addMesh(mesh);
 }
@@ -134,9 +135,9 @@ onMounted(() => {
 
   scene = new Scene(gl);
 
-  camera = new PerspectiveCamera(45, 0.1, 100, gl);
-  camera.setPosition(0, 1.8, 5.0);
-  camera.lookAt(0, 0, 0);
+  camera = new PerspectiveCamera(45, new Vec2(0.1, 100), gl);
+  camera.setPosition(new Vec3(0, 1.8, 5.0));
+  camera.lookAt(new Vec3(0, 0, 0));
 
   controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true;
@@ -150,8 +151,8 @@ onMounted(() => {
   });
 
   dirLight = new DirectionalLight(new Vec3(-0.5, -0.8, -0.5));
-  dirLight.setDiffuse(1.0, 0.95, 0.9);
-  dirLight.setSpecular(0.8, 0.8, 0.8);
+  dirLight.setDiffuse(new Vec3(1.0, 0.95, 0.9));
+  dirLight.setSpecular(new Vec3(0.8, 0.8, 0.8));
   scene.addLight(dirLight);
 
   const ambientLight = new AmbientLight(new Vec3(0.35, 0.38, 0.45));
@@ -166,9 +167,9 @@ onMounted(() => {
     if (autoRotate.value && mesh) {
       rotY += delta * 0.8;
       if (currentShape.value === 'cylinder') {
-        mesh.setRotation(0.25, rotY, 0.55);
+        mesh.setRotation(new Vec3(0.25, rotY, 0.55));
       } else {
-        mesh.setRotation(0.3, rotY, 0);
+        mesh.setRotation(new Vec3(0.3, rotY, 0));
       }
     }
 
@@ -193,7 +194,7 @@ onMounted(() => {
       canvas.width = nw;
       canvas.height = nh;
       gl.viewport(0, 0, nw, nh);
-      camera.setProjectionMatrix([0, 0, nw, nh]);
+      camera.setProjectionMatrix(new Vec2(nw, nh));
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       scene.render(camera);
     }

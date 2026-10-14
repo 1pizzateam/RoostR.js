@@ -1,9 +1,9 @@
 import { jest } from '@jest/globals';
-import { Mesh, Quad, Cube, Material, Mat4x3, Vec3, Quat, Ray } from "../dist/roostr";
+import { Mesh, Quad, Cube, Material, Mat4x3, Vec2, Vec3, Quat, Ray, BoundingBox } from "../dist/roostr";
 import { createMockContext } from "./helpers/webgl-mock";
 
 function createMesh(context = createMockContext()) {
-  const quad = new Quad(2, 2);
+  const quad = new Quad(new Vec2(2, 2));
   return { mesh: new Mesh(quad, context), context, quad };
 }
 
@@ -194,7 +194,7 @@ test("activateBlendMode / deactivateBlendMode toggle the blendMode flag", () => 
 
 test("render binds normal buffer and sets 3-component normal attribute pointer when geometry has normals", () => {
   const context = createMockContext();
-  const cube = new Cube(2);
+  const cube = new Cube(new Vec3(2, 2, 2));
   const mesh = new Mesh(cube, context);
   mesh.addProgram("vertex-src", "fragment-src", new Material());
 
@@ -232,7 +232,7 @@ test("render does not crash when active mesh has no programs", () => {
 test("addProgram returns false if shader program fails to link", () => {
   const context = createMockContext();
   context.getProgramParameter.mockReturnValue(false);
-  const quad = new Quad(2, 2);
+  const quad = new Quad(new Vec2(2, 2));
   const mesh = new Mesh(quad, context);
   const result = mesh.addProgram("vert", "frag", new Material());
   expect(result).toBe(false);
@@ -474,10 +474,10 @@ test("destroy recursively cleans up children", () => {
 
 test("setPosition, setRotation, setScale and translate update transforms and modelMatrix", () => {
   const { mesh } = createMesh();
-  mesh.setPosition(1, 2, 3);
-  mesh.setScale(2);
+  mesh.setPosition(new Vec3(1, 2, 3));
+  mesh.setScale(new Vec3(2, 2, 2));
   mesh.rotateY(Math.PI / 2);
-  mesh.translate(0, 1, 0);
+  mesh.translate(new Vec3(0, 1, 0));
 
   expect(mesh.position.toArray()).toEqual([1, 3, 3]);
   expect(mesh.scale.toArray()).toEqual([2, 2, 2]);
@@ -507,8 +507,8 @@ test("setQuaternion rotates mesh using quaternion and updates modelMatrix", () =
 
 test("computeNormalMatrix computes the transposed inverse of worldMatrix linear part", () => {
   const { mesh } = createMesh();
-  mesh.setPosition(5, 5, 5);
-  mesh.setScale(2, 2, 2);
+  mesh.setPosition(new Vec3(5, 5, 5));
+  mesh.setScale(new Vec3(2, 2, 2));
   mesh.updateModelMatrix();
   mesh.setWorldMatrix(new Mat4x3().identity());
 
@@ -522,7 +522,7 @@ test("computeNormalMatrix computes the transposed inverse of worldMatrix linear 
 
 test("getWorldPosition extracts translation from worldMatrix", () => {
   const { mesh } = createMesh();
-  mesh.setPosition(7, 8, 9);
+  mesh.setPosition(new Vec3(7, 8, 9));
   const graph = {
     getWorldMatrix: () => new Mat4x3().identity(),
     pushModelMatrix: () => {},
@@ -552,10 +552,10 @@ test("render sends normalMatrix uniform if present in program", () => {
   );
 });
 
-test("scaleBy multiplies current scale by vector or scalar", () => {
+test("scaleBy multiplies current scale by vector", () => {
   const { mesh } = createMesh();
-  mesh.setScale(2, 3, 4);
-  mesh.scaleBy(2);
+  mesh.setScale(new Vec3(2, 3, 4));
+  mesh.scaleBy(new Vec3(2, 2, 2));
   expect(mesh.scale.toArray()).toEqual([4, 6, 8]);
 
   mesh.scaleBy(new Vec3(0.5, 0.5, 0.5));
@@ -575,7 +575,7 @@ test("slerp interpolates mesh quaternion orientation", () => {
 
 test("lookAt orients mesh towards target in 3D space", () => {
   const { mesh } = createMesh();
-  mesh.setPosition(0, 0, 0);
+  mesh.setPosition(new Vec3(0, 0, 0));
   mesh.lookAt(new Vec3(10, 0, 0)); // look toward +X
 
   mesh.updateModelMatrix();
@@ -589,7 +589,7 @@ test("lookAt orients mesh towards target in 3D space", () => {
 
 test("getWorldDirection, distanceTo, and isInsideBounds calculate spatial relationships", () => {
   const { mesh } = createMesh();
-  mesh.setPosition(0, 0, 5);
+  mesh.setPosition(new Vec3(0, 0, 5));
   const graph = {
     getWorldMatrix: () => new Mat4x3().identity(),
     pushModelMatrix: () => {},
@@ -604,17 +604,17 @@ test("getWorldDirection, distanceTo, and isInsideBounds calculate spatial relati
   expect(mesh.distanceTo(otherPos)).toBeCloseTo(10);
 
   const otherMesh = createMesh().mesh;
-  otherMesh.setPosition(0, 0, 15);
+  otherMesh.setPosition(new Vec3(0, 0, 15));
   otherMesh.computeWorldMatrix(graph);
   expect(mesh.distanceTo(otherMesh)).toBeCloseTo(10);
 
-  expect(mesh.isInsideBounds(new Vec3(-1, -1, 0), new Vec3(1, 1, 10))).toBe(true);
-  expect(mesh.isInsideBounds(new Vec3(10, 10, 10), new Vec3(20, 20, 20))).toBe(false);
+  expect(mesh.isInsideBounds(new BoundingBox(new Vec3(-1, -1, 0), new Vec3(1, 1, 10)))).toBe(true);
+  expect(mesh.isInsideBounds(new BoundingBox(new Vec3(10, 10, 10), new Vec3(20, 20, 20)))).toBe(false);
 });
 
 test("computeBoundingBox and computeBoundingSphere compute spatial bounds", () => {
   const context = createMockContext();
-  const mesh = new Mesh(new Cube(2.0), context);
+  const mesh = new Mesh(new Cube(new Vec3(2, 2, 2)), context);
 
   const box = mesh.computeBoundingBox();
   expect(box).not.toBeNull();
@@ -628,8 +628,8 @@ test("computeBoundingBox and computeBoundingSphere compute spatial bounds", () =
 
 test("mesh.raycast tests ray intersection in world space", () => {
   const context = createMockContext();
-  const mesh = new Mesh(new Cube(2.0), context);
-  mesh.setPosition(0, 0, 0);
+  const mesh = new Mesh(new Cube(new Vec3(2, 2, 2)), context);
+  mesh.setPosition(new Vec3(0, 0, 0));
 
   const hitRay = new Ray(new Vec3(0, 0, 10), new Vec3(0, 0, -1));
   const hit = mesh.raycast(hitRay);
@@ -643,7 +643,7 @@ test("mesh.raycast tests ray intersection in world space", () => {
 
 test("mesh.raycast precise tests triangles instead of the bounding sphere", () => {
   const context = createMockContext();
-  const mesh = new Mesh(new Cube(2.0), context);
+  const mesh = new Mesh(new Cube(new Vec3(2, 2, 2)), context);
   mesh.updateModelMatrix();
   mesh.setWorldMatrix(new Mat4x3().identity());
 
@@ -660,9 +660,9 @@ test("mesh.raycast precise tests triangles instead of the bounding sphere", () =
 
 test("mesh.raycast precise follows the world transform", () => {
   const context = createMockContext();
-  const mesh = new Mesh(new Cube(2.0), context);
-  mesh.setPosition(5, 0, 0);
-  mesh.scale.setScalar(2, 2, 2);
+  const mesh = new Mesh(new Cube(new Vec3(2, 2, 2)), context);
+  mesh.setPosition(new Vec3(5, 0, 0));
+  mesh.setScale(new Vec3(2, 2, 2));
   mesh.updateModelMatrix();
   mesh.setWorldMatrix(new Mat4x3().identity());
 
@@ -677,7 +677,7 @@ test("mesh.raycast precise follows the world transform", () => {
 
 test("computeBoundingBox and computeBoundingSphere cache results until transformed", () => {
   const context = createMockContext();
-  const mesh = new Mesh(new Cube(2.0), context);
+  const mesh = new Mesh(new Cube(new Vec3(2, 2, 2)), context);
   mesh.updateModelMatrix();
   mesh.setWorldMatrix(new Mat4x3().identity());
 
@@ -691,7 +691,7 @@ test("computeBoundingBox and computeBoundingSphere cache results until transform
   expect(box2).toBe(box1);
 
   // Modifying position marks bounds dirty
-  mesh.setPosition(5, 0, 0);
+  mesh.setPosition(new Vec3(5, 0, 0));
   expect(mesh.isBoundsDirty).toBe(true);
   mesh.updateModelMatrix();
   mesh.setWorldMatrix(new Mat4x3().identity());
@@ -704,8 +704,8 @@ test("computeBoundingBox and computeBoundingSphere cache results until transform
 
 test("computeNormalMatrix caches normalMatrix until transform changes", () => {
   const context = createMockContext();
-  const mesh = new Mesh(new Cube(2.0), context);
-  mesh.setScale(2, 2, 2);
+  const mesh = new Mesh(new Cube(new Vec3(2, 2, 2)), context);
+  mesh.setScale(new Vec3(2, 2, 2));
   mesh.updateModelMatrix();
   mesh.setWorldMatrix(new Mat4x3().identity());
 
@@ -725,8 +725,8 @@ test("computeNormalMatrix caches normalMatrix until transform changes", () => {
 
 test("computeNormalMatrix transforms normals correctly under rotation", () => {
   const context = createMockContext();
-  const mesh = new Mesh(new Cube(2.0), context);
-  mesh.setRotation(0, Math.PI / 2, 0); // 90 deg around Y
+  const mesh = new Mesh(new Cube(new Vec3(2, 2, 2)), context);
+  mesh.setRotation(new Vec3(0, Math.PI / 2, 0)); // 90 deg around Y
   mesh.updateModelMatrix();
   mesh.setWorldMatrix(new Mat4x3().identity());
 
@@ -768,8 +768,8 @@ test("render binds fog uniforms and camera position", () => {
 
 test("computeBoundingBox and computeBoundingSphere stay synchronized without mutual starvation", () => {
   const context = createMockContext();
-  const mesh = new Mesh(new Cube(2.0), context);
-  mesh.setPosition(10, 0, 0);
+  const mesh = new Mesh(new Cube(new Vec3(2, 2, 2)), context);
+  mesh.setPosition(new Vec3(10, 0, 0));
   mesh.updateModelMatrix();
   mesh.setWorldMatrix(new Mat4x3().identity());
 
@@ -785,6 +785,26 @@ test("computeBoundingBox and computeBoundingSphere stay synchronized without mut
   expect(box.min.x).toBeCloseTo(9);
   expect(box.max.x).toBeCloseTo(11);
   expect(mesh.isBoundsDirty).toBe(false);
+});
+
+test("computeBounds uses localBoundingBox when vertices are null or empty after setLocalBounds", () => {
+  const context = createMockContext();
+  const emptyGeometry = { vertices: null, indices: null, normals: null, uvs: null, itemSize: 3, primitive: "TRIANGLES", subMeshes: [] };
+  const mesh = new Mesh(emptyGeometry, context);
+  mesh.setLocalBounds(new BoundingBox(new Vec3(-5, -2, -3), new Vec3(5, 2, 3)));
+  mesh.setPosition(new Vec3(10, 0, 0));
+  mesh.updateModelMatrix();
+  mesh.setWorldMatrix(new Mat4x3().identity());
+
+  const box = mesh.computeBoundingBox();
+  expect(box.min.x).toBeCloseTo(5);
+  expect(box.max.x).toBeCloseTo(15);
+  expect(box.min.y).toBeCloseTo(-2);
+  expect(box.max.y).toBeCloseTo(2);
+
+  const sphere = mesh.computeBoundingSphere();
+  expect(sphere.center.x).toBeCloseTo(10);
+  expect(sphere.radius).toBeGreaterThan(0);
 });
 
 

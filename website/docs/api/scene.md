@@ -3,7 +3,7 @@
 The central container orchestrating all renderable meshes, dynamic lights, camera passes, viewing frustum culling, and spatial raycasting.
 
 ```javascript
-import { Scene, PerspectiveCamera, Mesh, Cube, PhongShader, DirectionalLight, Vec3 } from '@1pizzateam/roostr';
+import { Scene, PerspectiveCamera, Mesh, Cube, PhongShader, DirectionalLight, Vec3, Vec2 } from '@1pizzateam/roostr';
 
 const canvas = document.getElementById('webgl-canvas');
 const gl = canvas.getContext('webgl');
@@ -11,7 +11,7 @@ const gl = canvas.getContext('webgl');
 const scene = new Scene({
   canvasId: canvas,
   context: gl,
-  viewport: { x: 0, y: 0, width: 800, height: 600 },
+  viewport: new Vec2(800, 600),
   clearColor: new Vec3(0.08, 0.1, 0.14)
 });
 ```
@@ -32,11 +32,14 @@ new Scene(optionsOrContext?: ISceneOptions | WebGLRenderingContext)
 | :--- | :--- | :--- |
 | `options.canvasId` | `string \| HTMLCanvasElement` | Canvas element or element ID. |
 | `options.context` | `WebGLRenderingContext` | The WebGL rendering context. |
-| `options.viewport` | `IRect` | Viewport rectangle `{ x, y, width, height }`. |
-| `options.clearColor` | `Vec3 \| number[]` | Background clear color `[r, g, b]`. |
+| `options.viewport` | `Vec2 \| { position?: Vec2; size: Vec2 }` | Viewport dimensions `Vec2(width, height)` or `{ position?, size }`. |
+| `options.clearColor` | `Vec3` | Background clear RGB color. |
+| `options.ambientColor` | `Vec3` | Global ambient light factor (default `[0, 0, 0]`). |
+| `options.fog` | `{ color: Vec3; near: number; far: number } \| null` | Optional distance fog settings. |
 | `options.cullFace` | `'BACK' \| 'FRONT' \| 'NONE'` | Face culling mode (default `'BACK'`). |
 | `options.frontFace` | `'CCW' \| 'CW'` | Front-face vertex winding (default `'CCW'`). |
 | `options.depthTest` | `boolean` | Whether to enable WebGL depth testing (default `true`). |
+| `options.enableFrustumCulling` | `boolean` | When true, automatically culls meshes outside camera frustum (default `false`). |
 
 ---
 
@@ -127,29 +130,31 @@ if (hits.length > 0) {
 }
 ```
 
-### `setSize(sizeOrWidth: Vec2 | number, height?: number): void`
+### `setSize(size: Vec2): void`
 
 Updates the viewport dimensions and underlying canvas size:
 
 ```javascript
 scene.setSize(new Vec2(window.innerWidth, window.innerHeight));
-// Or:
-scene.setSize(1280, 720);
 ```
 
-### `setViewport(x: number, y: number, width: number, height: number): void`
+### `getSize(target?: Vec2): Vec2`
 
-Update the WebGL viewport dimensions.
+Returns the current canvas resolution into an optional target `Vec2`.
 
-### `setClearColor(r: number, g: number, b: number, a?: number): void`
+### `setViewport(size: Vec2, position?: Vec2): void`
 
-Update the scene background clear color.
+Update the WebGL viewport dimensions and optional offset.
 
-### `setFog(color: Vec3 | number[], near: number, far?: number): this`
+### `setClearColor(color: Vec3, alpha: number = 1.0): void`
 
-Enables atmospheric linear distance fog for built-in `PhongShader` meshes. A legacy numeric overload `setFog(r, g, b, near?, far?)` is also accepted.
+Update the scene background clear RGB color and alpha.
 
-### `clearFog(): void`
+### `setFog(color: Vec3, near: number, far: number = 1000): this`
+
+Enables atmospheric linear distance fog for built-in `PhongShader` meshes.
+
+### `clearFog(): this`
 
 Disables distance fog.
 

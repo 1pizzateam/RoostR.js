@@ -1,4 +1,4 @@
-import { CustomMesh } from "../../dist/roostr";
+import { CustomMesh, Vec3 } from "../../dist/roostr";
 
 test("starts with null vertices, indices, normals and uvs", () => {
   const mesh = new CustomMesh();
@@ -27,12 +27,11 @@ test("exposes the list of supported GL primitives", () => {
   ]);
 });
 
-test("setVertices copies a Float32Array", () => {
+test("setVertices converts Vec3 array to Float32Array", () => {
   const mesh = new CustomMesh();
-  const array = new Float32Array([1, 2, 3]);
+  const array = [new Vec3(1, 2, 3)];
   mesh.setVertices(array);
-  expect(mesh.vertices).toEqual(array);
-  expect(mesh.vertices).not.toBe(array);
+  expect(mesh.vertices).toEqual(new Float32Array([1, 2, 3]));
 });
 
 test("setIndices copies an Int32Array", () => {
@@ -43,12 +42,11 @@ test("setIndices copies an Int32Array", () => {
   expect(mesh.indices).not.toBe(array);
 });
 
-test("setNormals copies a Float32Array", () => {
+test("setNormals converts Vec3 array to Float32Array", () => {
   const mesh = new CustomMesh();
-  const array = new Float32Array([0, 1, 0]);
+  const array = [new Vec3(0, 1, 0)];
   mesh.setNormals(array);
-  expect(mesh.normals).toEqual(array);
-  expect(mesh.normals).not.toBe(array);
+  expect(mesh.normals).toEqual(new Float32Array([0, 1, 0]));
 });
 
 test("setUvs copies a Float32Array", () => {
@@ -98,25 +96,11 @@ test("setPrimitive rejects an unsupported primitive and returns false", () => {
   expect(mesh.primitive).toBe("TRIANGLES");
 });
 
-test("setVertices accepts a regular number array and converts to Float32Array", () => {
-  const mesh = new CustomMesh();
-  mesh.setVertices([1, 2, 3]);
-  expect(mesh.vertices).toBeInstanceOf(Float32Array);
-  expect(Array.from(mesh.vertices)).toEqual([1, 2, 3]);
-});
-
 test("setIndices accepts a regular number array and converts to Int32Array", () => {
   const mesh = new CustomMesh();
   mesh.setIndices([0, 1, 2]);
   expect(mesh.indices).toBeInstanceOf(Int32Array);
   expect(Array.from(mesh.indices)).toEqual([0, 1, 2]);
-});
-
-test("setNormals accepts a regular number array and converts to Float32Array", () => {
-  const mesh = new CustomMesh();
-  mesh.setNormals([0, 1, 0]);
-  expect(mesh.normals).toBeInstanceOf(Float32Array);
-  expect(Array.from(mesh.normals)).toEqual([0, 1, 0]);
 });
 
 test("setUvs accepts a regular number array and converts to Float32Array", () => {

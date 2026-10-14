@@ -73,7 +73,8 @@ import {
   Material,
   DirectionalLight,
   PointLight,
-  Vec3
+  Vec3,
+  Vec2
 } from '@1pizzateam/roostr';
 import { Player } from '@1pizzateam/loopr';
 
@@ -84,17 +85,17 @@ const gl = canvas.getContext('webgl');
 const scene = new Scene({
   canvasId: canvas,
   context: gl,
-  viewport: { x: 0, y: 0, width: 800, height: 600 },
+  viewport: new Vec2(800, 600),
   clearColor: new Vec3(0.05, 0.07, 0.1)
 });
 
 // 2. Camera setup
-const camera = new PerspectiveCamera(45, gl, 0.1, 100);
-camera.setPosition(0, 2, 5);
-camera.lookAt(0, 0, 0);
+const camera = new PerspectiveCamera(45, new Vec2(0.1, 100), gl);
+camera.setPosition(new Vec3(0, 2, 5));
+camera.lookAt(new Vec3(0, 0, 0));
 
 // 3. Create a sphere mesh
-const sphere = new Mesh(gl, new Sphere(1.0, 32, 24));
+const sphere = new Mesh(new Sphere(1.0, 32, 24), gl);
 sphere.addProgram(PhongShader.create(gl));
 sphere.addMaterial(new Material({
   ambient: new Vec3(0.2, 0.2, 0.2),
@@ -106,11 +107,11 @@ scene.addMesh(sphere);
 
 // 4. Add lighting
 const sun = new DirectionalLight(new Vec3(0.5, 1.0, 0.5));
-sun.setDiffuse(0.9, 0.9, 0.9);
+sun.setDiffuse(new Vec3(0.9, 0.9, 0.9));
 scene.addLight(sun);
 
 const point = new PointLight(new Vec3(2, 2, 1));
-point.setDiffuse(1.0, 0.6, 0.2);
+point.setDiffuse(new Vec3(1.0, 0.6, 0.2));
 scene.addLight(point);
 
 // 5. Render loop

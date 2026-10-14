@@ -3,7 +3,7 @@ import {
   Scene, Mesh, Quad, Material, Program, Texture, Lights, MAX_LIGHTS, PhongShader,
   PointLight, DirectionalLight, SpotLight, AmbientLight,
   PerspectiveCamera, OrbitControls, CustomMesh, BoundingBox, BoundingSphere, Ray,
-  Vec3, Quat, Mat4x3
+  Vec2, Vec3, Quat, Mat4x3
 } from "../dist/roostr";
 import { createMockContext } from "./helpers/webgl-mock";
 
@@ -47,8 +47,8 @@ describe("Lights", () => {
   test("scene.render feeds scene.ambientColor into the lights", () => {
     const context = createContext();
     const scene = new Scene(context);
-    scene.setAmbientColor(0.5, 0.25, 0.125);
-    const camera = new PerspectiveCamera(45, 0.1, 100, context);
+    scene.setAmbientColor(new Vec3(0.5, 0.25, 0.125));
+    const camera = new PerspectiveCamera(45, new Vec2(0.1, 100), context);
     scene.render(camera);
     expect(Array.from(scene.lights.flatArrays.floatAmbient)).toEqual([0.5, 0.25, 0.125]);
   });
@@ -71,25 +71,25 @@ describe("Lights", () => {
     const point = new PointLight();
     lights.addLight(point);
     const first = lights.flatten().floatPosition;
-    point.setPosition(4, 5, 6);
+    point.setPosition(new Vec3(4, 5, 6));
     const second = lights.flatten().floatPosition;
     expect(second).toBe(first);
     expect(Array.from(second)).toEqual([4, 5, 6]);
   });
 
-  test("light setters and constructors accept number arrays", () => {
-    const directional = new DirectionalLight({ direction: [0, 0, -2], diffuse: [0.1, 0.2, 0.3] });
+  test("light setters and constructors accept Vec3", () => {
+    const directional = new DirectionalLight({ direction: new Vec3(0, 0, -2), diffuse: new Vec3(0.1, 0.2, 0.3) });
     expect(directional.direction.toArray()).toEqual([0, 0, -1]);
     expect(directional.diffuse.toArray()).toEqual([0.1, 0.2, 0.3]);
-    const spot = new SpotLight({ position: [1, 2, 3], direction: [0, -1, 0] });
+    const spot = new SpotLight({ position: new Vec3(1, 2, 3), direction: new Vec3(0, -1, 0) });
     expect(spot.position.toArray()).toEqual([1, 2, 3]);
     expect(spot.direction.toArray()).toEqual([0, -1, 0]);
   });
 });
 
 describe("Material", () => {
-  test("accepts number arrays and Vec3 and keeps uniform arrays in place", () => {
-    const material = new Material({ ambient: [0.1, 0.2, 0.3], diffuse: new Vec3(0.4, 0.5, 0.6) });
+  test("accepts Vec3 and keeps uniform arrays in place", () => {
+    const material = new Material({ ambient: new Vec3(0.1, 0.2, 0.3), diffuse: new Vec3(0.4, 0.5, 0.6) });
     expect(material.ambient.toArray()).toEqual([0.1, 0.2, 0.3]);
     expect(material.uniforms.materialAmbient.value).toEqual([0.1, 0.2, 0.3]);
     const array = material.uniforms.materialDiffuse.value;
@@ -109,14 +109,10 @@ describe("Material", () => {
 });
 
 describe("Scene", () => {
-  test("setFog supports Vec3 and legacy numeric signatures", () => {
+  test("setFog supports Vec3", () => {
     const scene = new Scene(createContext());
     scene.setFog(new Vec3(0.1, 0.2, 0.3), 5, 50);
     expect(scene.fog).toEqual({ color: new Vec3(0.1, 0.2, 0.3), near: 5, far: 50 });
-    scene.setFog(1, 0.5, 0.25, 2, 80);
-    expect(scene.fog.color.toArray()).toEqual([1, 0.5, 0.25]);
-    expect(scene.fog.near).toBe(2);
-    expect(scene.fog.far).toBe(80);
   });
 
   test("resolves the context from canvasId and throws without any context", () => {
@@ -129,11 +125,11 @@ describe("Scene", () => {
   test("uploads the current resolution each frame", () => {
     const context = createContext();
     const scene = new Scene(context);
-    const mesh = new Mesh(new Quad(2, 2), context);
+    const mesh = new Mesh(new Quad(new Vec2(2, 2)), context);
     mesh.useBasicMaterial();
     scene.addMesh(mesh);
-    scene.setSize(800, 600);
-    scene.render(new PerspectiveCamera(45, 0.1, 100, context));
+    scene.setSize(new Vec2(800, 600));
+    scene.render(new PerspectiveCamera(45, new Vec2(0.1, 100), context));
     expect(context.uniform2f).toHaveBeenLastCalledWith(mesh.programs[0].screenResolution, 800, 600);
   });
 
@@ -141,7 +137,7 @@ describe("Scene", () => {
     const context = createContext();
     const scene = new Scene(context);
     const meshes = [0, 1, 2].map(() => {
-      const mesh = new Mesh(new Quad(2, 2), context);
+      const mesh = new Mesh(new Quad(new Vec2(2, 2)), context);
       mesh.useBasicMaterial();
       scene.addMesh(mesh);
       return mesh;
@@ -149,7 +145,7 @@ describe("Scene", () => {
     expect(meshes[0].programs[0]).toBe(meshes[1].programs[0]);
     expect(context.createProgram).toHaveBeenCalledTimes(1);
 
-    const camera = new PerspectiveCamera(45, 0.1, 100, context);
+    const camera = new PerspectiveCamera(45, new Vec2(0.1, 100), context);
     context.uniformMatrix4fv.mockClear();
     scene.render(camera);
 
@@ -163,14 +159,14 @@ describe("Scene", () => {
   test("renders children with their own blend mode and culling", () => {
     const context = createContext();
     const scene = new Scene(context);
-    const parent = new Mesh(new Quad(2, 2), context);
-    const blendedChild = new Mesh(new Quad(2, 2), context);
+    const parent = new Mesh(new Quad(new Vec2(2, 2)), context);
+    const blendedChild = new Mesh(new Quad(new Vec2(2, 2)), context);
     blendedChild.activateBlendMode();
     parent.addChild(blendedChild);
     scene.addMesh(parent);
-    const camera = new PerspectiveCamera(45, 0.1, 100, context);
-    camera.setPosition(0, 0, 10);
-    camera.setTarget(0, 0, 0);
+    const camera = new PerspectiveCamera(45, new Vec2(0.1, 100), context);
+    camera.setPosition(new Vec3(0, 0, 10));
+    camera.setTarget(new Vec3(0, 0, 0));
 
     const parentSpy = jest.spyOn(parent, "renderSelf");
     const childSpy = jest.spyOn(blendedChild, "renderSelf");
@@ -182,21 +178,21 @@ describe("Scene", () => {
   test("a child that is also a scene mesh is rendered once", () => {
     const context = createContext();
     const scene = new Scene(context);
-    const parent = new Mesh(new Quad(2, 2), context);
-    const child = new Mesh(new Quad(2, 2), context);
+    const parent = new Mesh(new Quad(new Vec2(2, 2)), context);
+    const child = new Mesh(new Quad(new Vec2(2, 2)), context);
     parent.addChild(child);
     scene.addMesh(child);
     scene.addMesh(parent);
-    expect(scene.render(new PerspectiveCamera(45, 0.1, 100, context))).toBe(2);
+    expect(scene.render(new PerspectiveCamera(45, new Vec2(0.1, 100), context))).toBe(2);
   });
 
   test("blend state is restored after drawing blended meshes", () => {
     const context = createContext();
     const scene = new Scene(context);
-    const mesh = new Mesh(new Quad(2, 2), context);
+    const mesh = new Mesh(new Quad(new Vec2(2, 2)), context);
     mesh.activateBlendMode();
     scene.addMesh(mesh);
-    scene.render(new PerspectiveCamera(45, 0.1, 100, context));
+    scene.render(new PerspectiveCamera(45, new Vec2(0.1, 100), context));
     const calls = [...context.enable.mock.calls.map(c => ["e", c[0]]), ...context.disable.mock.calls.map(c => ["d", c[0]])];
     expect(calls.filter(c => c[1] === context.BLEND).length).toBeGreaterThan(0);
     expect(context.disable).toHaveBeenLastCalledWith(context.BLEND);
@@ -205,9 +201,9 @@ describe("Scene", () => {
   test("raycast reaches child meshes", () => {
     const context = createContext();
     const scene = new Scene(context);
-    const parent = new Mesh(new Quad(2, 2), context);
-    const child = new Mesh(new Quad(2, 2), context);
-    child.setPosition(0, 0, -5);
+    const parent = new Mesh(new Quad(new Vec2(2, 2)), context);
+    const child = new Mesh(new Quad(new Vec2(2, 2)), context);
+    child.setPosition(new Vec3(0, 0, -5));
     parent.addChild(child);
     scene.addMesh(parent);
     const hits = scene.raycast(new Ray(new Vec3(0, 0, 10), new Vec3(0, 0, -1)));
@@ -277,7 +273,7 @@ describe("Mesh", () => {
 
   test("quaternion is the single rotation source and rotation is derived", () => {
     const { mesh } = { mesh: new Mesh(triangle(), createContext()) };
-    mesh.setRotation(0.3, -0.2, 0.5);
+    mesh.setRotation(new Vec3(0.3, -0.2, 0.5));
     mesh.rotateY(0.4);
     const euler = mesh.rotation;
     const expected = new Quat().copy(mesh.quaternion);
@@ -286,21 +282,21 @@ describe("Mesh", () => {
 
   test("lookAt makes -Z face the target and survives translate", () => {
     const mesh = new Mesh(triangle(), createContext());
-    mesh.setPosition(1, 2, 3);
+    mesh.setPosition(new Vec3(1, 2, 3));
     mesh.lookAt(new Vec3(5, 2, 3));
     mesh.updateModelMatrix();
     const forward = mesh.quaternion.multiplyVector(new Vec3(0, 0, -1));
     close(forward.x, 1);
     close(forward.y, 0);
-    mesh.translate(0, 1, 0);
+    mesh.translate(new Vec3(0, 1, 0));
     mesh.updateModelMatrix();
     const forwardAfter = mesh.quaternion.multiplyVector(new Vec3(0, 0, -1));
     close(forwardAfter.x, 1);
   });
 
-  test("array arguments are accepted by transform setters", () => {
+  test("vector arguments are accepted by transform setters", () => {
     const mesh = new Mesh(triangle(), createContext());
-    mesh.setPosition([1, 2, 3]).setScale([2, 2, 2]).translate([1, 1, 1]);
+    mesh.setPosition(new Vec3(1, 2, 3)).setScale(new Vec3(2, 2, 2)).translate(new Vec3(1, 1, 1));
     expect(mesh.position.toArray()).toEqual([2, 3, 4]);
     expect(mesh.scale.toArray()).toEqual([2, 2, 2]);
   });
@@ -312,7 +308,7 @@ describe("Mesh", () => {
     const child = new Mesh(triangle(), context);
     parent.addChild(child);
     scene.addMesh(parent);
-    const camera = new PerspectiveCamera(45, 0.1, 100, context);
+    const camera = new PerspectiveCamera(45, new Vec2(0.1, 100), context);
 
     scene.render(camera);
     const parentSpy = jest.spyOn(parent, "setWorldMatrix");
@@ -321,13 +317,13 @@ describe("Mesh", () => {
     expect(parentSpy).not.toHaveBeenCalled();
     expect(childSpy).not.toHaveBeenCalled();
 
-    parent.setPosition(3, 0, 0);
+    parent.setPosition(new Vec3(3, 0, 0));
     scene.render(camera);
     expect(parentSpy).toHaveBeenCalledTimes(1);
     expect(childSpy).toHaveBeenCalledTimes(1);
     expect(child.getWorldPosition().x).toBe(3);
 
-    child.setPosition(0, 2, 0);
+    child.setPosition(new Vec3(0, 2, 0));
     scene.render(camera);
     expect(parentSpy).toHaveBeenCalledTimes(1);
     expect(childSpy).toHaveBeenCalledTimes(2);
@@ -339,9 +335,9 @@ describe("Mesh", () => {
     const scene = new Scene(context);
     const mesh = new Mesh(triangle({ normals: [0, 0, 1, 0, 0, 1, 0, 0, 1] }), context);
     mesh.useNormalMaterial();
-    mesh.setScale(2, 2, 2);
+    mesh.setScale(new Vec3(2, 2, 2));
     scene.addMesh(mesh);
-    const camera = new PerspectiveCamera(45, 0.1, 100, context);
+    const camera = new PerspectiveCamera(45, new Vec2(0.1, 100), context);
     scene.render(camera);
     expect(mesh.isNormalMatrixDirty).toBe(false);
     const spy = jest.spyOn(mesh.worldMatrix, "toNormalMatrix");
@@ -448,7 +444,7 @@ describe("Texture", () => {
   test("update applies the flipY option", () => {
     const context = createContext();
     const texture = Texture.create(document.createElement("img"), context);
-    Texture.update(texture, document.createElement("img"), context, 0, 0, undefined, undefined, false);
+    Texture.update(texture, document.createElement("img"), context, new Vec2(0, 0), undefined, false);
     expect(context.pixelStorei).toHaveBeenLastCalledWith(context.UNPACK_FLIP_Y_WEBGL, 0);
   });
 
@@ -506,7 +502,7 @@ describe("Vector-first math", () => {
 
   test("CustomMesh smooth normals are normalized and fall back to +Y", () => {
     const mesh = new CustomMesh();
-    mesh.setVertices([0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 5, 5]);
+    mesh.setVertices([new Vec3(0, 0, 0), new Vec3(1, 0, 0), new Vec3(0, 1, 0), new Vec3(5, 5, 5)]);
     mesh.setIndices([0, 1, 2]);
     const normals = mesh.computeVertexNormals();
     expect(Array.from(normals.slice(0, 3))).toEqual([0, 0, 1]);
@@ -515,21 +511,21 @@ describe("Vector-first math", () => {
 
   test("Camera caches projection-view and ray matrices until the camera changes", () => {
     const context = createContext();
-    const camera = new PerspectiveCamera(60, 0.1, 100, context);
-    camera.setPosition(0, 0, 10);
-    camera.setTarget(0, 0, 0);
+    const camera = new PerspectiveCamera(60, new Vec2(0.1, 100), context);
+    camera.setPosition(new Vec3(0, 0, 10));
+    camera.setTarget(new Vec3(0, 0, 0));
     const pv = Array.from(camera.getProjectionViewMatrix());
     const expected = camera.getProjectionMatrixObject();
     const product = new (expected.constructor)().copy(expected);
     product.multiplyAffine(camera.getViewMatrixObject());
     pv.forEach((v, i) => close(v, product.toArray()[i]));
 
-    const ray = camera.getRay(0, 0);
+    const ray = camera.getRay(new Vec2(0, 0));
     close(ray.direction.z, -1);
 
-    camera.setPosition(10, 0, 0);
-    camera.setTarget(0, 0, 0);
-    const moved = camera.getRay(0, 0);
+    camera.setPosition(new Vec3(10, 0, 0));
+    camera.setTarget(new Vec3(0, 0, 0));
+    const moved = camera.getRay(new Vec2(0, 0));
     close(moved.direction.x, -1);
     expect(Array.from(camera.getProjectionViewMatrix())).not.toEqual(pv);
   });
@@ -540,9 +536,9 @@ describe("OrbitControls", () => {
 
   test("update skips the view matrix rebuild when nothing changed", () => {
     const context = createContext();
-    const camera = new PerspectiveCamera(45, 0.1, 100, context);
-    camera.setPosition(0, 0, 10);
-    camera.setTarget(0, 0, 0);
+    const camera = new PerspectiveCamera(45, new Vec2(0.1, 100), context);
+    camera.setPosition(new Vec3(0, 0, 10));
+    camera.setTarget(new Vec3(0, 0, 0));
     const controls = new OrbitControls(camera, dom());
     const spy = jest.spyOn(camera, "setViewMatrix");
     controls.update();
@@ -551,16 +547,16 @@ describe("OrbitControls", () => {
     controls.distance = 5;
     controls.update();
     expect(spy).toHaveBeenCalledTimes(1);
-    camera.target.setScalar(1, 0, 0);
+    camera.target.copy(new Vec3(1, 0, 0));
     controls.update();
     expect(spy).toHaveBeenCalledTimes(2);
   });
 
   test("sets touch-action and takes the shortest way around the azimuth", () => {
     const context = createContext();
-    const camera = new PerspectiveCamera(45, 0.1, 100, context);
-    camera.setPosition(0, 0, 10);
-    camera.setTarget(0, 0, 0);
+    const camera = new PerspectiveCamera(45, new Vec2(0.1, 100), context);
+    camera.setPosition(new Vec3(0, 0, 10));
+    camera.setTarget(new Vec3(0, 0, 0));
     const element = dom();
     const controls = new OrbitControls(camera, element);
     expect(element.style.touchAction).toBe("none");
@@ -574,9 +570,9 @@ describe("OrbitControls", () => {
   test("damping with deltaTime is frame-rate independent", () => {
     const context = createContext();
     const make = () => {
-      const camera = new PerspectiveCamera(45, 0.1, 100, context);
-      camera.setPosition(0, 0, 10);
-      camera.setTarget(0, 0, 0);
+      const camera = new PerspectiveCamera(45, new Vec2(0.1, 100), context);
+      camera.setPosition(new Vec3(0, 0, 10));
+      camera.setTarget(new Vec3(0, 0, 0));
       const controls = new OrbitControls(camera, dom());
       controls.enableDamping = true;
       controls.targetDistance = 30;
@@ -591,9 +587,9 @@ describe("OrbitControls", () => {
 
   test("ignores pointer moves from other pointers", () => {
     const context = createContext();
-    const camera = new PerspectiveCamera(45, 0.1, 100, context);
-    camera.setPosition(0, 0, 10);
-    camera.setTarget(0, 0, 0);
+    const camera = new PerspectiveCamera(45, new Vec2(0.1, 100), context);
+    camera.setPosition(new Vec3(0, 0, 10));
+    camera.setTarget(new Vec3(0, 0, 0));
     const listeners = {};
     const element = { addEventListener: jest.fn((n, cb) => { listeners[n] = cb; }), removeEventListener: jest.fn(), style: {}, clientHeight: 500 };
     const windowListeners = {};
@@ -612,8 +608,8 @@ describe("OrbitControls", () => {
 describe("Packed light uniforms", () => {
   test("flatten packs (position, type), (diffuse, cutoff), (specular, exponent) as vec4", () => {
     const lights = new Lights();
-    const spot = new SpotLight({ position: [1, 2, 3], diffuse: [0.1, 0.2, 0.3], specular: [0.4, 0.5, 0.6], cutoff: 30, exponent: 4 });
-    const directional = new DirectionalLight({ direction: [0, -1, 0] });
+    const spot = new SpotLight({ position: new Vec3(1, 2, 3), diffuse: new Vec3(0.1, 0.2, 0.3), specular: new Vec3(0.4, 0.5, 0.6), cutoff: 30, exponent: 4 });
+    const directional = new DirectionalLight({ direction: new Vec3(0, -1, 0) });
     lights.addLight(directional);
     lights.addLight(spot);
     const flat = lights.flatten();
@@ -627,11 +623,11 @@ describe("Packed light uniforms", () => {
   test("meshes upload packed arrays with uniform4fv", () => {
     const context = createContext();
     const scene = new Scene(context);
-    const mesh = new Mesh(new Quad(2, 2), context);
+    const mesh = new Mesh(new Quad(new Vec2(2, 2)), context);
     mesh.usePhongMaterial();
     scene.addMesh(mesh);
-    scene.addLight(new PointLight([1, 2, 3]));
-    scene.render(new PerspectiveCamera(45, 0.1, 100, context));
+    scene.addLight(new PointLight(new Vec3(1, 2, 3)));
+    scene.render(new PerspectiveCamera(45, new Vec2(0.1, 100), context));
     const program = mesh.programs[0];
     const upload = context.uniform4fv.mock.calls.find(c => c[0] === program.lightPositionType);
     expect(upload).toBeDefined();
@@ -668,12 +664,12 @@ describe("Packed light uniforms", () => {
 });
 
 describe("Per-mesh blend function and depth write", () => {
-  const camera = (context) => new PerspectiveCamera(45, 0.1, 100, context);
+  const camera = (context) => new PerspectiveCamera(45, new Vec2(0.1, 100), context);
 
   test("setBlend activates blending with custom factors", () => {
     const context = createContext();
     const scene = new Scene(context);
-    const mesh = new Mesh(new Quad(2, 2), context);
+    const mesh = new Mesh(new Quad(new Vec2(2, 2)), context);
     mesh.setBlend("SRC_ALPHA", "ONE_MINUS_SRC_ALPHA");
     scene.addMesh(mesh);
     scene.render(camera(context));
@@ -684,7 +680,7 @@ describe("Per-mesh blend function and depth write", () => {
   test("default blending stays additive", () => {
     const context = createContext();
     const scene = new Scene(context);
-    const mesh = new Mesh(new Quad(2, 2), context);
+    const mesh = new Mesh(new Quad(new Vec2(2, 2)), context);
     mesh.activateBlendMode();
     scene.addMesh(mesh);
     scene.render(camera(context));
@@ -696,7 +692,7 @@ describe("Per-mesh blend function and depth write", () => {
     const context = createContext();
     const scene = new Scene(context);
     for (let i = 0; i < 3; i++) {
-      const mesh = new Mesh(new Quad(2, 2), context);
+      const mesh = new Mesh(new Quad(new Vec2(2, 2)), context);
       mesh.setBlend("SRC_ALPHA", "ONE_MINUS_SRC_ALPHA");
       scene.addMesh(mesh);
     }
@@ -707,7 +703,7 @@ describe("Per-mesh blend function and depth write", () => {
   test("setDepthWrite(false) disables depth writes around the mesh and restores them", () => {
     const context = createContext();
     const scene = new Scene(context);
-    const mesh = new Mesh(new Quad(2, 2), context);
+    const mesh = new Mesh(new Quad(new Vec2(2, 2)), context);
     mesh.setBlend().setDepthWrite(false);
     scene.addMesh(mesh);
     context.depthMask.mockClear();
@@ -720,7 +716,7 @@ describe("Per-mesh blend function and depth write", () => {
   test("opaque meshes can also skip depth writes", () => {
     const context = createContext();
     const scene = new Scene(context);
-    const mesh = new Mesh(new Quad(2, 2), context);
+    const mesh = new Mesh(new Quad(new Vec2(2, 2)), context);
     mesh.setDepthWrite(false);
     scene.addMesh(mesh);
     context.depthMask.mockClear();
@@ -731,7 +727,7 @@ describe("Per-mesh blend function and depth write", () => {
   test("default meshes never touch depthMask beyond the initial state", () => {
     const context = createContext();
     const scene = new Scene(context);
-    scene.addMesh(new Mesh(new Quad(2, 2), context));
+    scene.addMesh(new Mesh(new Quad(new Vec2(2, 2)), context));
     context.depthMask.mockClear();
     scene.render(camera(context));
     expect(context.depthMask.mock.calls.every(c => c[0] === true)).toBe(true);

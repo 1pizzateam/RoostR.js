@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals';
-import { OrbitControls, PerspectiveCamera } from '../../dist/roostr.js';
+import { OrbitControls, PerspectiveCamera, Vec2, Vec3 } from '../../dist/roostr.js';
 import { createMockContext } from '../helpers/webgl-mock.js';
 
 describe('OrbitControls', () => {
@@ -9,9 +9,9 @@ describe('OrbitControls', () => {
   });
 
   test('initializes angles from camera position and target', () => {
-    const camera = new PerspectiveCamera(45, 0.1, 100, context);
-    camera.setPosition(0, 0, 10);
-    camera.setTarget(0, 0, 0);
+    const camera = new PerspectiveCamera(45, new Vec2(0.1, 100), context);
+    camera.setPosition(new Vec3(0, 0, 10));
+    camera.setTarget(new Vec3(0, 0, 0));
 
     const fakeDom = {
       addEventListener: jest.fn(),
@@ -28,9 +28,9 @@ describe('OrbitControls', () => {
   });
 
   test('update recomputes camera position around target', () => {
-    const camera = new PerspectiveCamera(45, 0.1, 100, context);
-    camera.setPosition(0, 0, 10);
-    camera.setTarget(0, 0, 0);
+    const camera = new PerspectiveCamera(45, new Vec2(0.1, 100), context);
+    camera.setPosition(new Vec3(0, 0, 10));
+    camera.setTarget(new Vec3(0, 0, 0));
 
     const fakeDom = {
       addEventListener: jest.fn(),
@@ -51,9 +51,9 @@ describe('OrbitControls', () => {
   });
 
   test('handles wheel zoom event', () => {
-    const camera = new PerspectiveCamera(45, 0.1, 100, context);
-    camera.setPosition(0, 0, 10);
-    camera.setTarget(0, 0, 0);
+    const camera = new PerspectiveCamera(45, new Vec2(0.1, 100), context);
+    camera.setPosition(new Vec3(0, 0, 10));
+    camera.setTarget(new Vec3(0, 0, 0));
 
     const listeners = {};
     const fakeDom = {
@@ -75,9 +75,9 @@ describe('OrbitControls', () => {
   });
 
   test('handles touch pinch and touch end reset', () => {
-    const camera = new PerspectiveCamera(45, 0.1, 100, context);
-    camera.setPosition(0, 0, 10);
-    camera.setTarget(0, 0, 0);
+    const camera = new PerspectiveCamera(45, new Vec2(0.1, 100), context);
+    camera.setPosition(new Vec3(0, 0, 10));
+    camera.setTarget(new Vec3(0, 0, 0));
 
     const listeners = {};
     const removed = {};

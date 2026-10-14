@@ -9,8 +9,8 @@ import { Cube, Sphere, Cylinder, Plane, Quad, MultiQuad, Mesh, Vec3, Vec2 } from
 
 const cubeMesh     = new Mesh(new Cube(new Vec3(2, 3, 2)), gl);
 const sphereMesh   = new Mesh(new Sphere(1.5, 32, 24), gl);
-const cylinderMesh = new Mesh(new Cylinder(1.0, 1.0, 3.0, 24), gl);
-const floorMesh    = new Mesh(new Plane(new Vec2(10, 10), 4, 4, 'xz'), gl);
+const cylinderMesh = new Mesh(new Cylinder(new Vec2(1.0, 1.0), 3.0, 24), gl);
+const floorMesh    = new Mesh(new Plane(new Vec2(10, 10), new Vec2(4, 4), 'xz'), gl);
 ```
 
 ---
@@ -19,15 +19,15 @@ const floorMesh    = new Mesh(new Plane(new Vec2(10, 10), 4, 4, 'xz'), gl);
 
 ### `Cube`
 
-Generates an axis-aligned 6-sided box with face normals and per-face UV maps. Supports scalar uniform size or non-uniform `Vec3` dimensions.
+Generates an axis-aligned 6-sided box with face normals and per-face UV maps.
 
 ```typescript
-new Cube(sizeOrDimensions: Vec3 | number = 1.0, flat: boolean = false)
+new Cube(size: Vec3 = new Vec3(2.0, 2.0, 2.0), flat: boolean = false)
 ```
 
-- Uniform cube: `new Cube(2.0)`
+- Uniform box: `new Cube(new Vec3(2.0, 2.0, 2.0))`
 - Non-uniform box: `new Cube(new Vec3(2.0, 4.0, 1.0))`
-- Unshared vertices with flat face normals: `new Cube(1.0, true)`
+- Unshared vertices with flat face normals: `new Cube(new Vec3(1.0, 1.0, 1.0), true)`
 
 ---
 
@@ -57,10 +57,11 @@ Generates a cylinder or truncated cone with top and bottom cap lids.
 
 ```typescript
 new Cylinder(
-  radiusTop: number = 1.0,
-  radiusBottom: number = 1.0,
-  height: number = 2.0,
-  radialSegments: number = 16
+  radii: Vec2 = new Vec2(1.0, 1.0),
+  height = 1.0,
+  radialSegments = 16,
+  heightSegments = 1,
+  openEnded = false
 )
 ```
 
@@ -72,17 +73,15 @@ Generates a flat 2D grid subdivided into tiles along the `'xz'` (horizontal grou
 
 ```typescript
 new Plane(
-  sizeOrWidth: Vec2 | number = 1.0,
-  height?: number,
-  segmentsW: number = 1,
-  segmentsH: number = 1,
+  size: Vec2 = new Vec2(1.0, 1.0),
+  segments: Vec2 = new Vec2(1, 1),
   orientation: 'xy' | 'xz' = 'xz'
 )
 ```
 
 ```javascript
 // Vector-first dimensions
-const ground = new Plane(new Vec2(20, 20), 8, 8, 'xz');
+const ground = new Plane(new Vec2(20, 20), new Vec2(8, 8), 'xz');
 ```
 
 ---
@@ -92,7 +91,7 @@ const ground = new Plane(new Vec2(20, 20), 8, 8, 'xz');
 Generates a single 2-triangle rectangular quad with vertex positions and UVs.
 
 ```typescript
-new Quad(sizeOrWidth?: Vec2 | Rect | number, height?: number)
+new Quad(size: Vec2 | Rect = new Vec2(2.0, 2.0))
 ```
 
 ```javascript
@@ -106,7 +105,7 @@ const quad = new Quad(new Vec2(4, 3));
 Procedurally constructs multiple quad surfaces into a single batched mesh buffer.
 
 ```typescript
-new MultiQuad(sizeOrWidth?: Vec2 | Rect | number, height?: number)
+new MultiQuad(size: Vec2 | Rect = new Vec2(2.0, 2.0))
 ```
 
 ```javascript
@@ -131,5 +130,5 @@ new FullscreenQuad()
 Renders connected 3D line segments from a series of vertex coordinates using `gl.LINE_STRIP`.
 
 ```typescript
-new Line(vertices: Vec3[] | number[], thickness: number = 1.0)
+new Line(vertices: Vec3[] = [], thickness: number = 2.0)
 ```

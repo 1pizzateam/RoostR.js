@@ -1,9 +1,9 @@
-import { Uniform } from './uniform';
-import { SubMesh } from './geometry/submesh';
-import { MeshRenderer }  from './renderer/mesh';
-import { eDrawMethod } from './mesh';
-import { Material }  from './material';
-import { Mat4x3, Vec3, Vec2, Quat, Mat3 } from '@1pizzateam/spock';
+import type { Uniform } from './uniform';
+import type { SubMesh } from './geometry/submesh';
+import type { MeshRenderer }  from './renderer/mesh';
+import type { eDrawMethod } from './objects/mesh';
+import type { Material }  from './material';
+import type { Mat4x3, Vec3, Vec2, Quat, Mat3 } from '@1pizzateam/spock';
 
 export interface IGeometry {
   vertices    : number[] | Float32Array | null;

@@ -13,7 +13,8 @@ import {
   PointLight,
   SpotLight,
   AmbientLight,
-  Vec3
+  Vec3,
+  Vec2
 } from '@1pizzateam/roostr';
 import { Player } from '@1pizzateam/loopr';
 
@@ -38,9 +39,9 @@ let resizeObserver = null;
 
 function updateLights() {
   if (!dirLight || !pointLight || !spotLight) return;
-  dirLight.setDiffuse(enableDir.value ? [0.9, 0.85, 0.8] : [0, 0, 0]);
-  pointLight.setDiffuse(enablePoint.value ? [1.0, 0.5, 0.2] : [0, 0, 0]);
-  spotLight.setDiffuse(enableSpot.value ? [0.2, 0.7, 1.0] : [0, 0, 0]);
+  dirLight.setDiffuse(enableDir.value ? new Vec3(0.9, 0.85, 0.8) : new Vec3(0, 0, 0));
+  pointLight.setDiffuse(enablePoint.value ? new Vec3(1.0, 0.5, 0.2) : new Vec3(0, 0, 0));
+  spotLight.setDiffuse(enableSpot.value ? new Vec3(0.2, 0.7, 1.0) : new Vec3(0, 0, 0));
 }
 
 function updateShininess(val) {
@@ -72,9 +73,9 @@ onMounted(() => {
 
   scene = new Scene(gl);
 
-  camera = new PerspectiveCamera(45, 0.1, 100, gl);
-  camera.setPosition(0, 2.5, 5.5);
-  camera.lookAt(0, 0.4, 0);
+  camera = new PerspectiveCamera(45, new Vec2(0.1, 100), gl);
+  camera.setPosition(new Vec3(0, 2.5, 5.5));
+  camera.lookAt(new Vec3(0, 0.4, 0));
 
   controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true;
@@ -102,23 +103,23 @@ onMounted(() => {
     shininess: sphereMat.shininess
   });
   sphereMat = sphereMesh.materials[0];
-  sphereMesh.setPosition(0, 0.8, 0);
+  sphereMesh.setPosition(new Vec3(0, 0.8, 0));
   scene.addMesh(sphereMesh);
 
-  floorMesh = new Mesh(new Plane(12, 12, 6, 6), gl);
+  floorMesh = new Mesh(new Plane(new Vec2(12, 12), new Vec2(6, 6)), gl);
   floorMesh.usePhongMaterial({
     ambient: floorMat.ambient,
     diffuse: floorMat.diffuse,
     specular: floorMat.specular,
     shininess: floorMat.shininess
   });
-  floorMesh.setPosition(0, -0.4, 0);
+  floorMesh.setPosition(new Vec3(0, -0.4, 0));
   scene.addMesh(floorMesh);
 
   // Directional Light pointing downward
   dirLight = new DirectionalLight(new Vec3(-0.6, -1.0, -0.4));
-  dirLight.setDiffuse(0.9, 0.85, 0.8);
-  dirLight.setSpecular(0.8, 0.8, 0.8);
+  dirLight.setDiffuse(new Vec3(0.9, 0.85, 0.8));
+  dirLight.setSpecular(new Vec3(0.8, 0.8, 0.8));
   scene.addLight(dirLight);
 
   // Ambient Light for soft fill in shadows
@@ -127,19 +128,19 @@ onMounted(() => {
 
   // Point Light
   pointLight = new PointLight(new Vec3(2.5, 1.8, 2.0));
-  pointLight.setDiffuse(1.0, 0.5, 0.2);
-  pointLight.setSpecular(1.0, 0.8, 0.6);
+  pointLight.setDiffuse(new Vec3(1.0, 0.5, 0.2));
+  pointLight.setSpecular(new Vec3(1.0, 0.8, 0.6));
   pointLight.setLinearAttenuation(0.15);
   pointLight.setQuadraticAttenuation(0.05);
   scene.addLight(pointLight);
 
   // Spot Light
   spotLight = new SpotLight(new Vec3(0, 4.0, 0));
-  spotLight.setDirection(0, -1, 0);
+  spotLight.setDirection(new Vec3(0, -1, 0));
   spotLight.setCutoff(0.85); // cone cutoff
   spotLight.setExponent(16.0);
-  spotLight.setDiffuse(0, 0, 0); // initial disabled
-  spotLight.setSpecular(0.8, 0.9, 1.0);
+  spotLight.setDiffuse(new Vec3(0, 0, 0)); // initial disabled
+  spotLight.setSpecular(new Vec3(0.8, 0.9, 1.0));
   scene.addLight(spotLight);
 
   let orbitAngle = 0;
@@ -148,7 +149,7 @@ onMounted(() => {
 
     orbitAngle += delta * 1.2;
     if (pointLight && enablePoint.value) {
-      pointLight.setPosition(Math.cos(orbitAngle) * 2.8, 1.6, Math.sin(orbitAngle) * 2.8);
+      pointLight.setPosition(new Vec3(Math.cos(orbitAngle) * 2.8, 1.6, Math.sin(orbitAngle) * 2.8));
     }
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -172,7 +173,7 @@ onMounted(() => {
       canvas.width = nw;
       canvas.height = nh;
       gl.viewport(0, 0, nw, nh);
-      camera.setProjectionMatrix([0, 0, nw, nh]);
+      camera.setProjectionMatrix(new Vec2(nw, nh));
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       scene.render(camera);
     }

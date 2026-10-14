@@ -42,7 +42,7 @@ test("setAmbient updates ambient vector and uniform value", () => {
   expect(material.ambient.toArray()).toEqual([0.1, 0.2, 0.3]);
   expect(material.uniforms.materialAmbient.value).toEqual([0.1, 0.2, 0.3]);
 
-  material.setAmbient(0.4, 0.5, 0.6);
+  material.setAmbient(new Vec3(0.4, 0.5, 0.6));
   expect(material.ambient.toArray()).toEqual([0.4, 0.5, 0.6]);
 });
 
@@ -52,7 +52,7 @@ test("setDiffuse updates diffuse vector and uniform value", () => {
   expect(material.diffuse.toArray()).toEqual([0.3, 0.4, 0.5]);
   expect(material.uniforms.materialDiffuse.value).toEqual([0.3, 0.4, 0.5]);
 
-  material.setDiffuse(0.6, 0.7, 0.8);
+  material.setDiffuse(new Vec3(0.6, 0.7, 0.8));
   expect(material.diffuse.toArray()).toEqual([0.6, 0.7, 0.8]);
 });
 
@@ -62,7 +62,7 @@ test("setSpecular updates specular vector and uniform value", () => {
   expect(material.specular.toArray()).toEqual([0.7, 0.8, 0.9]);
   expect(material.uniforms.materialSpecular.value).toEqual([0.7, 0.8, 0.9]);
 
-  material.setSpecular(0.2, 0.2, 0.2);
+  material.setSpecular(new Vec3(0.2, 0.2, 0.2));
   expect(material.specular.toArray()).toEqual([0.2, 0.2, 0.2]);
 });
 

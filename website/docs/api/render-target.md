@@ -5,10 +5,8 @@ Encapsulates an offscreen WebGL framebuffer (`WebGLFramebuffer`) with an attache
 ```javascript
 import { RenderTarget, Vec2 } from '@1pizzateam/roostr';
 
-// 1. Create target matching screen resolution (vector or scalar width/height)
+// 1. Create target matching screen resolution
 const renderTarget = new RenderTarget(new Vec2(800, 600), gl);
-// Or with scalar dimensions:
-// const renderTarget = new RenderTarget(800, 600, gl);
 
 // 2. Direct render calls into the target
 renderTarget.bind();
@@ -24,19 +22,10 @@ postQuadMesh.setTexture(renderTarget.texture);
 ## Constructor
 
 ```typescript
-new RenderTarget(
-  sizeOrWidth: Vec2 | number,
-  heightOrContext: number | WebGLRenderingContext,
-  context?: WebGLRenderingContext
-)
+new RenderTarget(size: Vec2, context: WebGLRenderingContext)
 ```
 
 Automatically allocates a `WebGLFramebuffer`, attaches an RGBA `WebGLTexture` to `gl.COLOR_ATTACHMENT0`, and creates a `WebGLRenderbuffer` for 16-bit depth testing (`gl.DEPTH_ATTACHMENT`).
-
-### Signatures
-
-- `new RenderTarget(size: Vec2, context: WebGLRenderingContext)`
-- `new RenderTarget(width: number, height: number, context: WebGLRenderingContext)`
 
 ---
 
@@ -47,8 +36,7 @@ Automatically allocates a `WebGLFramebuffer`, attaches an RGBA `WebGLTexture` to
 | `texture` | `WebGLTexture` | Hardware texture holding the rendered color output. |
 | `framebuffer` | `WebGLFramebuffer` | WebGL framebuffer object. |
 | `depthBuffer` | `WebGLRenderbuffer`| Depth renderbuffer object. |
-| `width` | `number` | Framebuffer width in pixels. |
-| `height` | `number` | Framebuffer height in pixels. |
+| `size` | `Vec2` | Framebuffer dimensions in pixels. |
 
 ---
 
@@ -58,22 +46,20 @@ Automatically allocates a `WebGLFramebuffer`, attaches an RGBA `WebGLTexture` to
 
 Directs subsequent draw calls and clears into this offscreen framebuffer. Automatically updates the WebGL viewport to match the render target dimensions.
 
-### `unbind(viewportWidthOrSize?: Vec2 | number, viewportHeight?: number): void`
+### `unbind(viewportSize?: Vec2): void`
 
-Restores rendering back to the default display canvas framebuffer (`null`). Optionally resets the viewport using a Spock `Vec2` or scalar `(width, height)`.
+Restores rendering back to the default display canvas framebuffer (`null`). Optionally resets the viewport using a Spock `Vec2`.
 
 ### `getSize(target: Vec2 = new Vec2()): Vec2`
 
 Returns the dimensions of the render target as a Spock `Vec2`.
 
-### `setSize(sizeOrWidth: Vec2 | number, height?: number): void`
+### `setSize(size: Vec2): void`
 
-Reallocates the color texture and depth renderbuffer to match new dimensions upon window resize. Accepts a `Vec2` or scalar width and height:
+Reallocates the color texture and depth renderbuffer to match new dimensions upon window resize. Accepts a `Vec2`:
 
 ```javascript
 renderTarget.setSize(new Vec2(window.innerWidth, window.innerHeight));
-// Or:
-renderTarget.setSize(1024, 768);
 ```
 
 ### `dispose(): void`

@@ -3,9 +3,9 @@
 Smooth mouse and touch orbital controller that rotates, pans, and dollies a camera around a central 3D focus target with inertia damping.
 
 ```javascript
-import { OrbitControls, PerspectiveCamera } from '@1pizzateam/roostr';
+import { OrbitControls, PerspectiveCamera, Vec2 } from '@1pizzateam/roostr';
 
-const camera = new PerspectiveCamera(45, gl, 0.1, 100);
+const camera = new PerspectiveCamera(45, new Vec2(0.1, 100), gl);
 const controls = new OrbitControls(camera, canvas);
 
 controls.enableDamping = true;

@@ -1,4 +1,4 @@
-import { Renderer, RenderTarget, Scene, Mesh, Quad, Material, Program, BasicShader } from '../../dist/roostr.js';
+import { Renderer, RenderTarget, Scene, Mesh, Quad, Material, Program, BasicShader, Vec2 } from '../../dist/roostr.js';
 import { createMockContext, createMockCanvas } from '../helpers/webgl-mock.js';
 
 const VERTEX = 'attribute vec3 aVertexPosition; void main(void){ gl_Position = vec4(aVertexPosition, 1.0); }';
@@ -142,7 +142,7 @@ describe('context loss and restore', () => {
   });
 
   test('RenderTarget.restore creates new GL objects', () => {
-    const target = new RenderTarget(64, 64, context);
+    const target = new RenderTarget(new Vec2(64, 64), context);
     const { texture } = target;
 
     target.restore();

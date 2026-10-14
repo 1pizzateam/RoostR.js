@@ -43,8 +43,7 @@ Creates and uploads a WebGL texture from an image, canvas, or typed array buffer
 | `magFilter` | `number` | `gl.LINEAR` | Texture magnification filter (`gl.LINEAR`, `gl.NEAREST`). |
 | `flipY` | `boolean` | `true` | Unpack flip Y parameter for proper texture orientation. |
 | `generateMipmaps`| `boolean` | `false` | Generates a mipmap pyramid using `gl.generateMipmap(gl.TEXTURE_2D)`. |
-| `width` | `number` | `1` | Buffer width when `source` is a `Uint8Array`. |
-| `height` | `number` | `1` | Buffer height when `source` is a `Uint8Array`. |
+| `size` | `Vec2` | `Vec2(1, 1)` | Buffer dimensions when `source` is a `Uint8Array`. |
 
 ---
 
@@ -62,13 +61,13 @@ const texture = await Texture.load('textures/grass.png', gl, {
 
 ---
 
-### `Texture.update(texture: WebGLTexture, source: TextureSource, context: WebGLRenderingContext, xOffset: number = 0, yOffset: number = 0, width?: number, height?: number): void`
+### `Texture.update(texture: WebGLTexture, source: TextureSource, context: WebGLRenderingContext, offset: Vec2 = new Vec2(), size?: Vec2, flipY: boolean = true): void`
 
 Partially or fully updates pixel data in an existing GPU texture using `gl.texSubImage2D` without reallocating texture memory.
 
 ```javascript
 // Update a 128x128 sub-region of an active texture
-Texture.update(webGLTexture, newPixelData, gl, 0, 0, 128, 128);
+Texture.update(webGLTexture, newPixelData, gl, new Vec2(0, 0), new Vec2(128, 128));
 ```
 
 ---

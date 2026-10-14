@@ -31,11 +31,11 @@ test("setExponent updates exponent", () => {
   expect(light.exponent).toBe(2);
 });
 
-test("setDirection copies the given direction vector or scalars", () => {
+test("setDirection copies the given direction vector", () => {
   const light = new SpotLight();
   light.setDirection(new Vec3(0, -1, 0));
   expect(light.direction.toArray()).toEqual([0, -1, 0]);
 
-  light.setDirection(0, 0, -1);
+  light.setDirection(new Vec3(0, 0, -1));
   expect(light.direction.toArray()).toEqual([0, 0, -1]);
 });

@@ -15,19 +15,16 @@ export class MultiQuad extends BasicMesh{
   declare uvs      : number[];
   quad : IQuad;
 
-  constructor(sizeOrWidth?: Vec2 | Rect | number, height?: number/*, quantity: number*/) {
+  constructor(size: Vec2 | Rect = new Vec2(2.0, 2.0)) {
     super();
     let width: number;
     let h: number;
-    if (sizeOrWidth instanceof Vec2) {
-      width = sizeOrWidth.x * 0.5;
-      h = sizeOrWidth.y * 0.5;
-    } else if (sizeOrWidth instanceof Rect) {
-      width = sizeOrWidth.size.x * 0.5;
-      h = sizeOrWidth.size.y * 0.5;
+    if (size instanceof Rect) {
+      width = size.size.x * 0.5;
+      h = size.size.y * 0.5;
     } else {
-      width = sizeOrWidth ? sizeOrWidth * 0.5 : 1.0;
-      h = height ? height * 0.5 : 1.0;
+      width = size.x * 0.5;
+      h = size.y * 0.5;
     }
 
     this.quad = {

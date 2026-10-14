@@ -1,7 +1,11 @@
 import { Vec3 } from '@1pizzateam/spock';
+import { PointLight, type IPointLightOptions } from './point';
 
-import { PointLight } from './point';
-import { assignVec3, Vec3Like } from '../vector';
+export interface ISpotLightOptions extends IPointLightOptions {
+  direction?: Vec3;
+  cutoff?: number;
+  exponent?: number;
+}
 
 export class SpotLight extends PointLight {
 
@@ -9,15 +13,15 @@ export class SpotLight extends PointLight {
   exponent : number;
   direction : Vec3;
 
-  constructor(positionOrOptions?: Vec3 | number[] | { position?: Vec3 | number[]; direction?: Vec3 | number[]; diffuse?: Vec3 | number[]; specular?: Vec3 | number[]; cutoff?: number; exponent?: number; constantAttenuation?: number; linearAttenuation?: number; quadraticAttenuation?: number }) {
-    super(positionOrOptions as any);
+  constructor(positionOrOptions?: Vec3 | ISpotLightOptions) {
+    super(positionOrOptions);
 
     this.cutoff = 180;
     this.exponent = 0;
     this.direction = new Vec3(1.0, 0.0, 0.0);
     this.type = 'spot';
 
-    if (positionOrOptions && typeof positionOrOptions === 'object' && !(positionOrOptions instanceof Vec3) && !Array.isArray(positionOrOptions)) {
+    if (positionOrOptions && !(positionOrOptions instanceof Vec3)) {
       if (positionOrOptions.direction) this.setDirection(positionOrOptions.direction);
       if (positionOrOptions.cutoff !== undefined) this.setCutoff(positionOrOptions.cutoff);
       if (positionOrOptions.exponent !== undefined) this.setExponent(positionOrOptions.exponent);
@@ -32,8 +36,8 @@ export class SpotLight extends PointLight {
     this.exponent = value;
   }
 
-  public setDirection(xOrVec: Vec3Like | number, y?: number, z?: number): void {
-    assignVec3(this.direction, xOrVec, y, z);
+  public setDirection(direction: Vec3): void {
+    this.direction.copy(direction);
   }
 
 }

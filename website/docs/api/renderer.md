@@ -3,11 +3,11 @@
 Low-level WebGL context manager controlling driver state, viewport dimensions, color clearing, polygon culling, and alpha blending.
 
 ```javascript
-import { Renderer, Vec2 } from '@1pizzateam/roostr';
+import { Renderer, Vec2, Vec3 } from '@1pizzateam/roostr';
 
 const renderer = new Renderer(gl, {
-  viewport: { x: 0, y: 0, width: 800, height: 600 },
-  clearColor: [0.08, 0.1, 0.14, 1.0],
+  viewport: new Vec2(800, 600),
+  clearColor: new Vec3(0.08, 0.1, 0.14),
   cullFace: 'BACK',
   frontFace: 'CCW',
   depthTest: true
@@ -26,23 +26,25 @@ new Renderer(context: WebGLRenderingContext, options?: IRendererOptions)
 
 ## Methods
 
-### `setSize(sizeOrWidth: Vec2 | number, height?: number): void`
+### `setSize(size: Vec2): void`
 
 Resizes the rendering viewport and canvas buffer dimensions:
 
 ```javascript
 renderer.setSize(new Vec2(1024, 768));
-// Or:
-renderer.setSize(1024, 768);
 ```
 
-### `setViewport(x: number, y: number, width: number, height: number): void`
+### `getSize(target?: Vec2): Vec2`
 
-Set the WebGL rendering viewport rectangle (`gl.viewport`).
+Returns the current canvas buffer size into an optional target `Vec2`.
 
-### `setClearColor(r: number, g: number, b: number, a: number = 1.0): void`
+### `setViewport(size: Vec2): void`
 
-Set the background clear color (`gl.clearColor`).
+Set the WebGL rendering viewport dimensions `Vec2(width, height)`.
+
+### `setClearColor(color: Vec3, alpha: number = 1.0): void`
+
+Set the background clear RGB color and alpha.
 
 ### `clear(color: boolean = true, depth: boolean = true, stencil: boolean = false): void`
 

@@ -5,33 +5,17 @@ import { SubMesh } from './submesh';
 export class Plane extends BasicMesh {
 
   constructor(
-    sizeOrWidth: Vec2 | number = 1.0,
-    heightOrWidthSegments: number = 1.0,
-    widthOrHeightSegments: number = 1,
-    heightSegmentsOrOrientation?: number | ('xy' | 'xz'),
+    size: Vec2 = new Vec2(1.0, 1.0),
+    segments: Vec2 = new Vec2(1, 1),
     orientation: 'xy' | 'xz' = 'xz'
   ) {
     super();
 
-    let w: number;
-    let h: number;
-    let gridX: number;
-    let gridY: number;
-    let orient: 'xy' | 'xz';
-
-    if (sizeOrWidth instanceof Vec2) {
-      w = sizeOrWidth.x || 1.0;
-      h = sizeOrWidth.y || 1.0;
-      gridX = Utils.clamp(Utils.floor(heightOrWidthSegments || 1, 0), 1, Infinity);
-      gridY = Utils.clamp(Utils.floor(widthOrHeightSegments || 1, 0), 1, Infinity);
-      orient = (typeof heightSegmentsOrOrientation === 'string' ? heightSegmentsOrOrientation : orientation) || 'xz';
-    } else {
-      w = sizeOrWidth || 1.0;
-      h = heightOrWidthSegments || 1.0;
-      gridX = Utils.clamp(Utils.floor(widthOrHeightSegments || 1, 0), 1, Infinity);
-      gridY = Utils.clamp(Utils.floor((typeof heightSegmentsOrOrientation === 'number' ? heightSegmentsOrOrientation : 1) || 1, 0), 1, Infinity);
-      orient = orientation || 'xz';
-    }
+    const w = size.x || 1.0;
+    const h = size.y || 1.0;
+    const gridX = Utils.clamp(Utils.floor(segments.x || 1, 0), 1, Infinity);
+    const gridY = Utils.clamp(Utils.floor(segments.y || 1, 0), 1, Infinity);
+    const orient = orientation || 'xz';
 
     const gridX1 = gridX + 1;
     const gridY1 = gridY + 1;
