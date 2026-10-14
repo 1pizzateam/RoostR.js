@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals';
-import { Scene, Mesh, Quad, DirectionalLight, PointLight, SpotLight, OrthographicCamera, PerspectiveCamera, Material, Vec3, Vec2 } from "../dist/roostr";
+import { Scene, Mesh, Quad, DirectionalLight, PointLight, SpotLight, OrthographicCamera, PerspectiveCamera, Material, CustomMesh, Vec3, Vec2 } from "../dist/roostr";
 import { createMockContext } from "./helpers/webgl-mock";
 
 function createScene() {
@@ -166,6 +166,31 @@ test("frustum culling skips rendering meshes outside frustum when enabled", () =
   scene.enableFrustumCulling = true;
   const rendered = scene.render(camera);
   expect(rendered).toBe(1); // Only meshIn is rendered
+});
+
+test("setLocalBounds sizes culling bounds of a mesh whose buffer starts empty", () => {
+  const { scene, context } = createScene();
+  const camera = new PerspectiveCamera(45, 0.1, 100, context);
+  camera.setPosition(0, 0, 10);
+  camera.setTarget(0, 0, 0);
+
+  const geometry = new CustomMesh();
+  geometry.setVertices(new Float32Array(12));
+  geometry.setPrimitive("LINES");
+  const mesh = new Mesh(geometry, context);
+  mesh.addProgram("void main(){}", "void main(){}", new Material());
+  scene.addMesh(mesh);
+  scene.enableFrustumCulling = true;
+
+  // all-zero vertices measure as an empty point at the origin, which is in view
+  mesh.setLocalBounds(new Vec3(500, 500, 0), new Vec3(520, 520, 10));
+  expect(scene.render(camera)).toBe(0);
+
+  mesh.setLocalBounds(new Vec3(-1, -1, 0), new Vec3(1, 1, 1));
+  expect(scene.render(camera)).toBe(1);
+
+  mesh.setPosition(1000, 0, 0); // the bounds follow the mesh transform
+  expect(scene.render(camera)).toBe(0);
 });
 
 test("renderBlended sorts meshes by depth back-to-front", () => {

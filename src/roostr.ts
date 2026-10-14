@@ -20,6 +20,7 @@ export { VWing }              from './geometry/vwing';
 export { Cannon }             from './geometry/cannon';
 export { CustomMesh }         from './geometry/customMesh';
 export { SubMesh }            from './geometry/submesh';
+export { Sprite, SpriteShader, ISpriteOptions, SpriteBillboard, SpriteAnchor } from './sprite';
 export { Texture, TextureSource, ITextureOptions } from './texture';
 export { DirectionalLight }   from './lights/directional';
 export { PointLight }         from './lights/point';

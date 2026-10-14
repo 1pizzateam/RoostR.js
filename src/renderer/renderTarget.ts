@@ -31,6 +31,12 @@ export class RenderTarget {
     this.init();
   }
 
+  // Recreates the framebuffer, texture and depth buffer after the context was lost and restored.
+  // The texture is a new object: give it again to every mesh that samples it.
+  public restore(): void {
+    this.init();
+  }
+
   private init(): void {
     const gl = this.context;
 

@@ -1,11 +1,16 @@
 import { Vec3, Vec2, Utils } from '@1pizzateam/spock';
+import { Program } from '../program';
+import { getGLState } from './state';
 
 export interface IRendererOptions {
   width?: number;
   height?: number;
   // Forwarded to canvas.getContext('webgl', ...). alpha defaults to false.
   contextAttributes?: WebGLContextAttributes;
-  // GPU resources are lost with the context: recreate meshes, textures and programs on restore.
+  // GPU resources are lost with the context. The browser gives back the same context object, so RoostR
+  // forgets its shared programs and cached GL state first; onContextRestored then runs, and is the place
+  // to call restore() on every Scene and RenderTarget (and to set GL capabilities again).
+  // Anything uploaded by hand (bufferSubData) must be uploaded again.
   onContextLost?: () => void;
   onContextRestored?: () => void;
 }
@@ -29,6 +34,10 @@ export class Renderer {
     };
     this.onContextRestoredBound = () => {
       this.isContextLost = false;
+      if (this.context) {
+        Program.reset(this.context);
+        getGLState(this.context).reset();
+      }
       this.defaultSettings();
       this.options.onContextRestored?.();
     };

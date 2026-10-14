@@ -12,10 +12,10 @@ export class GLState {
   maxAttributes: number = 0;
 
   // Last frame token that uploaded the per-frame uniforms of a program.
-  readonly frameOfProgram = new WeakMap<object, number>();
+  frameOfProgram = new WeakMap<object, number>();
   // Last material (and version) uploaded to a program.
-  readonly materialOfProgram = new WeakMap<object, object>();
-  readonly materialVersionOfProgram = new WeakMap<object, number>();
+  materialOfProgram = new WeakMap<object, object>();
+  materialVersionOfProgram = new WeakMap<object, number>();
 
   // Call when GL state may have been changed outside RoostR.
   public invalidate(): void {
@@ -23,6 +23,16 @@ export class GLState {
     this.arrayBuffer = null;
     this.elementBuffer = null;
     this.attributeMask = null;
+  }
+
+  // Call when the context lost and came back: every program and buffer the cache knows is gone.
+  // Resets in place, because meshes keep a reference to this object.
+  public reset(): void {
+    this.invalidate();
+    this.maxAttributes = 0;
+    this.frameOfProgram = new WeakMap();
+    this.materialOfProgram = new WeakMap();
+    this.materialVersionOfProgram = new WeakMap();
   }
 
 }

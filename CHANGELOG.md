@@ -1,3 +1,17 @@
+Unreleased
+-----------------------------
+ * New `Sprite` mesh: a flat image that turns to face the camera, for enemies, pickups, trees and particles. `new Sprite(gl, { width, height, texture, frames, anchor, billboard, alphaCutoff, depthBias, material, fragment })`.
+   - `billboard` is `'spherical'` (default, faces the camera), `'cylindrical'` (stays upright, turns about the vertical axis) or `'none'`; `anchor` is `'center'` or `'bottom'` (feet on the mesh position).
+   - The image can be a sprite sheet: `frames` is the number of equal cells side by side and `setFrame(n)` picks one. The material's diffuse colour tints the image, pixels under `alphaCutoff` are discarded, and scene fog is applied.
+   - Position, scale and parent work as on any mesh; frustum culling uses bounds that cover every way a billboard can turn. The texture is owned by the mesh, so `Scene.restore()` rebuilds it. A custom `fragment` shader can replace the built-in one and receives `vTextureCoord` and `vDepth`.
+   - `depthBias` draws a sprite as if it were nearer the camera, in depth only, so a big one (an explosion) is not cut off flat by the walls and floor round it.
+   - New exports: `Sprite`, `SpriteShader`, `ISpriteOptions`, `SpriteBillboard`, `SpriteAnchor`.
+ * New `Mesh.setLocalBounds(min, max)` sets the bounds used by frustum culling and picking for geometry that is filled after construction. The constructor measures the vertex arrays it receives, so a buffer that starts empty had zero-size bounds and was culled wrongly.
+ * Context loss and restore: after `webglcontextrestored` the browser hands back the same context object, but every GPU object is dead and RoostR's per-context caches still pointed at them (`useProgram: object does not belong to this context`).
+   - `Renderer` now forgets the shared programs and the cached GL state before calling `onContextRestored`.
+   - New `Scene.restore()`, `Mesh.restore()` and `RenderTarget.restore()` rebuild buffers, programs, custom-uniform locations and owned textures from the data kept on the CPU. Call them from `onContextRestored`. Data uploaded by hand (`bufferSubData`), textures passed as a `WebGLTexture` (including a render target's) and programs passed as a `WebGLProgram` are not rebuilt: upload or assign them again. A mesh whose program cannot be rebuilt stops drawing instead of misdrawing.
+   - New `Program.reset(context)` and `Program.sources(program)`. `Program.release` no longer evicts a newer program that shares the cache key of a pre-reset one.
+
 Version 0.7.0 (October 10th 2026)
 -----------------------------
  * Uses `@1pizzateam/spock` ^4.3.0 and its new 3D helpers instead of hand-rolled matrix math:

@@ -21,6 +21,15 @@ export class SceneRenderer {
     this.depthWrite = null;
   }
 
+  // Forgets everything cached about a context that was lost and restored, then sets the defaults again.
+  public reset(): void {
+    getGLState(this.context).reset();
+    this.blendKey = '';
+    this.blendEnabled = null;
+    this.depthWrite = null;
+    this.defaultSettings();
+  }
+
   public defaultSettings(): void {
     this.setDepthFunc('LEQUAL');
     this.enableDepthTest();
@@ -108,7 +117,7 @@ export class SceneRenderer {
   }
 
   public enableBlendMode(equation: string, source: string, destination: string): void {
-    const key = equation + '|' + source + '|' + destination;
+    const key = `${equation}|${source}|${destination}`;
     if (key !== this.blendKey) {
       this.setBlendEquation(equation);
       this.setBlendFunction(source, destination);

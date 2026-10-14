@@ -1,13 +1,13 @@
 import { Mat4x3, Mat3, Vec3, Quat } from '@1pizzateam/spock';
-import { SceneGraph } from './scene/sceneGraph';
+import type { SceneGraph } from './scene/sceneGraph';
 import { Program } from './program';
-import { Texture, TextureSource, ITextureOptions } from './texture';
-import { Uniform, uploadUniform, UniformValue } from './uniform';
-import { assignVec3, Vec3Like } from './vector';
+import { Texture, type TextureSource, type ITextureOptions } from './texture';
+import { Uniform, uploadUniform, type UniformValue } from './uniform';
+import { assignVec3, type Vec3Like } from './vector';
 import { MeshRenderer }  from './renderer/mesh';
 import { SubMesh }  from './geometry/submesh';
 import { Material }  from './material';
-import { IProgram, ICustomUniforms, IFlatLights, IMesh, IFrameInfo, IBlendOptions } from './interfaces';
+import type { IProgram, ICustomUniforms, IFlatLights, IMesh, IFrameInfo, IBlendOptions } from './interfaces';
 import { Box as BoundingBox, Sphere as BoundingSphere, Ray3 as Ray } from '@1pizzateam/spock';
 import { BasicShader, PhongShader, NormalShader } from './shaders/standard';
 
@@ -57,6 +57,8 @@ export class Mesh implements IMesh {
   private isTransformDirty : boolean;
   private isWorldDirty : boolean = true;
   private ownsTexture : boolean = false;
+  private textureSource : TextureSource | null = null;
+  private textureOptions : ITextureOptions | undefined;
   private indexType : number;
 
   private static readonly UP = new Vec3(0, 1, 0);
@@ -126,31 +128,12 @@ export class Mesh implements IMesh {
 
     this.WebGLTexture = null;
 
-    this.vertexBuffer   = this.vertices 
-                            ? this.renderer.createBuffer( 'ARRAY_BUFFER', 
-                                                          this.vertices instanceof Float32Array ? this.vertices : new Float32Array(this.vertices), 
-                                                          'STATIC_DRAW'
-                                                        ) 
-                            : null;
+    this.vertexBuffer   = null;
+    this.indexBuffer    = null;
+    this.normalBuffer   = null;
+    this.texCoordBuffer = null;
     this.indexType = this.context.UNSIGNED_SHORT;
-    this.indexBuffer    = this.indices 
-                            ? this.renderer.createBuffer( 'ELEMENT_ARRAY_BUFFER', 
-                                                          this.createIndexData(this.indices), 
-                                                          'STATIC_DRAW'
-                                                        ) 
-                            : null;
-    this.normalBuffer   = this.normals 
-                            ? this.renderer.createBuffer('ARRAY_BUFFER', 
-                                                         this.normals instanceof Float32Array ? this.normals : new Float32Array(this.normals), 
-                                                         'STATIC_DRAW'
-                                                        )
-                            : null;
-    this.texCoordBuffer = this.uvs 
-                            ? this.renderer.createBuffer( 'ARRAY_BUFFER', 
-                                                          this.uvs instanceof Float32Array ? this.uvs : new Float32Array(this.uvs), 
-                                                          'STATIC_DRAW'
-                                                        ) 
-                            : null;
+    this.createBuffers();
 
     this.position       = new Vec3();
     this._rotation      = new Vec3();
@@ -423,6 +406,16 @@ export class Mesh implements IMesh {
     return this.getWorldPosition(Mesh.scratchVec).isInBounds(min, max);
   }
 
+  // Sets the local-space bounds used for culling and picking, for geometry whose vertices change after
+  // construction (the constructor measures the arrays it was given, so a buffer that starts empty has no size).
+  public setLocalBounds(min: Vec3, max: Vec3): this {
+    this.localBoundingBox.set(min, max);
+    this.localBoundingBox.getCenter(Mesh.scratchVec);
+    this.localBoundingSphere.set(Mesh.scratchVec, min.getDistance(max) / 2);
+    this.isBoundsDirty = true;
+    return this;
+  }
+
   public computeBounds(): void {
     if (!this.isBoundsDirty) return;
     if (this.vertices && this.vertices.length > 0) {
@@ -541,6 +534,8 @@ export class Mesh implements IMesh {
       this.context.deleteTexture(this.WebGLTexture);
     this.WebGLTexture = null;
     this.ownsTexture = false;
+    this.textureSource = null;
+    this.textureOptions = undefined;
   }
 
   // Combines the parent world matrix with the local matrix.
@@ -557,7 +552,9 @@ export class Mesh implements IMesh {
     this.releaseTexture();
     this.WebGLTexture = texture;
     this.ownsTexture = true;
-    for (let program of this.programs)
+    this.textureSource = img;
+    this.textureOptions = options;
+    for (const program of this.programs)
       if (program.sampler === undefined)
         program.sampler = this.context.getUniformLocation(program, 'uSampler');
   }
@@ -565,7 +562,7 @@ export class Mesh implements IMesh {
   public addCustomUniform(name:string, type:string, value:UniformValue): void {
     if (!this.customUniforms.hasOwnProperty(name)){
       this.customUniforms[name] = new Uniform(type, value);
-      for (let program of this.programs)
+      for (const program of this.programs)
         if (program[name] === undefined)
           program[name] = this.context.getUniformLocation(program, 'u' + this.ucfirst(name));
     }
@@ -590,6 +587,67 @@ export class Mesh implements IMesh {
       console.warn('Mesh: indices exceed 65535 but OES_element_index_uint is unavailable; geometry will be corrupted.');
     }
     return indices instanceof Uint16Array ? indices : new Uint16Array(indices);
+  }
+
+  private createBuffers(): void {
+    this.vertexBuffer   = this.vertices 
+                            ? this.renderer.createBuffer( 'ARRAY_BUFFER', 
+                                                          this.vertices instanceof Float32Array ? this.vertices : new Float32Array(this.vertices), 
+                                                          'STATIC_DRAW'
+                                                        ) 
+                            : null;
+    this.indexType = this.context.UNSIGNED_SHORT;
+    this.indexBuffer    = this.indices 
+                            ? this.renderer.createBuffer( 'ELEMENT_ARRAY_BUFFER', 
+                                                          this.createIndexData(this.indices), 
+                                                          'STATIC_DRAW'
+                                                        ) 
+                            : null;
+    this.normalBuffer   = this.normals 
+                            ? this.renderer.createBuffer('ARRAY_BUFFER', 
+                                                         this.normals instanceof Float32Array ? this.normals : new Float32Array(this.normals), 
+                                                         'STATIC_DRAW'
+                                                        )
+                            : null;
+    this.texCoordBuffer = this.uvs 
+                            ? this.renderer.createBuffer( 'ARRAY_BUFFER', 
+                                                          this.uvs instanceof Float32Array ? this.uvs : new Float32Array(this.uvs), 
+                                                          'STATIC_DRAW'
+                                                        ) 
+                            : null;
+  }
+
+  // Rebuilds buffers, programs and the texture of this mesh and its children after the context was lost
+  // and restored (see Scene.restore). Buffers are filled from the arrays the mesh was built with, so data
+  // changed later with bufferSubData must be uploaded again. A texture given as a WebGLTexture, and a program
+  // given as a WebGLProgram, cannot be rebuilt: set them again.
+  public restore(): void {
+    this.createBuffers();
+
+    const sources = this.programs.map((program) => Program.sources(program));
+    this.programs = [];
+    this.nbPrograms = 0;
+    sources.forEach((source) => {
+      if (!source)
+        return;
+      const program = Program.acquire(this.context, source.vertex, source.fragment) as IProgram | null;
+      if (!program)
+        return;
+      this.programs.push(program);
+      this.createProgram();
+    });
+    // programs that could not be rebuilt would leave a gap, so the mesh stops drawing rather than misdraw
+    if (this.programs.length !== sources.length)
+      this.setInactive();
+
+    if (this.ownsTexture && this.textureSource) {
+      const texture = Texture.create(this.textureSource, this.context, this.textureOptions);
+      this.WebGLTexture = texture;
+      this.ownsTexture = texture !== null;
+    }
+
+    for (const child of this.children)
+      child.restore();
   }
 
   private static initializedPrograms = new WeakSet<object>();

@@ -99,6 +99,7 @@ export default defineConfig({
           { text: 'Primitives', link: '/api/geometry' },
           { text: 'Procedural Models', link: '/api/models' },
           { text: 'CustomMesh & SubMesh', link: '/api/custom-mesh' },
+          { text: 'Sprite', link: '/api/sprite' },
         ],
       },
       {

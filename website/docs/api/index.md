@@ -49,6 +49,7 @@ import {
 - [Primitives](/api/geometry): Procedural primitives: `Cube`, `Sphere`, `Hemisphere`, `Cylinder`, `Plane`, `Quad`, `FullscreenQuad`, `MultiQuad`, `Line`.
 - [Procedural Models](/api/models): Built-in articulated procedural models `VWing` (starfighter) and `Cannon` (defense turret).
 - [CustomMesh & SubMesh](/api/custom-mesh): Custom vertex buffers, normal computation, and submesh draw calls.
+- [Sprite](/api/sprite): Flat image that faces the camera, with sprite-sheet frames, tint, alpha cutoff and fog.
 
 ### Spatial Math & Culling
 - [BoundingBox](/api/box3): 3D Axis-Aligned Bounding Box (AABB) with Arvo's $O(1)$ matrix transform.

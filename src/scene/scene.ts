@@ -195,6 +195,14 @@ export class Scene {
     this.lights.clear();
   }
 
+  // Rebuilds the GPU side of the scene (buffers, programs, owned textures) after the context was lost
+  // and restored, from the data the meshes still hold on the CPU. Call it from Renderer's onContextRestored.
+  public restore(): void {
+    this.renderer.reset();
+    for (const mesh of this.meshes)
+      mesh.restore();
+  }
+
   public destroy(destroyMeshes: boolean = true): void {
     if (destroyMeshes)
       for (const mesh of this.meshes)
