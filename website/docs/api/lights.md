@@ -2,8 +2,6 @@
 
 The `Lights` class coordinates scene illumination by organizing directional, point, spot, and ambient light sources and packaging them into pre-allocated `Float32Array` buffers for high-speed GLSL uniform uploads.
 
-<LightingDemo />
-
 ```javascript
 import { Scene, DirectionalLight, PointLight, SpotLight, AmbientLight, Vec3 } from '@1pizzateam/roostr';
 

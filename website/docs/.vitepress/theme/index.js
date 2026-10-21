@@ -3,7 +3,6 @@ import DefaultTheme from 'vitepress/theme';
 import RoostRLogo from './components/RoostRLogo.vue';
 import SceneDemo from './components/SceneDemo.vue';
 import GeometryDemo from './components/GeometryDemo.vue';
-import LightingDemo from './components/LightingDemo.vue';
 import './demo.css';
 
 export default {
@@ -18,6 +17,5 @@ export default {
     app.component('RoostRLogo', RoostRLogo);
     app.component('SceneDemo', SceneDemo);
     app.component('GeometryDemo', GeometryDemo);
-    app.component('LightingDemo', LightingDemo);
   },
 };
