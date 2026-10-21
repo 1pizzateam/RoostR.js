@@ -9,7 +9,7 @@ const aspect = canvas.width / canvas.height;
 const frustumSize = 10;
 
 const camera = new OrthographicCamera(
-  new Rect(-frustumSize * aspect / 2, frustumSize / 2, frustumSize * aspect / 2, -frustumSize / 2),
+  new Rect(new Vec2(frustumSize * aspect, frustumSize)),
   new Vec2(0.1, 1000)
 );
 camera.setPosition(new Vec3(10, 10, 10));
@@ -32,7 +32,7 @@ Initialized with a Spock [`Rect`](https://1pizzateam.github.io/Spock.js/) defini
 ```javascript
 import { OrthographicCamera, Rect, Vec2 } from '@1pizzateam/roostr';
 
-const camera = new OrthographicCamera(new Rect(20, 10, 0, 0), new Vec2(0.1, 1000));
+const camera = new OrthographicCamera(new Rect(new Vec2(20, 10)), new Vec2(0.1, 1000));
 ```
 
 ---
