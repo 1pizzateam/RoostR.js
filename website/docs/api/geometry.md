@@ -2,8 +2,6 @@
 
 RoostR provides built-in procedural geometry generators that output ready-to-render vertex coordinates, triangle indices, normal vectors, and UV mapping coordinates.
 
-<GeometryDemo />
-
 ```javascript
 import { Cube, Sphere, Cylinder, Plane, Quad, MultiQuad, Mesh, Vec3, Vec2 } from '@1pizzateam/roostr';
 
