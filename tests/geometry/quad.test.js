@@ -31,7 +31,7 @@ test("creates a Quad directly from a Spock Vec2", () => {
 });
 
 test("creates a Quad directly from a Spock Rect", () => {
-  const rect = new Rect(6, 4);
+  const rect = new Rect(new Vec2(6, 4));
   const quad = new Quad(rect);
   expect(quad.vertices).toEqual([
     3, -2, 0.0,

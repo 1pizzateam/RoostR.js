@@ -10,7 +10,7 @@ describe('Frustum and Plane', () => {
 
   test('Frustum extracts planes and intersects sphere', () => {
     const proj = new Mat4().perspective(Math.PI / 4, 1.0, 1.0, 100.0);
-    const frustum = new Frustum().setFromProjectionViewMatrix(proj.toArray());
+    const frustum = new Frustum().setFromProjectionViewMatrix(proj);
 
     const centerSphere = new BoundingSphere(new Vec3(0, 0, -10), 1);
     expect(frustum.intersectsSphere(centerSphere)).toBe(true);
@@ -24,7 +24,7 @@ describe('Frustum and Plane', () => {
 
   test('Frustum intersectsBox', () => {
     const proj = new Mat4().perspective(Math.PI / 4, 1.0, 1.0, 100.0);
-    const frustum = new Frustum().setFromProjectionViewMatrix(proj.toArray());
+    const frustum = new Frustum().setFromProjectionViewMatrix(proj);
 
     const visibleBox = new BoundingBox(new Vec3(-1, -1, -15), new Vec3(1, 1, -10));
     expect(frustum.intersectsBox(visibleBox)).toBe(true);

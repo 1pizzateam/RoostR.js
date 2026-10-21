@@ -1,3 +1,7 @@
+Version 0.8.1 (October 21st 2026)
+-----------------------------
+ * Upgrade `@1pizzateam/spock` dependency to `4.4.0`.
+
 Version 0.8.0 (October 14th 2026)
 -----------------------------
  * New `Node` scene-graph base class extracted from `Mesh`:

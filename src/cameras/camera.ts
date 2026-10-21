@@ -63,12 +63,12 @@ export class Camera {
   }
 
   // projection * view, recomputed only after the view or projection changed.
-  public getProjectionViewMatrix(): Float32Array {
+  public getProjectionViewMatrix(): Mat4 {
     if (this.isProjectionViewDirty) {
       this.projectionViewMatrix.copy(this.projectionMatrix).multiplyAffine(this.viewMatrix);
       this.isProjectionViewDirty = false;
     }
-    return this.projectionViewMatrix.toArray();
+    return this.projectionViewMatrix;
   }
 
   public getInverseProjectionViewMatrix(): Mat4 {

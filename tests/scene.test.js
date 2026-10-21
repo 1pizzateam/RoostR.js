@@ -43,7 +43,7 @@ test("addLight registers a light and getLightsProperty exposes its flattened dat
   const light = new DirectionalLight();
   scene.addLight(light);
 
-  const camera = new OrthographicCamera(new Rect(2, 2, 0, 0), new Vec2(0.1, 100));
+  const camera = new OrthographicCamera(new Rect(new Vec2(2, 2), new Vec2(0, 0)), new Vec2(0.1, 100));
   scene.render(camera, 0); // flattens registered lights as a side effect
 
   const positions = scene.getLightsProperty("position");
@@ -74,7 +74,7 @@ test("render draws every active mesh using the camera's matrices", () => {
   const renderSpy = jest.spyOn(mesh, "renderSelf");
   scene.addMesh(mesh);
 
-  const camera = new OrthographicCamera(new Rect(2, 2, 0, 0), new Vec2(0.1, 100));
+  const camera = new OrthographicCamera(new Rect(new Vec2(2, 2), new Vec2(0, 0)), new Vec2(0.1, 100));
   scene.render(camera, 16);
 
   expect(renderSpy).toHaveBeenCalled();

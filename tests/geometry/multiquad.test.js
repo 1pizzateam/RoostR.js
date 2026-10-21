@@ -44,7 +44,7 @@ test("createQuads updates subMeshes[0].count to match total indices created", ()
 });
 
 test("supports initialization with Spock Rect", () => {
-  const rect = new Rect(4, 2);
+  const rect = new Rect(new Vec2(4, 2));
   const multiQuad = new MultiQuad(rect);
   multiQuad.createQuads(1);
   expect(multiQuad.vertices.slice(0, 3)).toEqual([2, -1, 0]);

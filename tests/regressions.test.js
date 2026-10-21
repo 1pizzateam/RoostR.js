@@ -462,7 +462,7 @@ describe("Texture", () => {
 describe("Vector-first math", () => {
   test("BoundingBox.applyMatrix4 matches transforming every corner", () => {
     const box = new BoundingBox(new Vec3(-1, -2, -3), new Vec3(2, 1, 4));
-    const m = new Mat4x3().compose(new Vec3(5, -1, 2), new Quat().setFromEuler(0.4, 0.9, -0.3), new Vec3(2, 1, 3));
+    const m = new Mat4x3().compose(new Vec3(5, -1, 2), new Quat().setFromEuler(new Vec3(0.4, 0.9, -0.3)), new Vec3(2, 1, 3));
     const expected = new BoundingBox();
     for (const x of [box.min.x, box.max.x])
       for (const y of [box.min.y, box.max.y])
@@ -514,7 +514,7 @@ describe("Vector-first math", () => {
     const camera = new PerspectiveCamera(60, new Vec2(0.1, 100), context);
     camera.setPosition(new Vec3(0, 0, 10));
     camera.setTarget(new Vec3(0, 0, 0));
-    const pv = Array.from(camera.getProjectionViewMatrix());
+    const pv = Array.from(camera.getProjectionViewMatrix().toArray());
     const expected = camera.getProjectionMatrixObject();
     const product = new (expected.constructor)().copy(expected);
     product.multiplyAffine(camera.getViewMatrixObject());
@@ -527,7 +527,7 @@ describe("Vector-first math", () => {
     camera.setTarget(new Vec3(0, 0, 0));
     const moved = camera.getRay(new Vec2(0, 0));
     close(moved.direction.x, -1);
-    expect(Array.from(camera.getProjectionViewMatrix())).not.toEqual(pv);
+    expect(Array.from(camera.getProjectionViewMatrix().toArray())).not.toEqual(pv);
   });
 });
 
