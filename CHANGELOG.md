@@ -24,7 +24,6 @@ Version 0.9.0 (October 25th 2026)
    - `packLights()` reuses `flatArrays.ambient` in place via `Vec3.toArray()`.
    - Re-exported `RightTriangle`, `raycastSegment`, `TriangleCorner`, `TriangleShape`, `GRID_EMPTY_CELL`, `RayHit2D`, `PointSource`, and `Vec` from `@1pizzateam/spock`.
    - Removed legacy `assignVec3`, `assignVec2`, `Vec3Like`, and `Vec2Like` helpers.
- * Upgrade `@1pizzateam/spock` dependency to `4.5.0`.
 
 Version 0.8.1 (October 21st 2026)
 -----------------------------
