@@ -1,3 +1,31 @@
+Version 0.9.0 (October 25th 2026)
+-----------------------------
+ * New `QuadBatch` mesh (`new QuadBatch(gl, options)`) & `IQuadBatchOptions` interface:
+   - Dynamic CPU-batched quad mesh (`begin()`, `quad(corners, uv)`, `end()`, `show(visible)`) backed by `DYNAMIC_DRAW` vertex and UV buffers.
+   - Automatically tracks local `BoundingBox` (`bounds`) across batched quads and updates local culling bounds on `end()`.
+   - Supports custom or default `BasicShader` sources, `Material`, owned `texture`, and `sharedTexture`.
+ * Dynamic buffer usage support:
+   - Added `bufferUsage?: 'STATIC_DRAW' | 'DYNAMIC_DRAW'` to `IGeometry`, `CustomMesh`, and `Mesh` (default `'STATIC_DRAW'`).
+ * Distance culling:
+   - Added `Scene.maxDrawDistance` and `ISceneOptions.maxDrawDistance` (default `0`) to cull meshes beyond `maxDrawDistance + sphere.radius` in `SceneCollector.collect()` before frustum testing.
+ * Shared WebGL textures:
+   - Added `Mesh.setSharedTexture(texture: WebGLTexture | null)` to assign a shared `WebGLTexture` across multiple meshes without taking ownership or deleting it on `releaseTexture()` / `destroy()`.
+ * WebGL texture and sampler state caching:
+   - `GLState` now tracks the bound `TEXTURE_2D` texture (`texture2D`), per-program sampler unit initialization (`samplerInitializedOfProgram`), and per-program `uHasTexture` state (`hasTextureOfProgram`).
+   - `MeshRenderer` skips redundant `activeTexture`, `bindTexture`, `uSampler`, and `uHasTexture` calls across consecutive draw calls when state is unchanged.
+   - `Texture.create()`, `Texture.update()`, `RenderTarget` setup/resize/destroy, and `Mesh.releaseTexture()` keep `GLState.texture2D` synchronized when unbinding or deleting textures.
+ * Scene graph traversal optimizations:
+   - `Node.addChild()` returns early when the node is already a direct child of the parent.
+   - `Scene.markDescendants()` skips recursive traversal on leaf meshes with no children.
+   - `Scene.computeWorldMatrices()` skips world matrix computation for inactive root meshes.
+ * Upgraded `@1pizzateam/spock` to `4.5.0`:
+   - `OrbitControls.update()` uses `Trigo.lerpRadian` for shortest-arc azimuth damping and `Vec3.origin()` for scratch pan reset.
+   - `QuadBatch.quad()` uses `Vec3.setArray(corners, offset)` for allocation-free bounds expansion.
+   - `packLights()` reuses `flatArrays.ambient` in place via `Vec3.toArray()`.
+   - Re-exported `RightTriangle`, `raycastSegment`, `TriangleCorner`, `TriangleShape`, `GRID_EMPTY_CELL`, `RayHit2D`, `PointSource`, and `Vec` from `@1pizzateam/spock`.
+   - Removed legacy `assignVec3`, `assignVec2`, `Vec3Like`, and `Vec2Like` helpers.
+ * Upgrade `@1pizzateam/spock` dependency to `4.5.0`.
+
 Version 0.8.1 (October 21st 2026)
 -----------------------------
  * Upgrade `@1pizzateam/spock` dependency to `4.4.0`.

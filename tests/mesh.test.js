@@ -230,6 +230,7 @@ test("render does not crash when active mesh has no programs", () => {
 });
 
 test("addProgram returns false if shader program fails to link", () => {
+  const error = jest.spyOn(console, "error").mockImplementation(() => {});
   const context = createMockContext();
   context.getProgramParameter.mockReturnValue(false);
   const quad = new Quad(new Vec2(2, 2));
@@ -237,6 +238,8 @@ test("addProgram returns false if shader program fails to link", () => {
   const result = mesh.addProgram("vert", "frag", new Material());
   expect(result).toBe(false);
   expect(mesh.nbPrograms).toBe(0);
+  expect(error).toHaveBeenCalled();
+  error.mockRestore();
 });
 
 test("drawArrays respects submesh start offset", () => {
@@ -806,5 +809,39 @@ test("computeBounds uses localBoundingBox when vertices are null or empty after 
   expect(sphere.center.x).toBeCloseTo(10);
   expect(sphere.radius).toBeGreaterThan(0);
 });
+
+test("setSharedTexture assigns a shared WebGLTexture without owning or deleting it, and caches texture binds across draws", () => {
+  const context = createMockContext();
+  const { mesh: meshA } = createMesh(context);
+  const { mesh: meshB } = createMesh(context);
+  meshA.addProgram("vert", "frag", new Material());
+  meshB.addProgram("vert", "frag", new Material());
+
+  const sharedTex = { id: "shared-tex" };
+  meshA.setSharedTexture(sharedTex);
+  meshB.setSharedTexture(sharedTex);
+  // Setting the same shared texture again is a no-op
+  meshA.setSharedTexture(sharedTex);
+
+  expect(meshA.WebGLTexture).toBe(sharedTex);
+  expect(meshB.WebGLTexture).toBe(sharedTex);
+
+  const lights = {
+    position: [], diffuse: [], specular: [],
+    constantAttenuation: [], linearAttenuation: [], quadraticAttenuation: [],
+    cutoff: [], exponent: [], direction: [], type: [],
+  };
+
+  context.bindTexture.mockClear();
+  meshA.render(new Float32Array(16), new Float32Array(12), lights, 0, false);
+  meshB.render(new Float32Array(16), new Float32Array(12), lights, 0, false);
+  // Both meshes share the same texture, so bindTexture should only be called once
+  expect(context.bindTexture).toHaveBeenCalledTimes(1);
+  expect(context.bindTexture).toHaveBeenCalledWith(context.TEXTURE_2D, sharedTex);
+
+  meshA.destroy();
+  expect(context.deleteTexture).not.toHaveBeenCalled();
+});
+
 
 

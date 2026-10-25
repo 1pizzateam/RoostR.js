@@ -14,6 +14,7 @@ export class CustomMesh implements IGeometry {
   // nbSubMeshes : number;
   primitive   : string;
   primitives  : string[];
+  bufferUsage : 'STATIC_DRAW' | 'DYNAMIC_DRAW';
 
   constructor() {
     this.vertices  = /*mesh.vertices ? this.copyArray(mesh.vertices) :*/ null;
@@ -23,6 +24,7 @@ export class CustomMesh implements IGeometry {
     this.subMeshes = [];
     this.itemSize  = 3;
     this.primitive = 'TRIANGLES';
+    this.bufferUsage = 'STATIC_DRAW';
     // gl.POINTS: Draws a single dot.
     // gl.LINE_STRIP: Draws a straight line to the next vertex.
     // gl.LINE_LOOP: Draws a straight line to the next vertex, and connects the last vertex back to the first.

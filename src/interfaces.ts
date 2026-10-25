@@ -14,6 +14,7 @@ export interface IGeometry {
   primitive   : string | null;
   uvs?        : number[] | Float32Array | null;
   nbSubMeshes? : number;
+  bufferUsage? : 'STATIC_DRAW' | 'DYNAMIC_DRAW';
   quad? : {
     vertices: number[] | null;
     indices: number[] | null;

@@ -14,8 +14,8 @@ const webGLTexture = await Texture.load('/assets/wood.jpg', gl, {
   wrapT: gl.REPEAT
 });
 
-// 2. Or attach directly to a mesh
-mesh.setTexture(webGLTexture);
+// 2. Or attach the shared WebGLTexture directly to one or more meshes
+mesh.setSharedTexture(webGLTexture);
 ```
 
 ---
@@ -74,11 +74,15 @@ Texture.update(webGLTexture, newPixelData, gl, new Vec2(0, 0), new Vec2(128, 128
 
 ## Mesh Integration
 
-Textures are most commonly applied directly via [`mesh.setTexture()`](/api/mesh#settexture):
+Textures are most commonly applied directly via [`mesh.setTexture()`](/api/mesh#settexture) (which creates and owns the `WebGLTexture`) or [`mesh.setSharedTexture()`](/api/mesh#setsharedtexture) (which shares an existing `WebGLTexture` across multiple meshes without taking ownership):
 
 ```javascript
-// Directly from an Image or Canvas element
+// Owned texture from an Image or Canvas element
 mesh.setTexture(imageElement, { generateMipmaps: true });
+
+// Shared WebGLTexture across multiple meshes
+meshA.setSharedTexture(webGLTexture);
+meshB.setSharedTexture(webGLTexture);
 
 // Or via convenient material helpers
 mesh.useBasicMaterial({ texture: imageElement });

@@ -16,19 +16,34 @@ export class SceneCollector {
     frustum: Frustum | null,
     opaque: boolean,
     blended: boolean,
-    stamp: number
+    stamp: number,
+    maxDrawDistance: number = 0
   ): void {
     this.opaqueList.length = 0;
     this.blendedList.length = 0;
+    const camPos = camera.position;
     const visit = (mesh: Mesh): void => {
       if (!mesh.isActive()) return;
       const wanted = mesh.blendMode ? blended : opaque;
-      if (wanted && !(frustum && !frustum.intersectsSphere(mesh.computeBoundingSphere()))) {
-        if (mesh.blendMode) {
-          mesh.sortKey = mesh.getWorldPosition(this.scratchVec).getDistance(camera.position, true);
-          this.blendedList.push(mesh);
-        } else
-          this.opaqueList.push(mesh);
+      if (wanted) {
+        let visible = true;
+        if (frustum || maxDrawDistance > 0) {
+          const sphere = mesh.computeBoundingSphere();
+          if (maxDrawDistance > 0) {
+            const limit = maxDrawDistance + sphere.radius;
+            if (sphere.center.getDistance(camPos, true) > limit * limit)
+              visible = false;
+          }
+          if (visible && frustum && !frustum.intersectsSphere(sphere))
+            visible = false;
+        }
+        if (visible) {
+          if (mesh.blendMode) {
+            mesh.sortKey = mesh.getWorldPosition(this.scratchVec).getDistance(camPos, true);
+            this.blendedList.push(mesh);
+          } else
+            this.opaqueList.push(mesh);
+        }
       }
       for (const child of mesh.children)
         visit(child);

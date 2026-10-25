@@ -40,6 +40,7 @@ new Scene(optionsOrContext?: ISceneOptions | WebGLRenderingContext)
 | `options.frontFace` | `'CCW' \| 'CW'` | Front-face vertex winding (default `'CCW'`). |
 | `options.depthTest` | `boolean` | Whether to enable WebGL depth testing (default `true`). |
 | `options.enableFrustumCulling` | `boolean` | When true, automatically culls meshes outside camera frustum (default `false`). |
+| `options.maxDrawDistance` | `number` | Maximum camera-to-sphere-surface distance (`0` disables distance culling, default `0`). |
 
 ---
 
@@ -50,10 +51,12 @@ new Scene(optionsOrContext?: ISceneOptions | WebGLRenderingContext)
 | `meshes` | `Mesh[]` | Array of registered root meshes in the scene. |
 | `nbMeshes` | `number` | Count of registered root meshes. |
 | `lights` | `Lights` | The scene's multi-light manager. |
-| `ambientColor` | `Vec3` | Global ambient light color factor (default `[0.2, 0.2, 0.2]`). |
-| `fog` | `IFogConfig \| null` | Optional distance fog `{ enabled, color, near, far }`. |
-| `frustumCulling` | `boolean` | When true (default), automatically culls meshes outside the camera frustum. |
-| `renderer` | `Renderer` | The low-level WebGL renderer instance. |
+| `ambientColor` | `Vec3` | Global ambient light color factor (default `new Vec3(0, 0, 0)`). |
+| `fog` | `{ color: Vec3; near: number; far: number } \| null` | Optional distance fog configuration. |
+| `enableFrustumCulling` | `boolean` | When true, automatically culls meshes outside the camera frustum (default `false`). |
+| `maxDrawDistance` | `number` | Maximum draw distance from camera to mesh bounding sphere surface (`0` = disabled). |
+| `resolution` | `Vec2` | Size of the render surface uploaded to shaders as `uScreenResolution`. |
+| `renderer` | `SceneRenderer` | The internal WebGL scene renderer instance. |
 
 ---
 
@@ -112,9 +115,9 @@ Sorts transparent/blended meshes back-to-front relative to camera depth and rend
 scene.renderBlended(camera);
 ```
 
-### `raycast(ray: Ray): { mesh: Mesh, distance: number, point: Vec3 }[]`
+### `raycast(ray: Ray, precise: boolean = false): { mesh: Mesh, distance: number, point: Vec3 }[]`
 
-Cast a 3D ray through all meshes in the scene and return an array of hit results sorted from nearest to furthest.
+Cast a 3D ray through all active meshes in the scene and return an array of hit results sorted from nearest to furthest. Pass `precise = true` to test triangle geometry (`TRIANGLES` / `TRIANGLE_STRIP`) in addition to bounding spheres.
 
 ```javascript
 const rect = canvas.getBoundingClientRect();
@@ -150,18 +153,26 @@ Update the WebGL viewport dimensions and optional offset.
 
 Update the scene background clear RGB color and alpha.
 
+### `clear(color: boolean = true, depth: boolean = true): void`
+
+Clears the color and/or depth buffers on the scene's WebGL context.
+
+### `setAmbientColor(color: Vec3): this`
+
+Updates the global ambient light color factor added to `Lights.flatten()`.
+
 ### `setFog(color: Vec3, near: number, far: number = 1000): this`
 
-Enables atmospheric linear distance fog for built-in `PhongShader` meshes.
+Enables atmospheric linear distance fog for built-in `PhongShader` and `SpriteShader` meshes.
 
 ### `clearFog(): this`
 
 Disables distance fog.
 
-### `getCanvas(): HTMLCanvasElement | null`
+### `restore(): void`
 
-Returns the canvas element attached to this scene.
+Rebuilds the GPU resources (buffers, shared programs, and owned textures) of all registered meshes and resets cached GL state after a `webglcontextrestored` event.
 
-### `destroy(destroyMeshes: boolean = false): void`
+### `destroy(destroyMeshes: boolean = true): void`
 
-Cleans up scene resources, deletes renderer state, and optionally calls `destroy()` on all registered meshes.
+Cleans up scene resources and optionally calls `destroy()` on all registered meshes.

@@ -54,8 +54,10 @@ export class Node<T extends Node<T> = any> {
   }
 
   public addChild(node: T): void {
+    if (node.parent === (this as unknown as T))
+      return;
     if (this.children.indexOf(node) === -1) {
-      if (node.parent && node.parent !== (this as unknown as T))
+      if (node.parent)
         node.parent.removeChild(node);
       this.children.push(node);
       node.parent = this as unknown as T;
@@ -99,12 +101,16 @@ export class Node<T extends Node<T> = any> {
   }
 
   public setPosition(position: Vec3): this {
+    if (position !== this.position && this.position.equals(position))
+      return this;
     this.position.copy(position);
     this.markDirty();
     return this;
   }
 
   public setRotation(rotation: Vec3): this {
+    if (rotation !== this._rotation && !this.isRotationStale && this._rotation.equals(rotation))
+      return this;
     this._rotation.copy(rotation);
     this.quaternion.setFromEuler(this._rotation);
     this.isRotationStale = false;
@@ -113,6 +119,8 @@ export class Node<T extends Node<T> = any> {
   }
 
   public setScale(scale: Vec3): this {
+    if (scale !== this.scale && this.scale.equals(scale))
+      return this;
     this.scale.copy(scale);
     this.markDirty();
     return this;
@@ -125,6 +133,8 @@ export class Node<T extends Node<T> = any> {
   }
 
   public setQuaternion(q: Quat): this {
+    if (q !== this.quaternion && this.quaternion.equals(q))
+      return this;
     this.quaternion.copy(q);
     this.rotationChanged();
     return this;

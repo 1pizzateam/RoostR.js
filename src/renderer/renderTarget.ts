@@ -1,4 +1,5 @@
 import { Vec2 } from '@1pizzateam/spock';
+import { getGLState } from './state';
 
 export class RenderTarget {
 
@@ -83,6 +84,7 @@ export class RenderTarget {
 
     // Unbind
     gl.bindTexture(gl.TEXTURE_2D, null);
+    getGLState(gl).texture2D = null;
     gl.bindRenderbuffer(gl.RENDERBUFFER, null);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
@@ -128,6 +130,7 @@ export class RenderTarget {
         null
       );
       gl.bindTexture(gl.TEXTURE_2D, null);
+      getGLState(gl).texture2D = null;
     }
 
     if (this.depthBuffer) {
@@ -149,6 +152,8 @@ export class RenderTarget {
       this.framebuffer = null;
     }
     if (this.texture) {
+      if (getGLState(gl).texture2D === this.texture)
+        getGLState(gl).texture2D = null;
       gl.deleteTexture(this.texture);
       this.texture = null;
     }

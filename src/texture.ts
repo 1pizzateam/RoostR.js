@@ -1,4 +1,5 @@
 import { Vec2 } from '@1pizzateam/spock';
+import { getGLState } from './renderer/state';
 
 export type TextureSource = HTMLImageElement | HTMLCanvasElement | ImageData | ImageBitmap | Uint8Array;
 
@@ -79,6 +80,7 @@ export const Texture = {
     }
 
     context.bindTexture(context.TEXTURE_2D, null);
+    getGLState(context).texture2D = null;
     return webGLTexture;
   },
 
@@ -133,6 +135,7 @@ export const Texture = {
         <TexImageSource>source
       );
     context.bindTexture(context.TEXTURE_2D, null);
+    getGLState(context).texture2D = null;
   }
 
 };

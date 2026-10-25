@@ -1,6 +1,6 @@
 # Mesh
 
-The foundational 3D scene node representing a renderable geometry bound to WebGL vertex/index/normal buffers, materials, and shader programs.
+The foundational 3D scene node extending [`Node<Mesh>`](/api/node) and representing a renderable geometry bound to WebGL vertex/index/normal/UV buffers, materials, textures, and shader programs.
 
 ```javascript
 import { Mesh, Cube, PhongShader, Material, Vec3 } from '@1pizzateam/roostr';
@@ -46,6 +46,7 @@ Allocates hardware WebGL vertex (`ARRAY_BUFFER`), index (`ELEMENT_ARRAY_BUFFER`)
 | `blendOptions` | `{ equation, source, destination }` | GL blend names used in the blended pass (default `FUNC_ADD`, `SRC_ALPHA`, `ONE`). |
 | `depthWrite` | `boolean` | Whether the mesh writes to the depth buffer (default `true`). |
 | `primitive` | `number` | WebGL drawing primitive (e.g. `gl.TRIANGLES`, `gl.LINE_STRIP`). |
+| `bufferUsage` | `'STATIC_DRAW' \| 'DYNAMIC_DRAW'` | WebGL buffer usage hint inherited from the source geometry (default `'STATIC_DRAW'`). |
 
 ---
 
@@ -99,9 +100,17 @@ Orient the mesh so its -Z axis faces a target 3D point (`Quat.lookAt`). Unchange
 
 Multiply the current mesh scale by a vector factor.
 
-### `slerp(targetRotation: Quat, t: number): void`
+### `slerp(targetRotation: Quat, t: number): this`
 
 Spherical linear interpolation between current rotation and a target quaternion by alpha `t` $\in [0, 1]$.
+
+### `addChild(node: Mesh): void` / `removeChild(node: Mesh): boolean`
+
+Attaches or detaches a child `Mesh` in the scene graph hierarchy. Adding a node that is already a direct child of this mesh is a no-op.
+
+### `setActive(): void` / `setInactive(): void` / `toggleActive(): boolean` / `isActive(): boolean`
+
+Controls and queries whether this mesh (and its subtree) is active during scene rendering and world-matrix traversal.
 
 ---
 
@@ -131,13 +140,17 @@ Compute the normalized forward direction vector in world coordinates.
 
 Compute Euclidean distance to another mesh or 3D vector.
 
-### `isInsideBounds(min: Vec3, max: Vec3): boolean`
+### `isInsideBounds(box: BoundingBox): boolean`
 
-Check if a world-space point or bounding volume is inside the mesh's transformed bounding box.
+Check if the mesh's world-space position is inside the given `BoundingBox`.
 
-### `raycast(ray: Ray): { distance: number, point: Vec3 } | null`
+### `setLocalBounds(box: BoundingBox): this`
 
-Test ray intersection against the mesh bounding box and geometry.
+Sets the local-space `BoundingBox` (and derives `localBoundingSphere`) used for frustum culling and picking when geometry vertices are populated or updated after construction.
+
+### `raycast(ray: Ray, precise: boolean = false): { distance: number, point: Vec3 } | null`
+
+Tests ray intersection against the mesh's world-space bounding sphere by default. When `precise` is `true`, also tests individual triangles (`TRIANGLES` and `TRIANGLE_STRIP`) in local space.
 
 ---
 
@@ -161,26 +174,38 @@ Instantly creates and binds a `NormalShader` to visualize surface curvature.
 
 ## Low-Level Materials & Shaders
 
-### `addProgram(program: Program | null): boolean`
+### `addProgram(vertexShaderOrProgram: string | WebGLProgram, fragmentShaderOrMaterial?: string | Material, material?: Material): boolean`
 
-Attach a compiled WebGL shader program.
+Attaches a compiled WebGL shader program (or acquires a shared program from vertex and fragment GLSL source strings) and pairs it with a `Material`.
 
-### `addMaterial(material: Material): void`
+### `clearPrograms(): void`
+
+Releases all attached shader programs and clears the mesh's materials list.
+
+### `addMaterial(material: Material): boolean`
 
 Attach surface lighting material parameters.
 
 ### `setTexture(image: TextureSource, options?: ITextureOptions): void`
 
-Uploads and sets a 2D texture map to the mesh's sampler uniform.
+Uploads and sets an owned 2D texture map to the mesh's sampler uniform.
 
-### `addCustomUniform(name: string, type: string, value: any): void`
+### `setSharedTexture(texture: WebGLTexture | null): void`
+
+Assigns an externally managed or shared `WebGLTexture` (or clears it with `null`) without taking ownership or deleting the texture when replaced or when `destroy()` is called.
+
+### `addCustomUniform(name: string, type: string, value: UniformValue): void`
 
 Register a custom shader uniform.
 
-### `setCustomUniform(name: string, value: any): void`
+### `setCustomUniform(name: string, value: UniformValue): void`
 
 Update the value of an existing custom uniform.
 
+### `restore(): void`
+
+Rebuilds the mesh's WebGL buffers, shared shader programs, custom uniform locations, owned textures, and child meshes after a `webglcontextrestored` event.
+
 ### `destroy(): void`
 
-Delete all associated WebGL buffers (`vertexBuffer`, `indexBuffer`, `normalBuffer`, `uvBuffer`) and textures to prevent GPU memory leaks.
+Delete all associated WebGL buffers (`vertexBuffer`, `indexBuffer`, `normalBuffer`, `texCoordBuffer`), release programs, and delete owned textures to prevent GPU memory leaks.

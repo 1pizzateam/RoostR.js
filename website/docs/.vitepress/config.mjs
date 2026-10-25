@@ -67,6 +67,7 @@ export default defineConfig({
         collapsed: false,
         items: [
           { text: 'Scene', link: '/api/scene' },
+          { text: 'Node', link: '/api/node' },
           { text: 'Mesh', link: '/api/mesh' },
           { text: 'Material', link: '/api/material' },
           { text: 'Texture', link: '/api/texture' },
@@ -99,6 +100,7 @@ export default defineConfig({
           { text: 'Primitives', link: '/api/geometry' },
           { text: 'Procedural Models', link: '/api/models' },
           { text: 'CustomMesh & SubMesh', link: '/api/custom-mesh' },
+          { text: 'QuadBatch', link: '/api/quad-batch' },
           { text: 'Sprite', link: '/api/sprite' },
         ],
       },

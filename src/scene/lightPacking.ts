@@ -116,7 +116,7 @@ export function packLights(
   for (let i = 0; i < directionals.length && index < count; i++)
     pushLight(flatArrays, index++, 'directional', directionals[i]);
 
-  const ambient = scratchAmbient.setScalar(0, 0, 0);
+  const ambient = scratchAmbient.origin();
   if (extraAmbient)
     ambient.add(extraAmbient);
   for (let i = 0; i < ambients.length; i++)
@@ -125,7 +125,7 @@ export function packLights(
   if (!flatArrays.floatAmbient)
     flatArrays.floatAmbient = new Float32Array(3);
   ambient.toArray(flatArrays.floatAmbient);
-  flatArrays.ambient = [ambient.x, ambient.y, ambient.z];
+  ambient.toArray(flatArrays.ambient);
 
   return flatArrays;
 }

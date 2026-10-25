@@ -14,7 +14,7 @@ scene.render(camera);
 renderTarget.unbind();
 
 // 3. Texture is now available for sampling
-postQuadMesh.setTexture(renderTarget.texture);
+postQuadMesh.setSharedTexture(renderTarget.texture);
 ```
 
 ---
@@ -61,6 +61,10 @@ Reallocates the color texture and depth renderbuffer to match new dimensions upo
 ```javascript
 renderTarget.setSize(new Vec2(window.innerWidth, window.innerHeight));
 ```
+
+### `restore(): void`
+
+Recreates the framebuffer, color texture, and depth renderbuffer after a `webglcontextrestored` event. Since `renderTarget.texture` is a newly allocated `WebGLTexture`, re-assign it to any mesh sampling it via `mesh.setSharedTexture(renderTarget.texture)`.
 
 ### `dispose(): void`
 

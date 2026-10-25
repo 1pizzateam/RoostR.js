@@ -20,6 +20,7 @@ export interface ISceneOptions {
   ambientColor?: Vec3;
   fog?: { color: Vec3; near: number; far: number } | null;
   enableFrustumCulling?: boolean;
+  maxDrawDistance?: number;
 }
 
 export class Scene {
@@ -29,6 +30,7 @@ export class Scene {
   public  ambientColor: Vec3;
   public  fog      : { color: Vec3; near: number; far: number } | null;
   public  enableFrustumCulling: boolean;
+  public  maxDrawDistance: number;
   public  context  : WebGLRenderingContext;
   public  renderer : SceneRenderer;
   public  graph    : SceneGraph;
@@ -46,6 +48,7 @@ export class Scene {
     this.ambientColor = new Vec3(0, 0, 0);
     this.fog = null;
     this.enableFrustumCulling = false;
+    this.maxDrawDistance = 0;
     this.collector = new SceneCollector();
 
     let ctx: WebGLRenderingContext | null = null;
@@ -60,6 +63,7 @@ export class Scene {
       if (opts.ambientColor) this.setAmbientColor(opts.ambientColor);
       if (opts.fog) this.fog = opts.fog;
       if (opts.enableFrustumCulling !== undefined) this.enableFrustumCulling = opts.enableFrustumCulling;
+      if (opts.maxDrawDistance !== undefined) this.maxDrawDistance = opts.maxDrawDistance;
     } else
       ctx = contextOrOptions as WebGLRenderingContext;
 
@@ -246,7 +250,7 @@ export class Scene {
       ? this.collector.scratchFrustum.setFromProjectionViewMatrix(camera.getProjectionViewMatrix())
       : null;
 
-    this.collector.collect(this.meshes, camera, frustum, true, true, this.traversalStamp);
+    this.collector.collect(this.meshes, camera, frustum, true, true, this.traversalStamp, this.maxDrawDistance);
 
     const frame = this.beginFrame();
     this.disableBlendMode();
@@ -273,18 +277,20 @@ export class Scene {
     const mark = (mesh: Mesh): void => {
       for (const child of mesh.children) {
         child.traversalStamp = stamp;
-        mark(child);
+        if (child.children.length > 0)
+          mark(child);
       }
     };
     for (const mesh of this.meshes)
-      mark(mesh);
+      if (mesh.children.length > 0)
+        mark(mesh);
     return stamp;
   }
 
   private computeWorldMatrices(): void {
     const stamp = this.markDescendants();
     for (const mesh of this.meshes)
-      if (mesh.traversalStamp !== stamp)
+      if (mesh.traversalStamp !== stamp && mesh.isActive())
         mesh.computeWorldMatrix( this.graph );
   }
 
@@ -301,7 +307,7 @@ export class Scene {
     flatLights: IFlatLights = this.lights.flatten(this.ambientColor),
     frustum: Frustum | null = null
   ): number {
-    this.collector.collect(this.meshes, camera, frustum, false, true, this.markDescendants());
+    this.collector.collect(this.meshes, camera, frustum, false, true, this.markDescendants(), this.maxDrawDistance);
     return this.collector.drawBlended(this, camera, time, flatLights, this.beginFrame());
   }
 

@@ -10,7 +10,10 @@ import {
   PerspectiveCamera,
   OrthographicCamera,
   OrbitControls,
+  Node,
   Mesh,
+  QuadBatch,
+  Sprite,
   Material,
   Texture,
   Cube,
@@ -29,7 +32,8 @@ import {
 
 ### Scene & Core
 - [Scene](/api/scene): The top-level 3D world orchestrator managing meshes, lights, camera passes, fog, and culling.
-- [Mesh](/api/mesh): The primary renderable scene node featuring hierarchical transformations, bounding volumes, and shader binding.
+- [Node](/api/node): Hierarchical scene-graph base class managing local/world transforms, quaternions, parenting, and bounds.
+- [Mesh](/api/mesh): The primary renderable scene node extending `Node` with WebGL buffers, materials, textures, and shaders.
 - [Material](/api/material): Optical surface appearance parameters (ambient, diffuse, specular, shininess).
 - [Texture](/api/texture): Texture loading, NPOT wrapping, mipmap generation, and sub-image buffer updates.
 
@@ -49,6 +53,7 @@ import {
 - [Primitives](/api/geometry): Procedural primitives: `Cube`, `Sphere`, `Hemisphere`, `Cylinder`, `Plane`, `Quad`, `FullscreenQuad`, `MultiQuad`, `Line`.
 - [Procedural Models](/api/models): Built-in articulated procedural models `VWing` (starfighter) and `Cannon` (defense turret).
 - [CustomMesh & SubMesh](/api/custom-mesh): Custom vertex buffers, normal computation, and submesh draw calls.
+- [QuadBatch](/api/quad-batch): Dynamic batched 3D quad streaming in a single draw call.
 - [Sprite](/api/sprite): Flat image that faces the camera, with sprite-sheet frames, tint, alpha cutoff and fog.
 
 ### Spatial Math & Culling

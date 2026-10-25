@@ -1,57 +1,22 @@
-import { assignVec2, assignVec3, Vec2, Vec3, Ray2 } from "../dist/roostr";
+import { Vec2, Vec3, Ray2, RightTriangle, Quat, Trigo, Utils, Rand } from "../dist/roostr";
 
-describe("Vector Helpers and Exports", () => {
-  test("assignVec3 copies Vec3 instance", () => {
-    const target = new Vec3();
-    const source = new Vec3(1, 2, 3);
-    const result = assignVec3(target, source);
-    expect(result).toBe(target);
-    expect(target.toArray()).toEqual([1, 2, 3]);
-  });
-
-  test("assignVec3 copies array-like numbers", () => {
-    const target = new Vec3();
-    assignVec3(target, [4, 5, 6]);
-    expect(target.toArray()).toEqual([4, 5, 6]);
-
-    const float32 = new Float32Array([7, 8, 9]);
-    assignVec3(target, float32);
-    expect(target.toArray()).toEqual([7, 8, 9]);
-  });
-
-  test("assignVec3 copies scalar arguments", () => {
-    const target = new Vec3();
-    assignVec3(target, 10, 20, 30);
-    expect(target.toArray()).toEqual([10, 20, 30]);
-  });
-
-  test("assignVec2 copies Vec2 instance", () => {
-    const target = new Vec2();
-    const source = new Vec2(1, 2);
-    const result = assignVec2(target, source);
-    expect(result).toBe(target);
-    expect(target.toArray()).toEqual([1, 2]);
-  });
-
-  test("assignVec2 copies array-like numbers", () => {
-    const target = new Vec2();
-    assignVec2(target, [3, 4]);
-    expect(target.toArray()).toEqual([3, 4]);
-
-    const float32 = new Float32Array([5, 6]);
-    assignVec2(target, float32);
-    expect(target.toArray()).toEqual([5, 6]);
-  });
-
-  test("assignVec2 copies scalar arguments", () => {
-    const target = new Vec2();
-    assignVec2(target, 7, 8);
-    expect(target.toArray()).toEqual([7, 8]);
-  });
-
-  test("Ray2 is properly exported", () => {
+describe("Spock Primitives Re-Exports", () => {
+  test("Ray2 and RightTriangle are properly exported", () => {
     const ray = new Ray2(new Vec2(0, 0), new Vec2(1, 0));
     expect(ray.origin.toArray()).toEqual([0, 0]);
     expect(ray.direction.toArray()).toEqual([1, 0]);
+
+    const tri = new RightTriangle(new Vec2(10, 10), new Vec2(5, 5), "nw");
+    expect(tri.corner).toBe("nw");
+  });
+
+  test("Spock v4.5.0 primitives (Quat.equals, Trigo.lerpRadian, Utils.damp, Rand.next) are exported", () => {
+    const q1 = new Quat();
+    const q2 = new Quat();
+    expect(q1.equals(q2)).toBe(true);
+    expect(Trigo.lerpRadian(0, Trigo.halfpi, 0.5)).toBeCloseTo(Trigo.halfpi * 0.5);
+    expect(Utils.damp(0, 10, 10, 0)).toBe(0);
+    expect(Rand.next()).toBeGreaterThanOrEqual(0);
+    expect(Rand.next()).toBeLessThan(1);
   });
 });

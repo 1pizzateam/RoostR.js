@@ -35,23 +35,7 @@ RoostR provides four distinct light types:
 
 ## GPU Buffer Flattening
 
-To avoid garbage collection spikes and driver upload overhead, `Lights` continuously synchronizes its internal light parameters into contiguous `Float32Array` buffers:
-
-| Uniform Name | GLSL Type | Description |
-| :--- | :--- | :--- |
-| `uNumDirLights` | `int` | Number of active directional lights. |
-| `uDirLightDirection` | `vec3[4]` | Flattened direction vectors. |
-| `uDirLightDiffuse` | `vec3[4]` | Flattened diffuse color intensities. |
-| `uDirLightSpecular` | `vec3[4]` | Flattened specular color intensities. |
-| `uNumPointLights` | `int` | Number of active point lights. |
-| `uPointLightPosition`| `vec3[8]` | World positions of point lights. |
-| `uPointLightDiffuse` | `vec3[8]` | Diffuse colors. |
-| `uPointLightAttenuation`| `vec3[8]`| Attenuation coefficients `(constant, linear, quadratic)`. |
-| `uNumSpotLights` | `int` | Number of active spotlights. |
-| `uSpotLightPosition` | `vec3[4]` | Spotlight positions. |
-| `uSpotLightDirection`| `vec3[4]` | Spotlight direction vectors. |
-| `uSpotLightCutoff` | `float[4]`| Cosine of beam cutoff angle. |
-| `uSpotLightExponent`| `float[4]`| Cone falloff intensity exponents. |
+To avoid garbage collection spikes and driver upload overhead, `Lights.flatten(extraAmbient?)` packs up to `MAX_LIGHTS` (`8`) active directional, point, and spot lights (plus accumulated `AmbientLight` and scene `ambientColor`) into reusable contiguous `Float32Array` buffers. Built-in `PhongShader` uploads packed `vec4` arrays (`uLightPositionType`, `uLightDiffuseCutoff`, `uLightSpecularExponent`, `uLightDirection`, `uLightAttenuation`, `uAmbientLight`) to stay well within mobile GPU fragment uniform limits, while classic unpacked uniform arrays (`uLightPosition`, `uLightDiffuse`, `uLightSpecular`, `uLightType`, etc.) remain available for custom shaders.
 
 ---
 

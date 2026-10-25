@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals';
-import { Scene, Mesh, Quad, DirectionalLight, PointLight, SpotLight, OrthographicCamera, PerspectiveCamera, Material, CustomMesh, Vec3, Vec2, Rect, BoundingBox } from "../dist/roostr";
+import { Scene, Mesh, Quad, QuadBatch, DirectionalLight, PointLight, SpotLight, OrthographicCamera, PerspectiveCamera, Material, CustomMesh, Vec3, Vec2, Rect, BoundingBox } from "../dist/roostr";
 import { createMockContext } from "./helpers/webgl-mock";
 
 function createScene() {
@@ -324,4 +324,58 @@ test("supports vector-first setViewport, getSize, and setClearColor", () => {
   scene.setClearColor(new Vec3(0.5, 0.6, 0.7), 0.9);
   expect(context.clearColor).toHaveBeenCalledWith(0.5, 0.6, 0.7, 0.9);
 });
+
+test("maxDrawDistance culls meshes beyond distance threshold", () => {
+  const context = createMockContext();
+  const scene = new Scene({ context, maxDrawDistance: 50 });
+  const camera = new PerspectiveCamera(45, new Vec2(0.1, 1000), context);
+  camera.setPosition(new Vec3(0, 0, 10));
+  camera.setTarget(new Vec3(0, 0, 0));
+
+  const meshNear = new Mesh(new Quad(new Vec2(2, 2)), context);
+  meshNear.setPosition(new Vec3(0, 0, 0));
+  scene.addMesh(meshNear);
+
+  const meshFar = new Mesh(new Quad(new Vec2(2, 2)), context);
+  meshFar.setPosition(new Vec3(0, 0, -200));
+  scene.addMesh(meshFar);
+
+  expect(scene.render(camera)).toBe(1);
+});
+
+test("QuadBatch streams dynamic quads and updates local bounds", () => {
+  const { context } = createScene();
+  const sharedTex = { id: "shared-tex" };
+  const batch = new QuadBatch(context, { capacity: 2, sharedTexture: sharedTex });
+  expect(batch.isActive()).toBe(false);
+  expect(batch.WebGLTexture).toBe(sharedTex);
+
+  batch.begin();
+  expect(batch.quad([0, 0, 0, 2, 0, 0, 2, 2, 0, 0, 2, 0], [0, 0, 1, 1])).toBe(true);
+  batch.end();
+  expect(batch.subMeshes[0].count).toBe(6);
+
+  batch.begin();
+  expect(batch.quad([0, 0, 0, 2, 0, 0, 2, 2, 0, 0, 2, 0], [0, 0, 1, 1])).toBe(true);
+  expect(batch.quad([2, 0, 0, 4, 0, 0, 4, 2, 0, 2, 2, 0], [0, 0, 1, 1])).toBe(true);
+  expect(batch.quad([4, 0, 0, 6, 0, 0, 6, 2, 0, 4, 2, 0], [0, 0, 1, 1])).toBe(false);
+  batch.end();
+
+  expect(batch.isActive()).toBe(true);
+  expect(batch.subMeshes[0].count).toBe(12);
+  expect(batch.localBoundingBox.min.toArray()).toEqual([0, 0, 0]);
+  expect(batch.localBoundingBox.max.toArray()).toEqual([4, 2, 0]);
+
+  batch.show(false);
+  expect(batch.isActive()).toBe(false);
+  batch.show(true);
+  expect(batch.isActive()).toBe(true);
+
+  batch.begin().end();
+  expect(batch.isActive()).toBe(false);
+
+  const ownedBatch = new QuadBatch(context, { capacity: 1, texture: new Uint8Array([255, 255, 255, 255]), textureOptions: { size: new Vec2(1, 1) } });
+  expect(ownedBatch.WebGLTexture).toBeTruthy();
+});
+
 

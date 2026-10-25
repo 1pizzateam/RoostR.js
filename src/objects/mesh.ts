@@ -26,6 +26,7 @@ export class Mesh extends Node<Mesh> implements IMesh {
   nbSubMeshes : number;
 
   primitive   : string | null;
+  bufferUsage : 'STATIC_DRAW' | 'DYNAMIC_DRAW';
   
   customUniforms : ICustomUniforms;
 
@@ -89,6 +90,7 @@ export class Mesh extends Node<Mesh> implements IMesh {
     this.nbSubMeshes = this.subMeshes.length;
 
     this.primitive   = mesh && mesh.primitive ? mesh.primitive : null;
+    this.bufferUsage = mesh && mesh.bufferUsage ? mesh.bufferUsage : 'STATIC_DRAW';
 
     this.customUniforms = {};
 
@@ -222,17 +224,19 @@ export class Mesh extends Node<Mesh> implements IMesh {
 
   private applyTextureOption(texture?: HTMLImageElement | HTMLCanvasElement | WebGLTexture): void {
     if (!texture) return;
-    if (typeof WebGLTexture !== 'undefined' && texture instanceof WebGLTexture) {
-      this.releaseTexture();
-      this.WebGLTexture = texture;
-      this.ownsTexture = false;
-    } else
+    if (typeof WebGLTexture !== 'undefined' && texture instanceof WebGLTexture)
+      this.setSharedTexture(texture);
+    else
       this.setTexture(<HTMLImageElement>texture);
   }
 
   private releaseTexture(): void {
-    if (this.WebGLTexture && this.ownsTexture)
-      this.context.deleteTexture(this.WebGLTexture);
+    if (this.WebGLTexture) {
+      if (this.renderer.state.texture2D === this.WebGLTexture)
+        this.renderer.state.texture2D = null;
+      if (this.ownsTexture)
+        this.context.deleteTexture(this.WebGLTexture);
+    }
     this.WebGLTexture = null;
     this.ownsTexture = false;
     this.textureSource = null;
@@ -248,6 +252,15 @@ export class Mesh extends Node<Mesh> implements IMesh {
     this.textureSource = img;
     this.textureOptions = options;
     syncTextureSampler(this.context, this.programs);
+  }
+
+  public setSharedTexture(texture: WebGLTexture | null): void {
+    if (this.WebGLTexture === texture && !this.ownsTexture) return;
+    this.releaseTexture();
+    this.WebGLTexture = texture;
+    this.ownsTexture = false;
+    if (texture)
+      syncTextureSampler(this.context, this.programs);
   }
 
   public addCustomUniform(name:string, type:string, value:UniformValue): void {
@@ -279,10 +292,11 @@ export class Mesh extends Node<Mesh> implements IMesh {
   }
 
   private createBuffers(): void {
+    const usage = this.bufferUsage || 'STATIC_DRAW';
     this.vertexBuffer   = this.vertices 
                             ? this.renderer.createBuffer( 'ARRAY_BUFFER', 
                                                           this.vertices instanceof Float32Array ? this.vertices : new Float32Array(this.vertices), 
-                                                          'STATIC_DRAW'
+                                                          usage
                                                         ) 
                             : null;
     this.indexType = this.context.UNSIGNED_SHORT;
@@ -295,13 +309,13 @@ export class Mesh extends Node<Mesh> implements IMesh {
     this.normalBuffer   = this.normals 
                             ? this.renderer.createBuffer('ARRAY_BUFFER', 
                                                          this.normals instanceof Float32Array ? this.normals : new Float32Array(this.normals), 
-                                                         'STATIC_DRAW'
+                                                         usage
                                                         )
                             : null;
     this.texCoordBuffer = this.uvs 
                             ? this.renderer.createBuffer( 'ARRAY_BUFFER', 
                                                           this.uvs instanceof Float32Array ? this.uvs : new Float32Array(this.uvs), 
-                                                          'STATIC_DRAW'
+                                                          usage
                                                         ) 
                             : null;
   }

@@ -104,4 +104,18 @@ describe("Node", () => {
     expect(c.boundingBox.min.toArray()).toEqual([-1, -1, -1]);
     expect(c.boundingBox.max.toArray()).toEqual([1, 1, 1]);
   });
+
+  test("setPosition, setRotation, setScale, setQuaternion skip marking dirty when unchanged", () => {
+    const node = new Node();
+    node.setPosition(new Vec3(1, 2, 3));
+    node.setRotation(new Vec3(0.1, 0.2, 0.3));
+    node.setScale(new Vec3(2, 2, 2));
+    expect(node.updateModelMatrix()).toBe(true);
+
+    node.setPosition(new Vec3(1, 2, 3));
+    node.setRotation(new Vec3(0.1, 0.2, 0.3));
+    node.setScale(new Vec3(2, 2, 2));
+    node.setQuaternion(new Quat().copy(node.quaternion));
+    expect(node.updateModelMatrix()).toBe(false);
+  });
 });

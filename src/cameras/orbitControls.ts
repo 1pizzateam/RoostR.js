@@ -220,7 +220,7 @@ export class OrbitControls {
     const right = OrbitControls._scratchRight.crossVectors(forward, this.camera.up).normalize();
     const up = OrbitControls._scratchUp.crossVectors(right, forward).normalize();
 
-    OrbitControls._scratchPan.setScalar(0, 0, 0)
+    OrbitControls._scratchPan.origin()
       .add(right.scale(-deltaX * factor))
       .add(up.scale(deltaY * factor));
 
@@ -236,8 +236,7 @@ export class OrbitControls {
         ? this.dampingFactor
         : 1 - Math.pow(1 - this.dampingFactor, deltaTime * 60);
       // Take the shortest way around when the azimuth wraps.
-      const turn = Trigo.normalizeRadian(this.targetAzimuth - this.azimuth);
-      this.azimuth = Utils.lerp(this.azimuth, this.azimuth + turn, t);
+      this.azimuth = Trigo.lerpRadian(this.azimuth, this.targetAzimuth, t);
       this.elevation = Utils.lerp(this.elevation, this.targetElevation, t);
       this.distance = Utils.lerp(this.distance, this.targetDistance, t);
     }

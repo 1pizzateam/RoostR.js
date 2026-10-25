@@ -159,14 +159,23 @@ export class MeshRenderer {
 
       // texture
       if (mesh.WebGLTexture) {
-        context.activeTexture(context.TEXTURE0);
-        context.bindTexture(context.TEXTURE_2D, mesh.WebGLTexture);
-        if (program.sampler)
+        if (state.texture2D !== mesh.WebGLTexture) {
+          context.activeTexture(context.TEXTURE0);
+          context.bindTexture(context.TEXTURE_2D, mesh.WebGLTexture);
+          state.texture2D = mesh.WebGLTexture;
+        }
+        if (program.sampler && !state.samplerInitializedOfProgram.has(program)) {
           context.uniform1i(program.sampler, 0);
-        if (program.hasTexture)
+          state.samplerInitializedOfProgram.add(program);
+        }
+        if (program.hasTexture && state.hasTextureOfProgram.get(program) !== 1) {
           context.uniform1i(program.hasTexture, 1);
-      } else if (program.hasTexture)
+          state.hasTextureOfProgram.set(program, 1);
+        }
+      } else if (program.hasTexture && state.hasTextureOfProgram.get(program) !== 0) {
         context.uniform1i(program.hasTexture, 0);
+        state.hasTextureOfProgram.set(program, 0);
+      }
 
       // matrices
       if (program.modelMatrix)

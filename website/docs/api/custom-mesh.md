@@ -44,6 +44,7 @@ scene.addMesh(mesh);
 | `subMeshes` | `SubMesh[]` | Array of distinct submesh index slices. |
 | `itemSize` | `number` | Coordinate dimensions per vertex (default `3`). |
 | `primitive` | `string` | WebGL primitive name (`'TRIANGLES'`, `'LINE_STRIP'`, etc.). |
+| `bufferUsage` | `'STATIC_DRAW' \| 'DYNAMIC_DRAW'` | WebGL buffer usage hint when uploading vertex/UV buffers (default `'STATIC_DRAW'`). |
 
 ---
 

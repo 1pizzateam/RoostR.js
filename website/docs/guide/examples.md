@@ -171,7 +171,7 @@ function renderFrame() {
   renderTarget.unbind();
 
   // Pass B: Draw full-screen quad using renderTarget.texture
-  postMesh.setTexture(renderTarget.texture);
+  postMesh.setSharedTexture(renderTarget.texture);
   postMesh.render(quadCamera);
 }
 ```

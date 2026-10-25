@@ -1,3 +1,4 @@
+import { jest } from "@jest/globals";
 import { Program, Shader } from "../dist/roostr";
 import { createMockContext } from "./helpers/webgl-mock";
 
@@ -12,15 +13,19 @@ test("Program.create creates, compiles, attaches and links shaders into a progra
 });
 
 test("Program.create cleans up shaders and deletes program if linking fails", () => {
+  const error = jest.spyOn(console, "error").mockImplementation(() => {});
   const context = createMockContext();
   context.getProgramParameter.mockReturnValue(false); // Link failed
   const program = Program.create(context, "void main() {}", "void main() {}");
   expect(program).toBeNull();
   expect(context.deleteShader).toHaveBeenCalledTimes(2);
   expect(context.deleteProgram).toHaveBeenCalledTimes(1);
+  expect(error).toHaveBeenCalled();
+  error.mockRestore();
 });
 
 test("Program.create cleans up compiled shader and program if fragment shader fails compilation", () => {
+  const error = jest.spyOn(console, "error").mockImplementation(() => {});
   const context = createMockContext();
   // First call (vertex shader) succeeds, second call (fragment shader) fails
   let callCount = 0;
@@ -34,12 +39,17 @@ test("Program.create cleans up compiled shader and program if fragment shader fa
   // The vertex shader that succeeded must be deleted
   expect(context.deleteShader).toHaveBeenCalledTimes(2); // once in Shader.create for failed fshader, once in Program.create for vshader
   expect(context.deleteProgram).toHaveBeenCalledTimes(1);
+  expect(error).toHaveBeenCalled();
+  error.mockRestore();
 });
 
 test("Shader.create returns null and deletes shader if compilation fails", () => {
+  const error = jest.spyOn(console, "error").mockImplementation(() => {});
   const context = createMockContext();
   context.getShaderParameter.mockReturnValue(false);
   const shader = Shader.create(context, "bad shader", "VERTEX_SHADER");
   expect(shader).toBeNull();
   expect(context.deleteShader).toHaveBeenCalledTimes(1);
+  expect(error).toHaveBeenCalled();
+  error.mockRestore();
 });

@@ -1,13 +1,14 @@
 # Shaders & Programs
 
-RoostR provides ready-to-use standard shaders and low-level wrappers for compiling GLSL vertex and fragment shaders into linked GPU executable programs.
+RoostR provides ready-to-use standard shaders and low-level utilities for compiling GLSL vertex and fragment shaders into cached, reference-counted GPU executable programs.
 
 ```javascript
-import { PhongShader, BasicShader, NormalShader, Program, Shader } from '@1pizzateam/roostr';
+import { PhongShader, BasicShader, NormalShader, SpriteShader, Program, Shader } from '@1pizzateam/roostr';
 
-// 1. Using built-in shaders:
-const phongProgram = PhongShader.create(gl);
-mesh.addProgram(phongProgram);
+// 1. Using built-in shaders via Mesh helpers or addProgram:
+mesh.usePhongMaterial({ diffuse: new Vec3(0.9, 0.5, 0.1) });
+// or:
+mesh.addProgram(PhongShader.vertex, PhongShader.fragment, material);
 ```
 
 ---
@@ -16,10 +17,12 @@ mesh.addProgram(phongProgram);
 
 ### `PhongShader`
 
-Full Blinn-Phong illumination model supporting up to 4 directional lights, 8 point lights, 4 spotlights, ambient lighting, diffuse texture mapping, specular highlights, and real-time atmospheric distance fog.
+Full Blinn-Phong illumination model supporting up to `MAX_LIGHTS` (8) dynamic lights (directional, point, spot, and ambient) via packed `vec4` uniforms (`uLightPositionType`, `uLightDiffuseCutoff`, `uLightSpecularExponent`, `uLightDirection`, `uLightAttenuation`), diffuse texture mapping, specular highlights, and real-time atmospheric distance fog.
 
 ```javascript
 const program = PhongShader.create(gl);
+// or share across meshes:
+mesh.addProgram(PhongShader.vertex, PhongShader.fragment, material);
 ```
 
 #### Uniforms
@@ -29,6 +32,7 @@ const program = PhongShader.create(gl);
 - `uNormalMatrix`: `Mat3` normal matrix
 - `uCamPosition`: `Vec3` camera eye position
 - `uMaterialAmbient`, `uMaterialDiffuse`, `uMaterialSpecular`, `uMaterialShininess`
+- `uLightPositionType`, `uLightDiffuseCutoff`, `uLightSpecularExponent`, `uLightDirection`, `uLightAttenuation`, `uAmbientLight`
 - `uHasFog`, `uFogColor`, `uFogNear`, `uFogFar`
 
 ---
@@ -53,39 +57,50 @@ const program = NormalShader.create(gl);
 
 ---
 
+### `SpriteShader`
+
+Built-in billboard vertex and alpha-tested/fog-enabled fragment shader used by [`Sprite`](/api/sprite).
+
+---
+
 ## Low-Level GLSL Pipeline
 
 ### `Shader`
 
-Compiles a single vertex (`gl.VERTEX_SHADER`) or fragment (`gl.FRAGMENT_SHADER`) GLSL shader stage.
+Compiles a single vertex (`'VERTEX_SHADER'`) or fragment (`'FRAGMENT_SHADER'`) GLSL shader stage.
 
 ```typescript
-new Shader(context: WebGLRenderingContext, type: number, source: string)
+Shader.create(
+  context: WebGLRenderingContext,
+  source: string,
+  type: 'VERTEX_SHADER' | 'FRAGMENT_SHADER'
+): WebGLShader | null
 ```
 
-Throws descriptive errors with GLSL compiler info log upon syntax failure.
+Logs descriptive GLSL compiler diagnostics and deletes the shader handle upon syntax failure.
 
 ---
 
 ### `Program`
 
-Links compiled vertex and fragment `Shader` stages into a GPU executable program.
+Compiles, links, and caches shared `WebGLProgram` instances per `WebGLRenderingContext`.
 
 ```typescript
-new Program(
-  context: WebGLRenderingContext,
-  vertexShader: Shader,
-  fragmentShader: Shader
-)
+Program.create(context: WebGLRenderingContext, vertexShader: string, fragmentShader: string): WebGLProgram | null
+Program.acquire(context: WebGLRenderingContext, vertexShader: string, fragmentShader: string): WebGLProgram | null
+Program.release(context: WebGLRenderingContext, program: WebGLProgram): void
+Program.sources(program: WebGLProgram): { vertex: string; fragment: string } | null
+Program.reset(context: WebGLRenderingContext): void
 ```
 
-Provides helper methods:
-- `use()`: Calls `gl.useProgram`.
-- `getUniformLocation(name)`: Retrieves uniform handle.
-- `getAttribLocation(name)`: Retrieves attribute handle.
+- `Program.create`: Compiles and links a new standalone `WebGLProgram`, detaching and deleting the intermediate shader stages once linked.
+- `Program.acquire`: Returns a reference-counted `WebGLProgram` shared by all callers using the same vertex and fragment shader sources on the given context.
+- `Program.release`: Decrements the reference count for an acquired program and deletes the GPU program when no references remain.
+- `Program.sources`: Returns `{ vertex, fragment }` for an acquired program (used by `Mesh.restore()`), or `null` otherwise.
+- `Program.reset`: Clears the per-context shared program cache after WebGL context loss/restoration.
 
 ---
 
 ### `Uniform`
 
-Binds JavaScript / typed array values to a GLSL uniform handle according to its type (`1f`, `1i`, `2fv`, `3fv`, `4fv`, `Matrix3fv`, `Matrix4fv`).
+Wraps a custom uniform type and value (`Vec2`, `Vec3`, `Quat`, `Mat3`, `Mat4`, `Mat4x3`, `Float32Array`, `Int32Array`, `number`, or `number[]`) for upload to a GLSL uniform location.

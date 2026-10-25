@@ -5,6 +5,7 @@ export class GLState {
   program: WebGLProgram | null = null;
   arrayBuffer: WebGLBuffer | null = null;
   elementBuffer: WebGLBuffer | null = null;
+  texture2D: WebGLTexture | null = null;
 
   // Bit i set when vertex attribute array i is enabled; null when unknown.
   attributeMask: number | null = null;
@@ -16,12 +17,17 @@ export class GLState {
   // Last material (and version) uploaded to a program.
   materialOfProgram = new WeakMap<object, object>();
   materialVersionOfProgram = new WeakMap<object, number>();
+  // Programs whose sampler uniform has already been set to texture unit 0.
+  samplerInitializedOfProgram = new WeakSet<object>();
+  // Last hasTexture uniform value (0 or 1) uploaded to a program.
+  hasTextureOfProgram = new WeakMap<object, number>();
 
   // Call when GL state may have been changed outside RoostR.
   public invalidate(): void {
     this.program = null;
     this.arrayBuffer = null;
     this.elementBuffer = null;
+    this.texture2D = null;
     this.attributeMask = null;
   }
 
@@ -33,6 +39,8 @@ export class GLState {
     this.frameOfProgram = new WeakMap();
     this.materialOfProgram = new WeakMap();
     this.materialVersionOfProgram = new WeakMap();
+    this.samplerInitializedOfProgram = new WeakSet();
+    this.hasTextureOfProgram = new WeakMap();
   }
 
 }

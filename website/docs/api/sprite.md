@@ -72,7 +72,7 @@ Image rows are read like any other RoostR texture: with the default `flipY`, the
 
 ## Raycasting and Picking
 
-Sprites fully support 3D raycasting and picking via [`Scene.pick`](/api/scene) or `sprite.raycast(ray)`. When billboard mode is `'spherical'` or `'cylindrical'`, `raycast` dynamically computes the camera-facing billboard plane and quad boundaries facing the ray, allowing precise pointer and cursor intersection from any viewing angle in 3D space with zero allocations.
+Sprites fully support 3D raycasting and picking via [`scene.raycast(ray)`](/api/scene#raycast) or `sprite.raycast(ray)`. When billboard mode is `'spherical'` or `'cylindrical'`, `raycast` dynamically computes the camera-facing billboard plane and quad boundaries facing the ray, allowing precise pointer and cursor intersection from any viewing angle in 3D space with zero allocations.
 
 ---
 
