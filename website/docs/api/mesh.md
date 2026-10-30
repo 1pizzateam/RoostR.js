@@ -47,6 +47,7 @@ Allocates hardware WebGL vertex (`ARRAY_BUFFER`), index (`ELEMENT_ARRAY_BUFFER`)
 | `depthWrite` | `boolean` | Whether the mesh writes to the depth buffer (default `true`). |
 | `primitive` | `number` | WebGL drawing primitive (e.g. `gl.TRIANGLES`, `gl.LINE_STRIP`). |
 | `bufferUsage` | `'STATIC_DRAW' \| 'DYNAMIC_DRAW'` | WebGL buffer usage hint inherited from the source geometry (default `'STATIC_DRAW'`). |
+| `eDrawMethod` | `enum` | Draw dispatch mode enum (`eDrawMethod.drawElements` or `eDrawMethod.drawArrays`). |
 
 ---
 

@@ -130,3 +130,13 @@ Renders connected 3D line segments from a series of vertex coordinates using `gl
 ```typescript
 new Line(vertices: Vec3[] = [], thickness: number = 2.0)
 ```
+
+---
+
+### `BasicMesh`
+
+Base geometry container implementing `IGeometry` (`vertices`, `indices`, `normals`, `uvs`, `subMeshes`, `itemSize = 3`, `primitive = 'TRIANGLES'`) extended by procedural geometry classes.
+
+```typescript
+new BasicMesh()
+```
