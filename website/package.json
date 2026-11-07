@@ -1,6 +1,6 @@
 {
   "name": "roostr-docs",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Documentation for RoostR.js.",
   "private": true,
   "scripts": {
@@ -21,6 +21,6 @@
   },
   "dependencies": {
     "@1pizzateam/loopr": "2.2.0",
-    "@1pizzateam/spock": "^4.5.0"
+    "@1pizzateam/spock": "4.6.0"
   }
 }
