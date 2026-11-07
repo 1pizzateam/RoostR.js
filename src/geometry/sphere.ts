@@ -1,4 +1,4 @@
-import { Vec3 } from '@1pizzateam/spock';
+import { Mat4x3, Vec3 } from '@1pizzateam/spock';
 import { BasicMesh } from './basic';
 import { SubMesh } from './submesh';
 
@@ -24,21 +24,16 @@ export class Sphere extends BasicMesh {
       const sy = scale.y;
       const sz = scale.z;
       if (sx !== 1 || sy !== 1 || sz !== 1) {
-        for (let i = 0; i < this.vertices.length; i += 3) {
-          this.vertices[i] *= sx;
-          this.vertices[i + 1] *= sy;
-          this.vertices[i + 2] *= sz;
-        }
-        if (sx !== sy || sy !== sz)
+        new Mat4x3().scale(scale).transformPoints(this.vertices);
+        if (sx !== sy || sy !== sz) {
+          new Mat4x3().scale(new Vec3(1 / sx, 1 / sy, 1 / sz)).transformDirections(this.normals);
           for (let i = 0; i < this.normals.length; i += 3) {
-            const nx = this.normals[i] / sx;
-            const ny = this.normals[i + 1] / sy;
-            const nz = this.normals[i + 2] / sz;
-            const len = Math.hypot(nx, ny, nz) || 1.0;
-            this.normals[i] = nx / len;
-            this.normals[i + 1] = ny / len;
-            this.normals[i + 2] = nz / len;
+            const len = Math.hypot(this.normals[i], this.normals[i + 1], this.normals[i + 2]) || 1.0;
+            this.normals[i] /= len;
+            this.normals[i + 1] /= len;
+            this.normals[i + 2] /= len;
           }
+        }
       }
     }
   }

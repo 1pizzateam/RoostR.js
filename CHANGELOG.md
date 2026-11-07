@@ -1,3 +1,8 @@
+Version 0.9.1 (November 7th 2026)
+-----------------------------
+ * Dependencies:
+   - Upgrade `@1pizzateam/spock` version to 4.6.0
+
 Version 0.9.0 (October 25th 2026)
 -----------------------------
  * New `QuadBatch` mesh (`new QuadBatch(gl, options)`) & `IQuadBatchOptions` interface:
